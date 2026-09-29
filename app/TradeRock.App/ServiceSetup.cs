@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using TradeRock.Core;
+using TradeRock.Core.Builder;
 using TradeRock.Core.Engines;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Storage;
@@ -22,6 +23,7 @@ public static class ServiceSetup
         });
 
         services.AddSingleton(TimeProvider.System);
+        services.AddMemoryCache();
         services.AddDbContextFactory<TradeRockDb>(o => o.UseSqlite($"Data Source={paths.DatabasePath}"));
         services.AddSingleton<PokemonStore>();
         services.AddSingleton<SettingsStore>();
@@ -63,6 +65,30 @@ public static class ServiceSetup
         {
             await db.Database.MigrateAsync();
         }
+
+        // Em segundo plano: carregar a base do AutoMod (a 1ª geração fica rápida) e reanalisar a
+        // legalidade de quem ainda não tem resultado ou foi analisado por outra versão do PKHeX.
+        var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("TradeRock.Startup");
+        var pokemonStore = app.Services.GetRequiredService<PokemonStore>();
+        var stopping = app.Lifetime.ApplicationStopping;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                AutoModEnvironment.EnsureInitialized();
+                var count = await pokemonStore.RefreshLegalityAsync(stopping);
+                if (count > 0)
+                    logger.LogInformation("Legalidade reanalisada para {Count} Pokémon.", count);
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException && stopping.IsCancellationRequested)
+            {
+                // app encerrando
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Falha ao preparar a análise de legalidade.");
+            }
+        }, stopping);
 
         var settings = app.Services.GetRequiredService<SettingsStore>();
         if (!await settings.GetAsync("demo.seeded", false, CancellationToken.None))

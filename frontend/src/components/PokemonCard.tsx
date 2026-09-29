@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { spriteUrl } from '../lib/api'
 import type { Pokemon } from '../lib/types'
+import { LegalityBadge, WarningList } from './Legality'
 import { Badge } from './ui'
 
 export function PokemonCard({
@@ -43,13 +44,12 @@ export function PokemonCard({
           <Badge>{pokemon.isEgg ? t('pokemon.egg') : t('pokemon.level', { level: pokemon.level })}</Badge>
           {pokemon.isShiny && <Badge tone="amber">★ {t('pokemon.shiny')}</Badge>}
           <Badge tone={pokemon.origin === 'received' ? 'emerald' : 'slate'}>{t(`pokemon.origin.${pokemon.origin}`)}</Badge>
+          <LegalityBadge status={pokemon.legality} />
         </div>
         {!compact && (
           <p className="truncate text-xs text-slate-500 dark:text-slate-400">{t('pokemon.ot', { name: pokemon.otName })}</p>
         )}
-        {pokemon.evolvesOnTradeInto !== null && (
-          <p className="text-xs text-amber-700 dark:text-amber-400">⚠ {t('pokemon.evolvesWarning')}</p>
-        )}
+        <WarningList warnings={pokemon.warnings ?? []} />
       </div>
       {actions && <div className="flex shrink-0 flex-col gap-1 sm:flex-row">{actions}</div>}
     </div>

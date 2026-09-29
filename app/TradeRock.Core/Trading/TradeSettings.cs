@@ -21,6 +21,12 @@ public sealed record TradeSettings
     /// <summary>Limite da sessão inteira.</summary>
     public double TotalTimeoutMinutes { get; init; } = 30;
 
+    /// <summary>
+    /// Modo avançado: permite trocar Pokémon que o PKHeX considera ilegais. Mesmo ligado, cada troca
+    /// com ilegal exige confirmação explícita no pedido.
+    /// </summary>
+    public bool AllowIllegal { get; init; }
+
     public static TradeSettings Default { get; } = new();
 
     /// <summary>Mantém valores dentro de limites seguros.</summary>

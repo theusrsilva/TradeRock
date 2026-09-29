@@ -12,10 +12,11 @@ export interface PartyState {
 
 export const MAX_PARTY = 6
 
-export function partyProblems(state: PartyState): string[] {
+export function partyProblems(state: PartyState, illegalBlocked = false): string[] {
   const problems: string[] = []
   if (state.party.length < 2) problems.push('trade.party.needTwo')
   if (state.offered.length < 1) problems.push('trade.party.needOffered')
+  if (illegalBlocked) problems.push('trade.party.illegalBlocked')
   return problems
 }
 
@@ -24,11 +25,13 @@ export function PartyStep({
   state,
   onChange,
   onReload,
+  allowIllegal,
 }: {
   pokemon: Pokemon[]
   state: PartyState
   onChange: (state: PartyState) => void
   onReload: () => void
+  allowIllegal: boolean
 }) {
   const { t } = useTranslation()
   const byId = new Map(pokemon.map((p) => [p.id, p]))
@@ -60,19 +63,28 @@ export function PartyStep({
                 compact
                 highlight={offered}
                 actions={
-                  <>
-                    <Button variant={offered ? 'primary' : 'secondary'} onClick={() => toggleOffered(id)} aria-pressed={offered}>
-                      {offered ? `${t('trade.party.send')} · ${t('trade.party.tradeOrder', { n: tradeNumber })}` : t('trade.party.stays')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      aria-label={t('trade.party.remove')}
-                      title={t('trade.party.remove')}
-                      onClick={() => onChange({ party: state.party.filter((x) => x !== id), offered: state.offered.filter((x) => x !== id) })}
-                    >
-                      ✕
-                    </Button>
-                  </>
+                  offered && p.legality === 'illegal' && !allowIllegal ? (
+                    <>
+                      <span className="max-w-40 text-xs text-red-700 dark:text-red-400">{t('trade.party.illegalBlocked')}</span>
+                      <Button variant="secondary" onClick={() => toggleOffered(id)}>
+                        {t('trade.party.stays')}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant={offered ? 'primary' : 'secondary'} onClick={() => toggleOffered(id)} aria-pressed={offered}>
+                        {offered ? `${t('trade.party.send')} · ${t('trade.party.tradeOrder', { n: tradeNumber })}` : t('trade.party.stays')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        aria-label={t('trade.party.remove')}
+                        title={t('trade.party.remove')}
+                        onClick={() => onChange({ party: state.party.filter((x) => x !== id), offered: state.offered.filter((x) => x !== id) })}
+                      >
+                        ✕
+                      </Button>
+                    </>
+                  )
                 }
               />
             )

@@ -89,6 +89,7 @@ public static class TradeRockServer
         api.MapPokemon();
         api.MapTrades();
         api.MapSettings();
+        api.MapBuilder();
     }
 
     /// <summary>Endereço real após o start (a porta 0 vira uma porta livre).</summary>

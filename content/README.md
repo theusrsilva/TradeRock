@@ -8,6 +8,7 @@ mexer em código.
 - Seções "Saiba mais" usam `<details><summary>Saiba mais</summary> ... </details>`.
 - Os textos curtos da interface (botões, rótulos) ficam em `frontend/src/locales/*.json`.
 
-Hoje: `trade/` (assistente de troca). O assistente de primeira execução chega na Entrega 5.
+Hoje: `trade/` (assistente de troca), `builder/` (construtor de Pokémon) e `pkhex/` (tradução das
+mensagens de legalidade do PKHeX, em JSON com as mesmas chaves do PKHeX; chave ausente fica em inglês). O assistente de primeira execução chega na Entrega 5.
 
 Em `fases.md`, cada seção `## chave` é a instrução de uma fase da troca; a chave não aparece na tela.

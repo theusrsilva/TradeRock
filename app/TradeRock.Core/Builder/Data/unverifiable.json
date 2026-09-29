@@ -1,0 +1,19 @@
+{
+  "_comment": [
+    "Espécies de Pokémon de evento que o PKHeX pode não conhecer. Se o PKHeX não encontrar o",
+    "encontro de um Pokémon com a flag de encontro fatídico destas espécies, o status é",
+    "'não verificável' (nunca 'legal').",
+    "",
+    "Hoje a lista está VAZIA, de propósito. Pesquisa de 2026-09-29:",
+    "- A versão de Switch (27/02/2026) não teve distribuições de evento.",
+    "- Depois do Hall da Fama, o jogo dá o Mystic Ticket (Navel Rock: Lugia, Ho-Oh) e o Aurora",
+    "  Ticket (Birth Island: Deoxys). Esses encontros já existem no jogo de GBA e o PKHeX 26.8.26",
+    "  os conhece (Encounters3FRLG.cs: Lugia/Ho-Oh local 174, Deoxys local 187, forma por versão).",
+    "- Os eventos oficiais da Gen 3 (os mesmos que o PKSM injeta) estão em EncountersWC3.cs.",
+    "Fontes: nintendolife.com/news/2026/02/psa-pokemon-firered-and-leafgreen-switch-version-gives-you-the-mystic-ticket-and-aurora-ticket",
+    "        gamerant.com/pokemon-firered-leafgreen-ho-oh-lugia-deoxys-how-catch-tickets/",
+    "Se aparecer uma distribuição nova que o PKHeX ainda não conheça, adicione a espécie aqui."
+  ],
+  "species": [],
+  "reason": "Pokémon de evento que o PKHeX pode ainda não conhecer (distribuição da versão de Switch)."
+}

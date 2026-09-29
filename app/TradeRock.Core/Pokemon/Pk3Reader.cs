@@ -23,7 +23,8 @@ public sealed record Pk3Summary(
     ushort Sid,
     string OriginGame,
     int Language,
-    ushort HeldItem)
+    ushort HeldItem,
+    bool Fateful)
 {
     /// <summary>Espécie em que evolui ao ser trocado (ver <see cref="TradeEvolution"/>), ou null.</summary>
     public ushort? EvolvesOnTradeInto => TradeEvolution.EvolvesInto(Species, HeldItem);
@@ -90,6 +91,7 @@ public static class Pk3Reader
             Sid: pk.SID16,
             OriginGame: pk.Version.ToString(),
             Language: pk.Language,
-            HeldItem: (ushort)pk.HeldItem);
+            HeldItem: (ushort)pk.HeldItem,
+            Fateful: pk.FatefulEncounter);
     }
 }

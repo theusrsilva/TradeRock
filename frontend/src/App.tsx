@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { Layout } from './components/Layout'
+import BuilderPage from './pages/builder/BuilderPage'
 import HistoryPage from './pages/HistoryPage'
 import HomePage from './pages/HomePage'
 import PokemonPage from './pages/PokemonPage'
@@ -16,6 +17,8 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/trocar" element={<TradePage />} />
           <Route path="/pokemon" element={<PokemonPage />} />
+          <Route path="/criar" element={<BuilderPage />} />
+          <Route path="/criar/:id" element={<BuilderPage />} />
           <Route path="/historico" element={<HistoryPage />} />
           <Route path="/configuracoes" element={<SettingsPage />} />
           <Route path="*" element={<HomePage />} />

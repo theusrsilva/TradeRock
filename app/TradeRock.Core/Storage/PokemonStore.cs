@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using PKHeX.Core;
+using TradeRock.Core.Builder;
 using TradeRock.Core.Pokemon;
 
 namespace TradeRock.Core.Storage;
@@ -46,6 +48,9 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
             Sid = s.Sid,
             OriginGame = s.OriginGame,
             HeldItem = s.HeldItem,
+            Fateful = s.Fateful,
+            Legality = AnalyzeLegality(pk.Data),
+            LegalityPkhexVersion = LegalityReporter.PkhexVersion,
             Origin = origin,
             SourceFileName = sourceFileName is null ? null : Path.GetFileName(sourceFileName),
             AddedAt = time.GetUtcNow(),
@@ -89,6 +94,44 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
             throw new InvalidDataException($"O arquivo do Pokémon {pokemon.Id} não confere com o hash guardado.");
         return data;
     }
+
+    /// <summary>Relatório de legalidade completo de um Pokémon guardado.</summary>
+    public async Task<LegalityReport> GetLegalityReportAsync(StoredPokemon pokemon, string language, CancellationToken ct)
+    {
+        var data = await ReadDataAsync(pokemon, ct);
+        return LegalityReporter.Analyze(new PK3(data), language);
+    }
+
+    /// <summary>
+    /// Refaz a análise dos Pokémon sem resultado ou analisados por outra versão do PKHeX.
+    /// Chamado na inicialização, em segundo plano.
+    /// </summary>
+    public async Task<int> RefreshLegalityAsync(CancellationToken ct)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var version = LegalityReporter.PkhexVersion;
+        var stale = await db.Pokemon.Where(p => p.Legality == null || p.LegalityPkhexVersion != version).ToListAsync(ct);
+        foreach (var p in stale)
+        {
+            try
+            {
+                var data = await ReadDataAsync(p, ct);
+                p.Legality = AnalyzeLegality(data);
+                p.Fateful = Pk3Reader.Read(data).Summary.Fateful;
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException)
+            {
+                p.Legality = null; // arquivo sumido ou adulterado: fica sem análise
+                continue;
+            }
+            p.LegalityPkhexVersion = version;
+        }
+        await db.SaveChangesAsync(ct);
+        return stale.Count;
+    }
+
+    public static string AnalyzeLegality(byte[] data) =>
+        LegalityReporter.Analyze(new PK3(data.ToArray())).Status.ToString().ToLowerInvariant();
 
     public string FilePath(string sha256) => Path.Combine(paths.VaultDir, sha256[..2], sha256 + ".pk3");
 

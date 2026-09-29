@@ -4,8 +4,9 @@ Troque Pokémon com **Pokémon FireRed e LeafGreen do Nintendo Switch / Switch 2
 wireless local do jogo (LDN). O seu PC, ou uma plaquinha ESP32, finge ser um segundo Switch na
 sala de troca do Direct Corner.
 
-> **Estado:** em desenvolvimento (Entrega 2 de 11). O assistente de troca funciona de ponta a ponta
-> em **modo demonstração** (motor simulado). Ainda não troca com um Switch de verdade.
+> **Estado:** em desenvolvimento (Entrega 3 de 11). Já dá para **criar Pokémon legais** no app
+> (sem abrir o PKHeX) e fazer o assistente de troca de ponta a ponta em **modo demonstração**
+> (motor simulado). Ainda não troca com um Switch de verdade.
 
 O TradeRock nunca baixa, sugere fontes nem distribui `prod.keys` ou ROMs. Use só as chaves
 extraídas do seu próprio console.
@@ -129,6 +130,19 @@ Repasse a porta serial para o container:
 
 O usuário `dev` do container já está no grupo `dialout`. No host, confira qual porta apareceu
 com `ls /dev/ttyUSB* /dev/ttyACM*` depois de conectar a placa.
+
+### Construtor de Pokémon
+
+Em **Criar Pokémon**, escolha a espécie e o que quiser dela (nível, natureza, habilidade, gênero,
+shiny, IVs, EVs, golpes, item, Poké Bola, idioma, origem, treinador original). O TradeRock usa o
+**PKHeX.Core.AutoMod** para gerar uma versão legal e o **LegalityAnalysis do PKHeX** para conferir,
+a cada mudança. Quando algo não é possível, a tela mostra o que mudou ou o que impede.
+
+- **Modo avançado:** edição dos campos brutos (PID, IVs, local de encontro…), como no PKHeX.
+- **Importar:** texto do Showdown, `.pk3`/`.ek3` e `.sav` de GBA (time e caixas).
+- **Meu treinador** (Configurações): dados do seu save, usados como OT padrão e nos avisos de
+  obediência e de Pokédex Nacional.
+- Pokémon ilegal não vai para o Switch, a não ser no modo avançado de troca, com confirmação.
 
 ### Modo demonstração
 

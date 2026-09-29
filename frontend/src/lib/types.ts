@@ -1,7 +1,8 @@
 // Tipos da API (enums em snake_case, como o backend serializa).
 
 export type TradeGame = 'fire_red' | 'leaf_green'
-export type PokemonOrigin = 'imported' | 'received' | 'demo'
+export type PokemonOrigin = 'imported' | 'received' | 'demo' | 'created'
+export type LegalityStatus = 'legal' | 'illegal' | 'unverifiable'
 export type TradeSessionStatus = 'running' | 'completed' | 'partially_completed' | 'failed' | 'cancelled'
 export type SimulationScenario =
   | 'success'
@@ -64,6 +65,14 @@ export interface Pokemon {
   addedAt: string
   heldItem: number
   evolvesOnTradeInto: number | null
+  fateful: boolean
+  legality: LegalityStatus | null
+  warnings: TradeWarning[]
+}
+
+export interface TradeWarning {
+  code: 'mythical_not_fateful' | 'national_dex_unknown' | 'national_dex_required' | 'trade_evolution' | 'obedience'
+  args: Record<string, number | string>
 }
 
 export interface UploadResult {
@@ -128,6 +137,7 @@ export interface TradeHistoryItem {
 
 export interface TradeSettings {
   maxAttempts: number
+  allowIllegal: boolean
   retryDelaySeconds: number
   connectTimeoutSeconds: number
   approvalTimeoutSeconds: number
@@ -161,4 +171,181 @@ export interface StartTrade {
   game: TradeGame
   trainer: Trainer
   simulation: { scenario: SimulationScenario; failuresBeforeSuccess: number } | null
+  acceptIllegal: boolean
+}
+
+// ---- Construtor ----
+
+export interface Option {
+  value: number
+  text: string
+}
+
+export interface BuilderData {
+  species: Option[]
+  natures: Option[]
+  moves: Option[]
+  items: Option[]
+  balls: Option[]
+  languages: Option[]
+  versions: string[]
+}
+
+export interface SpeciesDetails {
+  species: number
+  name: string
+  abilities: Option[]
+  genderRatio: 'genderless' | 'male_only' | 'female_only' | 'mixed'
+  inKantoDex: boolean
+}
+
+export interface EncounterOption {
+  key: string
+  type: 'wild' | 'static' | 'gift' | 'event' | 'trade' | 'egg' | 'shadow' | 'other'
+  version: string
+  species: number
+  speciesName: string
+  location: number
+  locationName: string
+  levelMin: number
+  levelMax: number
+  fateful: boolean
+}
+
+export interface TrainerSpec {
+  name: string
+  tid: number
+  sid: number
+  gender: number
+}
+
+export interface PokemonSpec {
+  species: number
+  nickname: string | null
+  level: number
+  nature: number | null
+  abilitySlot: number | null
+  gender: 'M' | 'F' | null
+  shiny: boolean
+  ivs: number[] | null
+  evs: number[]
+  moves: number[]
+  heldItem: number
+  ball: number | null
+  language: number
+  game: TradeGame
+  encounterKey: string | null
+  trainer: TrainerSpec
+}
+
+export interface RawPokemon {
+  species: number
+  nickname: string | null
+  level: number
+  pid: number
+  abilityBit: boolean
+  ivs: number[]
+  evs: number[]
+  moves: number[]
+  ppUps: number[]
+  heldItem: number
+  ball: number
+  otName: string
+  otGender: number
+  tid: number
+  sid: number
+  version: string
+  language: number
+  metLocation: number
+  metLevel: number
+  fateful: boolean
+  friendship: number
+}
+
+export interface LegalityCheck {
+  identifier: string
+  severity: 'valid' | 'fishy' | 'invalid'
+  code: string
+  message: string
+  field: string | null
+  moveIndex: number | null
+}
+
+export interface LegalityReport {
+  status: LegalityStatus
+  checks: LegalityCheck[]
+  encounter: string | null
+  encounterLocation: string | null
+  unverifiableReason: string | null
+  pkhexVersion: string
+}
+
+export interface Pk3Summary {
+  species: number
+  speciesName: string
+  nickname: string
+  level: number
+  isShiny: boolean
+  isEgg: boolean
+  gender: number
+  otName: string
+  tid: number
+  sid: number
+  originGame: string
+  language: number
+  heldItem: number
+  fateful: boolean
+}
+
+export interface SpecDifference {
+  field: string
+  requested: string
+  obtained: string
+}
+
+export interface BuildResult {
+  generation: 'regenerated' | 'failed' | 'timeout' | 'versionmismatch' | 'invalid_request'
+  errors: string[]
+  data: string | null
+  summary: Pk3Summary | null
+  obtained: PokemonSpec | null
+  legality: LegalityReport | null
+  differences: SpecDifference[]
+  encounter: EncounterOption | null
+  raw: RawPokemon | null
+  usable: boolean
+  blockers: { code: string; args: Record<string, number | string> }[] | null
+}
+
+export interface AdvancedResult {
+  errors: string[]
+  data: string | null
+  summary: Pk3Summary | null
+  legality: LegalityReport | null
+  derived: { nature: number; gender: 'M' | 'F' | null; shiny: boolean; ability: string; pidIvMethod: string } | null
+  raw: RawPokemon | null
+}
+
+export interface MyTrainer {
+  name: string
+  tid: number
+  sid: number | null
+  gender: number
+  badges: number
+  hasNationalDex: boolean
+}
+
+export interface ShowdownImportItem {
+  spec: PokemonSpec | null
+  problems: string[]
+  text: string
+}
+
+export interface SaveUpload {
+  token: string
+  game: string
+  trainerName: string
+  tid: number
+  sid: number
+  entries: { index: number; place: 'party' | 'box'; box: number; slot: number; summary: Pk3Summary; legality: LegalityStatus }[]
 }

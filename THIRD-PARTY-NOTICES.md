@@ -9,7 +9,7 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | [kinnay/LDN](https://github.com/kinnay/LDN) | Biblioteca LDN usada pelo motor Python | GPL-3.0 |
 | [easyworld/frlg-ldn-trade-esp32](https://github.com/easyworld/frlg-ldn-trade-esp32) | Core C# e firmware ESP32 (submódulo) | AGPL-3.0 (componente LDN: GPL-3.0) |
 | [PKHeX.Core](https://github.com/kwsch/PKHeX) | Leitura e legalidade de Pokémon (NuGet) | GPL-3.0 |
-| [santacrab2/PKHeX-Plugins](https://github.com/santacrab2/PKHeX-Plugins) | PKHeX.Core.AutoMod (submódulo) | MIT |
+| [santacrab2/PKHeX-Plugins](https://github.com/santacrab2/PKHeX-Plugins) | PKHeX.Core.AutoMod: geração de Pokémon legais (submódulo) | MIT |
 | [Photino.NET](https://github.com/tryphotino/photino.NET) | Janela nativa (NuGet) | Apache-2.0 |
 | [pret/pokefirered](https://github.com/pret/pokefirered) | Referência das regras do jogo (não distribuído) | sem código incorporado |
 | [ImaEternal/FRLG-LDN-Trade-Console](https://github.com/ImaEternal/FRLG-LDN-Trade-Console) | Referência de UX (não distribuído) | EUPL-1.2, sem código incorporado |

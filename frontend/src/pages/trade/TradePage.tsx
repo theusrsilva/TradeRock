@@ -6,7 +6,7 @@ import { SwitchReady } from '../../components/illustrations/SwitchReady'
 import { Button, Card } from '../../components/ui'
 import { ApiError, api } from '../../lib/api'
 import { DEFAULT_TRAINER, trainerNameErrors } from '../../lib/trainer'
-import type { Engine, Pokemon, StartTrade, TradeSession } from '../../lib/types'
+import type { Engine, Pokemon, StartTrade, TradeSession, TradeSettings } from '../../lib/types'
 import { useTradeSession } from '../../lib/useTradeSession'
 import { LiveView } from './LiveView'
 import { PartyStep, partyProblems, type PartyState } from './PartyStep'
@@ -29,6 +29,8 @@ export default function TradePage() {
     failuresBeforeSuccess: 2,
   })
   const [startErrors, setStartErrors] = useState<string[]>([])
+  const [acceptIllegal, setAcceptIllegal] = useState(false)
+  const [allowIllegal, setAllowIllegal] = useState(false)
   const [starting, setStarting] = useState(false)
 
   const loadPokemon = useCallback(() => {
@@ -37,6 +39,7 @@ export default function TradePage() {
 
   useEffect(() => {
     loadPokemon()
+    api.get<TradeSettings>('/api/settings/trade').then((s) => setAllowIllegal(s.allowIllegal)).catch(() => undefined)
     api
       .get<Engine[]>('/api/engines')
       .then((engines) => setSimulation(engines.find((e) => e.selected)?.isSimulation ?? false))
@@ -62,8 +65,14 @@ export default function TradePage() {
     )
   }
 
+  const offeredIllegal = party.offered.some((id) => pokemon.find((p) => p.id === id)?.legality === 'illegal')
+  const problems = partyProblems(party, offeredIllegal && !allowIllegal)
   const canContinue =
-    step === 0 ? partyProblems(party).length === 0 : step === 1 ? trainerNameErrors(trainer.trainer.name).length === 0 : true
+    step === 0
+      ? problems.length === 0
+      : step === 1
+        ? trainerNameErrors(trainer.trainer.name).length === 0
+        : !offeredIllegal || acceptIllegal
 
   async function start() {
     setStarting(true)
@@ -74,6 +83,7 @@ export default function TradePage() {
       game: trainer.game,
       trainer: trainer.trainer,
       simulation: simulation ? { scenario: trainer.scenario, failuresBeforeSuccess: trainer.failuresBeforeSuccess } : null,
+      acceptIllegal,
     }
     try {
       const snapshot = await api.post<TradeSession>('/api/trades', body)
@@ -108,7 +118,7 @@ export default function TradePage() {
         ))}
       </ol>
 
-      {step === 0 && <PartyStep pokemon={pokemon} state={party} onChange={setParty} onReload={loadPokemon} />}
+      {step === 0 && <PartyStep pokemon={pokemon} state={party} onChange={setParty} onReload={loadPokemon} allowIllegal={allowIllegal} />}
       {step === 1 && <TrainerStep state={trainer} onChange={setTrainer} simulation={simulation} />}
       {step === 2 && (
         <Card className="space-y-4">
@@ -121,6 +131,12 @@ export default function TradePage() {
             ]}
           />
           <ContentFile name="trade/lembrete" />
+          {offeredIllegal && (
+            <label className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-300">
+              <input type="checkbox" className="mt-0.5" checked={acceptIllegal} onChange={(e) => setAcceptIllegal(e.target.checked)} />
+              {t('trade.party.acceptIllegal')}
+            </label>
+          )}
           {startErrors.length > 0 && (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-300">
               <p>{t('trade.startError')}</p>
@@ -134,9 +150,9 @@ export default function TradePage() {
         </Card>
       )}
 
-      {step === 0 && partyProblems(party).length > 0 && (
+      {step === 0 && problems.length > 0 && (
         <ul className="text-sm text-slate-500">
-          {partyProblems(party).map((p) => (
+          {problems.map((p) => (
             <li key={p}>• {t(p)}</li>
           ))}
         </ul>
@@ -151,7 +167,7 @@ export default function TradePage() {
             {t('common.next')}
           </Button>
         ) : (
-          <Button disabled={starting} onClick={() => void start()}>
+          <Button disabled={starting || !canContinue} onClick={() => void start()}>
             {t('trade.reminder.start')}
           </Button>
         )}

@@ -17,6 +17,7 @@ const links = [
   { to: '/', key: 'nav.home', end: true },
   { to: '/trocar', key: 'nav.trade' },
   { to: '/pokemon', key: 'nav.pokemon' },
+  { to: '/criar', key: 'nav.builder' },
   { to: '/historico', key: 'nav.history' },
   { to: '/configuracoes', key: 'nav.settings' },
 ]

@@ -40,6 +40,9 @@ namespace TradeRock.Core.Storage.Migrations
                     b.Property<long>("AddedAt")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Fateful")
+                        .HasColumnType("INTEGER");
+
                     b.Property<byte>("Gender")
                         .HasColumnType("INTEGER");
 
@@ -51,6 +54,12 @@ namespace TradeRock.Core.Storage.Migrations
 
                     b.Property<bool>("IsShiny")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Legality")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LegalityPkhexVersion")
+                        .HasColumnType("TEXT");
 
                     b.Property<byte>("Level")
                         .HasColumnType("INTEGER");

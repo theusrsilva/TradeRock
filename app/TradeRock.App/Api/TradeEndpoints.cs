@@ -15,7 +15,8 @@ public static class TradeEndpoints
         IReadOnlyList<int> OfferedSlots,
         TradeGame Game,
         TrainerDto Trainer,
-        SimulationOptions? Simulation);
+        SimulationOptions? Simulation,
+        bool AcceptIllegal = false);
 
     public sealed record TradeHistoryItemDto(
         Guid Id, DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string EngineId, bool IsSimulation,
@@ -37,12 +38,26 @@ public static class TradeEndpoints
 
             // Todo Pokémon da troca já está guardado no cofre: o time vem de lá, por id.
             var party = new List<PartyMember>();
+            var stored = new List<StoredPokemon>();
             foreach (var id in body.Party)
             {
                 if (await store.GetAsync(id, ct) is not { } p)
                     return Results.BadRequest(new { error = "invalid", errors = new[] { "unknown_pokemon" } });
                 var name = string.IsNullOrWhiteSpace(p.Nickname) ? p.SpeciesName : p.Nickname;
                 party.Add(new PartyMember(p.Id, await store.ReadDataAsync(p, ct), name));
+                stored.Add(p);
+            }
+
+            var tradeSettings = await settings.GetAsync(SettingsEndpoints.TradeSettingsKey, TradeSettings.Default, ct);
+
+            // Pokémon ilegal não vai para o Switch, a não ser no modo avançado e com confirmação explícita.
+            var offeredIllegal = body.OfferedSlots
+                .Where(slot => slot >= 0 && slot < stored.Count && stored[slot].Legality == "illegal")
+                .ToList();
+            if (offeredIllegal.Count > 0 && !(tradeSettings.AllowIllegal && body.AcceptIllegal))
+            {
+                var code = tradeSettings.AllowIllegal ? "illegal_needs_confirmation" : "illegal_pokemon";
+                return Results.BadRequest(new { error = "invalid", errors = new[] { code } });
             }
 
             var engine = await engines.GetSelectedAsync(ct);
@@ -51,7 +66,6 @@ public static class TradeEndpoints
                 new TrainerProfile(body.Trainer.Name, body.Trainer.Tid, body.Trainer.Sid),
                 engine.IsSimulation ? body.Simulation : null);
 
-            var tradeSettings = await settings.GetAsync(SettingsEndpoints.TradeSettingsKey, TradeSettings.Default, ct);
             try
             {
                 var snapshot = coordinator.Start(engine, request, tradeSettings);

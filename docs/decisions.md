@@ -97,3 +97,59 @@ dados `~/.local/share/traderock` e `%APPDATA%\TradeRock`.
 - **Sprites** do PokeAPI (via easyworld): aceitos pelo dono do projeto para distribuição entre
   amigos. Rever antes de uma distribuição pública.
 - **Enums na API** em `snake_case` (`join_requested`, `fire_red`).
+
+## D12. Construtor e legalidade (Entrega 3)
+
+**AutoMod** (`app/TradeRock.Core/Builder/AutoModEnvironment.cs`). As opções dele são estáticas e
+globais no processo, então as gerações rodam uma por vez. Opções que precisaram mudar:
+
+- `Legalizer.EnableEasterEggs = false`: o padrão (`true`) troca o Pokémon por outra espécie "de meme"
+  quando a geração falha.
+- `APILegality.EnableDevMode = true`: com ele desligado, o AutoMod consulta na internet a última
+  versão do PKHeX (`ALMVersion` → `UpdateUtil.GetLatestPKHeXVersion`). O app não faz requisições sozinho.
+- `AllowTrainerOverride = true`, `UseTrainerData = false`: sem isso, o AutoMod ignora o treinador
+  pedido e usa o do banco dele ("PKHeX", 12345/54321). O OT vai nas linhas `OT/TID/SID/OTGender`.
+- `ForceLevel100for50 = false`: o padrão troca nível 50 por 100 (times de VGC).
+- `SetMatchingBalls = false`: o padrão escolhe a Poké Bola "da cor" da espécie.
+
+**Ordem da origem.** O gerador de encontros do PKHeX lista primeiro os eventos (o Ho-Oh "MATTLE" do
+Colosseum vinha antes da Navel Rock). O TradeRock ordena os candidatos assim:
+
+1. Jogo do Switch escolhido.
+2. O outro FRLG.
+3. Emerald, depois Ruby/Sapphire.
+4. Colosseum/XD.
+
+Dentro de cada jogo, a preferência é estático/selvagem/troca/presente, depois ovo. Eventos ficam por
+último. O construtor tenta até 4 candidatos e depois o AutoMod livre, e fica com o resultado legal
+mais fiel ao pedido. Presentes no local 255 ("fateful encounter") contam como evento.
+
+**Apelido** vai pelo texto (`Apelido (Espécie)`), porque o AutoMod grava os bytes residuais do nome
+como o jogo. Gravar o apelido depois gera `TrashBytesMismatchInitial`. O **item** entra depois da
+geração (ID interno da Gen 3).
+
+**Falhas.** Quando nada dá certo, o construtor afrouxa um pedido por vez (nível mínimo, shiny,
+natureza, IVs, golpes, Poké Bola, habilidade, gênero, origem) e diz o que impede. O Pokémon
+"vazio" que o AutoMod devolve na falha não é mostrado nem pode ser salvo.
+
+**Mensagens.** O PKHeX não tem português. As 149 mensagens relevantes para a Gen 3, mais as de
+golpes, encontro e gerais, estão em `content/pt-BR/pkhex/*.json` e entram por cima do inglês.
+O resto fica em inglês. Os nomes de espécies, golpes e itens ficam em inglês (decisão do projeto).
+
+**"Não verificável".** A versão de Switch (27/02/2026) não teve distribuições. Depois do Hall da
+Fama, o jogo dá os tickets Mystic (Navel Rock: Lugia, Ho-Oh) e Aurora (Birth Island: Deoxys), e
+esses encontros o PKHeX 26.8.26 já conhece (`Encounters3FRLG.cs`). A regra existe, mas a lista de
+espécies (`Builder/Data/unverifiable.json`) começa vazia.
+
+**Regras do jogo**, conferidas na pokefirered:
+
+- **Pokédex Nacional.** `trade.c` `CanTradeSelectedMon`: sem a Nacional, não há troca de #152+ nem
+  de ovos.
+- **Mew e Deoxys** precisam da flag de encontro fatídico.
+- **Obediência.** `battle_util.c` `IsMonDisobedient`: limites 10, 30, 50 e 70 conforme as
+  insígnias; com a 8ª, obedece sempre. `IsOtherTrainer` compara o ID de 32 bits e o nome.
+- **Evolução por troca**, já tratada desde a Entrega 2.
+
+**`.sav`.** A leitura do arquivo é do PKHeX (`SaveUtil.GetSaveFile`). O PKHeX não grava um save em
+branco que ele mesmo reconheça depois, então o teste cobre a extração a partir de um `SAV3FRLG`
+em memória. **Falta testar com um `.sav` real.**

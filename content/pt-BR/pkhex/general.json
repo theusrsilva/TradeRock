@@ -1,0 +1,8 @@
+{
+  "StatNames": ["PS", "Ataque", "Defesa", "Ataque Especial", "Defesa Especial", "Velocidade"],
+  "OriginalTrainer": "Treinador original",
+  "HandlingTrainer": "Treinador atual",
+  "GenderMale": "Macho",
+  "GenderFemale": "Fêmea",
+  "GenderGenderless": "Sem gênero"
+}

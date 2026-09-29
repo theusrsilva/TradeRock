@@ -7,6 +7,7 @@ public enum PokemonOrigin
     Imported,
     Received,
     Demo,
+    Created,
 }
 
 /// <summary>
@@ -32,6 +33,15 @@ public sealed class StoredPokemon
 
     /// <summary>Item segurado (ID interno da Gen 3).</summary>
     public ushort HeldItem { get; set; }
+
+    /// <summary>Flag de encontro fatídico (eventos, Mew/Deoxys/Lugia/Ho-Oh dos tickets).</summary>
+    public bool Fateful { get; set; }
+
+    /// <summary>Resultado do LegalityAnalysis ("legal", "illegal", "unverifiable"); null = ainda não analisado.</summary>
+    public string? Legality { get; set; }
+
+    /// <summary>Versão do PKHeX.Core que fez a análise (refeita quando o PKHeX é atualizado).</summary>
+    public string? LegalityPkhexVersion { get; set; }
 
     public PokemonOrigin Origin { get; set; }
     public string? SourceFileName { get; set; }
