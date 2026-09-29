@@ -164,6 +164,28 @@ class RadioTests(unittest.TestCase):
             self.assertIn("interface-name:ldn*", radio.NM_CONF)
 
 
+class BundledToolsTests(unittest.TestCase):
+    def test_bin_embutido_vem_antes_do_sistema(self):
+        path = server.child_env()["PATH"].split(":")
+        self.assertEqual(path[0], radio.BUNDLED_BIN)
+        self.assertEqual(os.path.basename(radio.BUNDLED_BIN), "bin")
+        # <instalação>/worker/traderock_worker/radio.py → <instalação>/bin
+        self.assertEqual(os.path.dirname(radio.BUNDLED_BIN), os.path.dirname(WORKER))
+
+    def test_which_acha_o_embutido(self):
+        with tempfile.TemporaryDirectory() as d:
+            tool = os.path.join(d, "iw")
+            with open(tool, "w") as f:
+                f.write("#!/bin/sh\n")
+            os.chmod(tool, 0o755)
+            old = radio.SAFE_PATH
+            try:
+                radio.SAFE_PATH = d + ":/nao/existe"
+                self.assertEqual(radio.which("iw"), tool)
+            finally:
+                radio.SAFE_PATH = old
+
+
 class CardVerdictTests(unittest.TestCase):
     def ch(self, set_=True, sent=5, received=3):
         return {"channel": 1, "set": set_, "sent": sent, "received": received, "error": None}

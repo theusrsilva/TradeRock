@@ -225,7 +225,7 @@
     "trade_incomplete": "Só parte das trocas foi concluída.",
     "engine_error": "O motor de troca parou com um erro.",
     "invalid_request": "O pedido de troca tem um dado que o motor não aceita.",
-    "missing_tools": "Faltam programas que o motor usa (iw/iproute2). Veja o assistente.",
+    "missing_tools": "Faltam programas do sistema que o motor usa. Veja o assistente.",
     "phy_not_found": "A placa Wi-Fi escolhida não está mais no PC. Ela foi desconectada?",
     "not_root": "O componente de rede não está rodando como administrador.",
     "worker_missing": "O componente de rede não está instalado.",

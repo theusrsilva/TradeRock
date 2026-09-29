@@ -15,7 +15,8 @@ O motor com a placa Wi-Fi (`PythonLdnEngine`) **não roda em container nem no WS
 - Linux instalado de verdade (dual boot serve).
 - .NET 10 SDK e Node 24.
 - `libwebkit2gtk-4.1-0` e `libnotify4`, para a janela.
-- `iw`, `iproute2` e `pkexec`. No Ubuntu 24.04: `sudo apt install iw pkexec`.
+- `pkexec`. No Ubuntu 24.04: `sudo apt install pkexec`. `iw` e `ip` não precisam estar instalados:
+  o worker traz os seus, compilados por `scripts/build-nettools.sh`.
 - Um agente do polkit na sessão, que é o diálogo de senha. GNOME e KDE já trazem um.
 
 ## Rodar
@@ -31,6 +32,8 @@ O script:
    - o Python 3.12 do python-build-standalone, com o checksum conferido;
    - as dependências do motor, com hash fixo;
    - o frlg-ldn-trade com os patches de `engines/patches`;
+   - `iw` e `ip` estáticos, compilados na primeira vez com `scripts/build-nettools.sh` (uns 2 minutos)
+     e guardados em `~/.cache/traderock`;
 3. instala o worker com `sudo`, se ele estiver ausente ou desatualizado:
    - em `/usr/local/lib/traderock-dev`, com dono root e sem escrita para outros usuários;
    - junto com a política `/usr/share/polkit-1/actions/io.github.traderock.worker.dev.policy`;

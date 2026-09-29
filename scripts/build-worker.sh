@@ -7,6 +7,7 @@
 #            instaladas com hash fixo (worker/requirements.lock)
 #   engine/  frlg-ldn-trade do submódulo + patches de engines/patches/frlg-ldn-trade
 #   worker/  o worker (worker/traderock_worker)
+#   bin/     iw e ip estáticos (scripts/build-nettools.sh), usados antes dos do sistema
 #   BUILD-INFO.json
 #
 # Nenhuma chave, ROM ou dado do usuário entra aqui.
@@ -62,6 +63,11 @@ for p in engines/patches/frlg-ldn-trade/*.patch; do
 done
 cp engines/patches/frlg-ldn-trade/README.md "$STAGE/engine/PATCHES.md"
 
+echo "==> iw e ip estáticos"
+NETTOOLS=$(scripts/build-nettools.sh)
+mkdir -p "$STAGE/bin"
+cp "$NETTOOLS/iw" "$NETTOOLS/ip" "$STAGE/bin/"
+
 echo "==> worker"
 mkdir -p "$STAGE/worker"
 cp worker/run.py "$STAGE/worker/"
@@ -74,7 +80,8 @@ cat > "$STAGE/BUILD-INFO.json" <<JSON
 {
   "engineCommit": "$commit",
   "patches": [$(IFS=,; echo "${patches[*]}")],
-  "python": "${PY_FILE%%-x86_64*}"
+  "python": "${PY_FILE%%-x86_64*}",
+  "nettools": "$(basename "$NETTOOLS")"
 }
 JSON
 echo "==> pronto: $STAGE ($(du -sh "$STAGE" | cut -f1))"

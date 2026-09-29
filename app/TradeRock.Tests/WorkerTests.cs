@@ -355,3 +355,45 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.Contains("setup_simulated", await response.Content.ReadAsStringAsync());
     }
 }
+
+/// <summary>Sistema sem iw e sem sysctl: o worker traz o iw embutido, então só o sysctl falta.</summary>
+file sealed class NoToolsProbe : ISystemProbe
+{
+    public SystemSnapshot Read() => SetupScenarios.All["linux-compatible"] with { SimulatedScenario = null, Worker = null, MissingTools = ["iw", "sysctl"] };
+}
+
+public sealed class BundledToolsTests : IAsyncLifetime
+{
+    private readonly SessionToken _token = SessionToken.Generate();
+    private readonly string _dataDir = Directory.CreateTempSubdirectory("traderock-tools-").FullName;
+    private WebApplication _app = null!;
+
+    public async ValueTask InitializeAsync()
+    {
+        var worker = new FakeWorker { Installed = new("dev", "/usr/local/lib/traderock-dev/traderock-worker", true, true, true, BundledTools: true) };
+        _app = TradeRockServer.Create(["--data-dir", _dataDir], _token, b =>
+        {
+            b.WebHost.UseTestServer();
+            b.Services.AddSingleton<IWorkerLauncher>(worker);
+            b.Services.AddSingleton<ISystemProbe, NoToolsProbe>();
+        });
+        await _app.StartAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _app.DisposeAsync();
+        try { Directory.Delete(_dataDir, true); } catch (IOException) { }
+    }
+
+    [Fact]
+    public async Task Ferramentas_embutidas_nao_sao_cobradas()
+    {
+        var setup = _app.Services.GetRequiredService<SetupService>();
+        await setup.UpdateStateAsync(new SetupStatePatch(Radio: "wifi", Phy: "phy1"), CancellationToken.None);
+        var status = await setup.StatusAsync(CancellationToken.None);
+        var tools = status.Checks.Single(c => c.Id == "tools");
+        Assert.Equal("sysctl", tools.Args!["tools"]);
+        Assert.Equal("sudo apt install procps", tools.Fix);
+    }
+}

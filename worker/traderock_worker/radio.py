@@ -38,7 +38,11 @@ NamePolicy=
 MACAddressPolicy=none
 """
 
-SAFE_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# iw e ip embutidos (scripts/build-nettools.sh) ficam em <instalação>/bin e vêm antes dos do sistema:
+# o motor chama os dois pelo nome, então usa os nossos sem precisar de nada instalado.
+INSTALL_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BUNDLED_BIN = os.path.join(INSTALL_ROOT, "bin")
+SAFE_PATH = BUNDLED_BIN + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 
 def run(cmd):

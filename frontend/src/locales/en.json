@@ -225,7 +225,7 @@
     "trade_incomplete": "Only some of the trades were completed.",
     "engine_error": "The trade engine stopped with an error.",
     "invalid_request": "The trade request has data the engine doesn't accept.",
-    "missing_tools": "Programs the engine uses are missing (iw/iproute2). See the setup wizard.",
+    "missing_tools": "System programs the engine uses are missing. See the setup wizard.",
     "phy_not_found": "The chosen Wi-Fi card is no longer in the PC. Was it unplugged?",
     "not_root": "The network component is not running as administrator.",
     "worker_missing": "The network component is not installed.",

@@ -25,7 +25,9 @@ from .radio import NetworkConfig, Radio, SAFE_PATH, which
 GRACEFUL_CANCEL_SECONDS = 30   # primeiro SIGINT: o motor sai da sala e espera o Switch fechar
 HARD_CANCEL_SECONDS = 10       # segundo SIGINT: encerra na hora; depois disso, SIGKILL
 CARD_TEST_TIMEOUT = 60
-REQUIRED_TOOLS = ("iw", "ip")   # o motor chama os dois; sem eles quebra no meio (FileNotFoundError)
+# O motor chama iw e ip (embutidos no worker) e sysctl (procps, presente em praticamente todo Linux);
+# sem eles ele quebra no meio (FileNotFoundError) ou deixa de receber os anúncios do Switch.
+REQUIRED_TOOLS = ("iw", "ip", "sysctl")
 
 
 class Server:
@@ -112,7 +114,7 @@ class Server:
             "version": VERSION,
             "protocol": PROTOCOL,
             "root": os.geteuid() == 0,
-            "tools": {t: self.which(t) is not None for t in ("iw", "ip", "nmcli", "sysctl")},
+            "tools": {t: self.which(t) for t in ("iw", "ip", "nmcli", "sysctl")},
             "missingTools": [t for t in REQUIRED_TOOLS if self.which(t) is None],
             **self.info,
         })

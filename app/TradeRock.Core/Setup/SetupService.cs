@@ -54,8 +54,12 @@ public sealed class SetupService(SettingsStore settings, ProdKeys keys, ISystemP
         else
         {
             system = probe.Read();
-            if (system.Os == "linux")
-                system = system with { Worker = worker.Install };
+            if (system.Os == "linux" && worker.Install is { } install)
+            {
+                // O que o worker traz embutido não precisa estar instalado no sistema.
+                var missing = system.MissingTools?.Where(t => !(install.BundledTools && WorkerLocator.BundledTools.Contains(t))).ToList();
+                system = system with { Worker = install, MissingTools = missing };
+            }
         }
         var state = await settings.GetAsync(StateKey, new SetupState(), ct);
         var advice = RadioAdvisor.Advise(system, Catalog);

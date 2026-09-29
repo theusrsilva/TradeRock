@@ -19,6 +19,10 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | attrs, idna, sortedcontainers | Dependências do trio | MIT; BSD-3-Clause; Apache-2.0 |
 | [pycryptodome](https://github.com/Legrandin/pycryptodome) | Criptografia do motor e da biblioteca LDN | BSD-2-Clause e domínio público |
 | [zstandard](https://github.com/indygreg/python-zstandard) | Compressão das mensagens do jogo (motor) | BSD-3-Clause |
+| [iw](https://git.kernel.org/pub/scm/linux/kernel/git/jberg/iw.git) 6.17 | Binário estático embutido no worker (`bin/iw`) | ISC |
+| [iproute2](https://git.kernel.org/pub/scm/network/iproute2/iproute2.git) 7.2.0 | Binário `ip` estático embutido no worker (`bin/ip`) | GPL-2.0 (programa separado; fonte oficial em `scripts/build-nettools.sh`) |
+| [libnl](https://github.com/thom311/libnl) 3.12.0 | Ligada estaticamente ao `iw` embutido | LGPL-2.1 |
+| [musl](https://musl.libc.org/) (via [Zig](https://ziglang.org/) 0.16.0) | libc estática do `iw`/`ip` embutidos; o Zig só compila, não é distribuído | MIT |
 | [GB-Link/GB-Link-Switch-LDN](https://github.com/GB-Link/GB-Link-Switch-LDN) | Referência (não distribuído) | AGPL-3.0, sem código incorporado |
 | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) | Sprites 1–386 (via `assets/sprites` do easyworld) | Arte © Nintendo, Game Freak e The Pokémon Company; uso não autorizado por eles |
 | Pokémon de demonstração | `assets/party/mewtwo.pk3` e `deoxys.pk3` do easyworld | Fornecidos pelo autor do easyworld |

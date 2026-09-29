@@ -265,8 +265,18 @@ em memória. **Falta testar com um `.sav` real.**
     PR #9 do upstream (o udev renomeava `ldnclient` para `wlx<mac>`).
 
   Recarregados com `nmcli general reload conf` e `udevadm control --reload`, sem derrubar a conexão.
-- **Pré-requisitos.** `iw` e `ip` são conferidos antes (`missing_tools`); sem eles, o motor quebrava
-  no meio com `FileNotFoundError`.
+- **`iw` e `ip` embutidos.** O motor chama os dois pelo nome, e sem eles quebrava no meio com
+  `FileNotFoundError`.
+  - `scripts/build-nettools.sh` compila os dois estáticos com musl usando o Zig 0.16.0, a partir das
+    fontes oficiais com sha256 conferido: iw 6.17 + libnl 3.12.0 e iproute2 7.2.0.
+  - Não depende de nada do sistema (nem gcc, nem pkg-config, nem bison), então roda igual no CI e no
+    host.
+  - Os binários ficam em `<instalação>/bin`, que o worker põe na frente do PATH dos filhos. Juntos têm
+    ~1,5 MB.
+  - O `sysctl` (procps) continua vindo do sistema, porque está em praticamente todo Linux; se faltar,
+    o assistente mostra o comando.
+  - O `pkexec` não pode ser embutido: é setuid root e depende do polkit do sistema. Ele vira
+    dependência do .deb na Entrega 8.
 - **Teste com o Switch (etapa 6).** Enquanto não existe (Entrega 7), ele não é essencial com a placa
   Wi-Fi. A própria troca diz se as chaves conferem (`beacon_not_decrypted`).
 - **Runtime embutido.**

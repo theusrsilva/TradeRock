@@ -12,7 +12,8 @@ public sealed record WorkerInstall(
     string Launcher,
     bool PolicyInstalled,
     bool Safe,
-    bool PkexecFound);
+    bool PkexecFound,
+    bool BundledTools = false); // iw e ip embutidos em <instalação>/bin
 
 /// <summary>Instalações conhecidas do worker (scripts/install-worker.sh e, na Entrega 8, os pacotes).</summary>
 public static class WorkerLocator
@@ -28,6 +29,9 @@ public static class WorkerLocator
         new("release", "/usr/lib/traderock", "io.github.traderock.worker"),
         new("dev", "/usr/local/lib/traderock-dev", "io.github.traderock.worker.dev"),
     ];
+
+    /// <summary>Ferramentas que o worker traz prontas (scripts/build-nettools.sh).</summary>
+    public static readonly string[] BundledTools = ["iw", "ip"];
 
     public static readonly string[] PkexecPaths = ["/usr/bin/pkexec", "/bin/pkexec"];
 
@@ -45,7 +49,8 @@ public static class WorkerLocator
                 continue;
             var safe = !writable(R(c.Launcher)) && AncestorsOf(c.Launcher).All(d => !writable(R(d)));
             return new WorkerInstall(c.Flavor, c.Launcher, File.Exists(R(c.Policy)), safe,
-                PkexecPaths.Any(p => File.Exists(R(p))));
+                PkexecPaths.Any(p => File.Exists(R(p))),
+                BundledTools.All(t => File.Exists(R(Path.Combine(c.Prefix, "bin", t)))));
         }
         return null;
     }

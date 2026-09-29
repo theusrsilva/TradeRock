@@ -47,7 +47,7 @@ if [[ $worker == 1 ]]; then
   else
     echo "==> worker de desenvolvimento já está atualizado"
   fi
-  for tool in iw ip pkexec; do
+  for tool in pkexec sysctl; do  # iw e ip vêm embutidos no worker
     command -v "$tool" >/dev/null || echo "Aviso: '$tool' não encontrado. O assistente mostra como instalar." >&2
   done
 fi

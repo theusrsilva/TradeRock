@@ -51,8 +51,8 @@ public sealed record SystemSnapshot(
     LdnNetworkConfig? LdnNetwork = null,
     IReadOnlyList<string>? MissingTools = null)
 {
-    /// <summary>Ferramentas que o motor com a placa Wi-Fi chama (iw, ip).</summary>
-    public static readonly string[] WifiTools = ["iw", "ip"];
+    /// <summary>Ferramentas que o motor com a placa Wi-Fi chama. iw e ip vêm embutidos no worker.</summary>
+    public static readonly string[] WifiTools = ["iw", "ip", "sysctl"];
 
     /// <summary>Grupo que dá acesso às portas seriais: uucp no Arch e derivados, dialout nos demais.</summary>
     public string SerialGroup =>

@@ -191,7 +191,7 @@ public static class SetupChecks
     };
 
     /// <summary>Pacote que traz cada ferramenta (o "ip" vem do iproute2).</summary>
-    private static string ToolPackage(string tool) => tool == "ip" ? "iproute2" : tool;
+    private static string ToolPackage(string tool) => tool switch { "ip" => "iproute2", "sysctl" => "procps", _ => tool };
 
     private static bool IsFamily(DistroInfo? d, string family) =>
         d is not null && (d.Id == family || d.IdLike.Split(' ').Contains(family));
