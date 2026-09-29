@@ -1,4 +1,3 @@
-using System.Reflection;
 using TradeRock.Core.Engines.Worker;
 using TradeRock.Core.Setup;
 
@@ -110,8 +109,7 @@ public static class SetupEndpoints
 
         setup.MapGet("/report", async (SetupService service, CancellationToken ct) =>
         {
-            var version = typeof(SetupEndpoints).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "?";
-            var report = SetupReport.Build(await service.StatusAsync(ct), version.Split('+')[0]);
+            var report = SetupReport.Build(await service.StatusAsync(ct), AppVersion.Current);
             return Results.Text(report, "text/markdown; charset=utf-8");
         });
 

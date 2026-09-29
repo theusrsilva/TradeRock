@@ -512,6 +512,21 @@ export interface SwitchTestResult {
   keysSavedAt: string | null
 }
 
+export interface WorkerInstallInfo {
+  flavor: 'release' | 'appimage' | 'dev'
+  launcher: string
+  policyInstalled: boolean
+  safe: boolean
+  pkexecFound: boolean
+}
+
+/** /api/worker: o componente de rede instalado e o embutido no AppImage. */
+export interface WorkerInfo {
+  install: WorkerInstallInfo | null
+  bundled: { available: boolean; installed: boolean; upToDate: boolean }
+  running: boolean
+}
+
 export interface SetupStatus {
   system: {
     os: 'linux' | 'windows' | 'other'

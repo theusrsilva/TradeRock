@@ -41,12 +41,17 @@ public static class ServiceSetup
         // Worker privilegiado (placa Wi-Fi, só Linux). Em desenvolvimento, a instalação dev
         // (scripts/install-worker.sh dev) vem antes da release.
         var development = string.Equals(config["environment"], "Development", StringComparison.OrdinalIgnoreCase);
+        // No AppImage, o worker vem embutido (<app>/../worker-payload) e é instalado na primeira vez.
+        var payload = OperatingSystem.IsLinux() ? BundledWorker.FindPayload(AppContext.BaseDirectory) : null;
         services.AddSingleton(new WorkerOptions
         {
             PreferDev = config.GetValue("Engines:PythonLdn:PreferDevWorker", development),
+            PreferAppImage = payload is not null,
         });
         services.AddSingleton<IWorkerLauncher, PkexecWorkerLauncher>();
         services.AddSingleton<WorkerHost>();
+        services.AddSingleton<IPrivilegedShell, PkexecShell>();
+        services.AddSingleton(sp => new BundledWorker(sp.GetRequiredService<IPrivilegedShell>(), payload));
 
         // Motores: o primeiro registrado é o padrão (simulação). O ESP32 chega na Entrega 9.
         var fake = new FakeEngineOptions

@@ -23,6 +23,7 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | [iproute2](https://git.kernel.org/pub/scm/network/iproute2/iproute2.git) 7.2.0 | Binário `ip` estático embutido no worker (`bin/ip`) | GPL-2.0 (programa separado; fonte oficial em `scripts/build-nettools.sh`) |
 | [libnl](https://github.com/thom311/libnl) 3.12.0 | Ligada estaticamente ao `iw` embutido | LGPL-2.1 |
 | [musl](https://musl.libc.org/) (via [Zig](https://ziglang.org/) 0.16.0) | libc estática do `iw`/`ip` embutidos; o Zig só compila, não é distribuído | MIT |
+| [AppImage/type2-runtime](https://github.com/AppImage/type2-runtime) | Runtime no início do AppImage (monta e roda o app) | MIT; ligado estaticamente a squashfuse (BSD-2-Clause), libfuse 3 (LGPL-2.1), zstd e zlib (BSD/zlib). Fonte no repositório indicado |
 | [GB-Link/GB-Link-Switch-LDN](https://github.com/GB-Link/GB-Link-Switch-LDN) | Referência (não distribuído) | AGPL-3.0, sem código incorporado |
 | [PokeAPI/sprites](https://github.com/PokeAPI/sprites) | Sprites 1–386 (via `assets/sprites` do easyworld) | Arte © Nintendo, Game Freak e The Pokémon Company; uso não autorizado por eles |
 | Pokémon de demonstração | `assets/party/mewtwo.pk3` e `deoxys.pk3` do easyworld | Fornecidos pelo autor do easyworld |

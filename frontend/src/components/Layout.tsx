@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink } from 'react-router'
+import { Link, NavLink } from 'react-router'
 import { api } from '../lib/api'
+import { useAppInfo } from '../lib/appInfo'
 import type { Engine, TradeSession } from '../lib/types'
 import { GlobalDrop } from './GlobalDrop'
 import { Badge, Button, Modal } from './ui'
@@ -28,6 +29,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const [demo, setDemo] = useState(false)
   const [closeRequested, setCloseRequested] = useState(false)
   const [closing, setClosing] = useState(false)
+  const info = useAppInfo()
 
   useEffect(() => {
     api
@@ -100,6 +102,12 @@ export function Layout({ children }: { children: ReactNode }) {
       </header>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
+      <footer className="mx-auto w-full max-w-7xl px-4 pb-4 text-xs text-slate-500">
+        TradeRock {info?.version} · AGPL-3.0 ·{' '}
+        <Link to="/sobre" className="underline hover:text-sky-700 dark:hover:text-sky-400">
+          {t('about.link')}
+        </Link>
+      </footer>
       <GlobalDrop />
 
       {closeRequested && (

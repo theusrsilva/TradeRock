@@ -31,7 +31,7 @@ public sealed record SetupStatePatch(
     bool? Completed = null);
 
 /// <summary>Assistente de primeira execução: estado, leitura do sistema (ou simulação), chaves e verificações.</summary>
-public sealed class SetupService(SettingsStore settings, ProdKeys keys, ISystemProbe probe, WorkerHost worker, TimeProvider time)
+public sealed class SetupService(SettingsStore settings, ProdKeys keys, ISystemProbe probe, WorkerHost worker, BundledWorker bundled, TimeProvider time)
 {
     public const string StateKey = "setup.state";
     public const string SimulationKey = "setup.simulation";
@@ -54,6 +54,8 @@ public sealed class SetupService(SettingsStore settings, ProdKeys keys, ISystemP
         else
         {
             system = probe.Read();
+            if (system.Os == "linux")
+                system = system with { BundledWorker = bundled.Status() };
             if (system.Os == "linux" && worker.Install is { } install)
             {
                 // O que o worker traz embutido não precisa estar instalado no sistema.

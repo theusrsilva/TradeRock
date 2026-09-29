@@ -68,6 +68,14 @@ public sealed class SetupTranslationTests
                 yield return check;
         }
 
+        // AppImage: worker embutido não instalado ou de outra versão.
+        foreach (var bundled in new BundledWorkerStatus[] { new(true, false, false), new(true, true, false) })
+        {
+            var system = linux with { BundledWorker = bundled, Worker = bundled.Installed ? new("appimage", "/x", true, true, true) : null };
+            foreach (var check in SetupChecks.Evaluate(system, RadioAdvisor.Advise(system, catalog), new SetupState { Radio = "wifi", Phy = "phy1" }, null, catalog))
+                yield return check;
+        }
+
         foreach (var worker in workers)
         foreach (var test in tests)
         foreach (var net in new[] { new LdnNetworkConfig(false, false), new LdnNetworkConfig(true, true) })
@@ -90,7 +98,7 @@ public sealed class SetupTranslationTests
         "invalid_request", "missing_tools", "phy_not_found", "busy", "not_root", "worker_missing", "worker_unsafe",
         "worker_policy_missing", "pkexec_missing", "auth_cancelled", "not_authorized", "worker_exited",
         "worker_timeout", "worker_version", "worker_start_failed", "wifi_not_configured", "keys_missing",
-        "beacon_test_crashed",
+        "beacon_test_crashed", "worker_install_failed", "worker_not_bundled",
     ];
 
     /// <summary>Resultados do teste com o Switch (beacon_child.py verdict), menos o aprovado.</summary>

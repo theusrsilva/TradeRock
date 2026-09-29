@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=TradeRock
+GenericName=Pokémon trading
+GenericName[pt_BR]=Troca de Pokémon
+Comment=Trade Pokémon with FireRed and LeafGreen on Nintendo Switch
+Comment[pt_BR]=Troque Pokémon com o FireRed e o LeafGreen do Nintendo Switch
+Exec=traderock
+Icon=io.github.traderock.TradeRock
+Terminal=false
+Categories=Game;
+Keywords=Pokemon;Pokémon;FireRed;LeafGreen;Switch;LDN;trade;

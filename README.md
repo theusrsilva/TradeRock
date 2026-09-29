@@ -4,16 +4,53 @@ Troque Pokémon com **Pokémon FireRed e LeafGreen do Nintendo Switch / Switch 2
 wireless local do jogo (LDN). O seu PC, ou uma plaquinha ESP32, finge ser um segundo Switch na
 sala de troca do Direct Corner.
 
-> **Estado:** em desenvolvimento (Entrega 7 de 11). Já dá para **criar Pokémon legais** no app,
+> **Estado:** em desenvolvimento (Entrega 8 de 11). Já dá para **criar Pokémon legais** no app,
 > organizá-los no **cofre** (caixas, tags, busca, exportação, injeção em `.sav` de GBA), fazer o
 > assistente de troca de ponta a ponta em **modo demonstração** (motor simulado) e seguir o
 > **assistente de configuração**, que confere o sistema, a placa Wi-Fi ou o ESP32 e o `prod.keys`.
 > O motor com a **placa Wi-Fi** (worker + polkit + frlg-ldn-trade) e o **teste com o Switch** (a sala é
 > encontrada e decifrada, sem entrar nela) estão prontos, mas **ainda não foram testados com um Switch
-> de verdade**. Veja [docs/dev-host.md](docs/dev-host.md).
+> de verdade**. Veja [docs/dev-host.md](docs/dev-host.md). Já há pacotes para Linux: **.deb** e
+> **AppImage**.
 
 O TradeRock nunca baixa, sugere fontes nem distribui `prod.keys` ou ROMs. Use só as chaves
 extraídas do seu próprio console.
+
+## Instalação (Linux)
+
+Baixe o pacote da versão mais recente na página de
+[Releases](https://github.com/theusrsilva/TradeRock/releases). Não há verificação automática de
+atualizações: para atualizar, baixe o pacote novo e instale por cima.
+
+**Debian, Ubuntu e derivados (.deb).** Ubuntu 22.04 ou mais novo, Debian 12 ou mais novo:
+
+```bash
+sudo apt install ./traderock_<versão>_amd64.deb
+```
+
+O `apt` instala as dependências (WebKitGTK 4.1, libnotify, pkexec, procps). O TradeRock aparece no
+menu de aplicativos, ou rode `traderock`. O componente de rede já vem instalado em
+`/usr/lib/traderock`. Para remover: `sudo apt remove traderock`. Os seus Pokémon, chaves e
+configurações ficam em `~/.local/share/traderock`.
+
+**Outras distribuições (AppImage).**
+
+```bash
+chmod +x TradeRock-<versão>-x86_64.AppImage
+./TradeRock-<versão>-x86_64.AppImage
+```
+
+Precisa do WebKitGTK 4.1 e do libnotify do sistema (o app mostra o comando se faltarem) e do
+`pkexec` (polkit). Para usar a placa Wi-Fi, o assistente oferece **instalar o componente de rede**
+na etapa 4. Depois da sua confirmação e da senha de administrador, ele é copiado para
+`/usr/local/lib/traderock`, com uma política própria do polkit, porque o sistema não deixa rodar
+como administrador um programa de dentro do AppImage. Quando uma versão nova do AppImage traz outro
+componente, o assistente oferece atualizar. Para remover: **Configurações → Motor de troca →
+Remover o componente de rede**. Sistemas com `/usr` somente leitura (Fedora Silverblue e parecidos)
+não aceitam essa instalação.
+
+Cada Release traz também o `SHA256SUMS` e o código-fonte completo (com os submódulos) e o das
+ferramentas de rede embutidas (veja **Sobre** no rodapé do app).
 
 ## Plataformas
 
@@ -76,7 +113,7 @@ frontend/                React + Vite + TypeScript + Tailwind
 engines/                 submódulos (motores e AutoMod)
 firmware/                firmware ESP32 embutido (vem do submódulo do easyworld)
 content/                 textos explicativos em markdown, por idioma
-packaging/               AppImage, .deb, polkit, instalador Windows
+packaging/               atalho, ícone e script de instalação do worker (Linux); instalador Windows
 docs/                    decisões e guias de desenvolvimento
 ```
 
@@ -254,7 +291,23 @@ não fica acessível: use um ESP32 ou o Linux instalado de verdade.
 usuário ao grupo `dialout` (Arch: `uucp`), depois saia e entre de novo na sessão. Se o `brltty`
 estiver rodando e você não usa display braile, desative-o. O assistente mostra os comandos exatos.
 
+**AppImage: "o componente de rede não foi instalado".** Use o botão da etapa 4 do assistente. Se o
+diálogo de senha não aparecer, falta um agente do polkit na sessão (GNOME e KDE já trazem um).
+
+## Pacotes
+
+```bash
+scripts/package-linux.sh            # dist/traderock_<versão>_amd64.deb e dist/TradeRock-<versão>-x86_64.AppImage
+scripts/package-linux.sh 0.8.1 --sources   # também o código-fonte e o das ferramentas de rede
+sudo scripts/smoke-linux.sh deb dist/traderock_*.deb          # teste de fumaça (instala e remove)
+sudo scripts/smoke-linux.sh appimage dist/TradeRock-*.AppImage
+```
+
+No CI (`.github/workflows/ci.yml`), cada push gera os pacotes como artefatos e testa o .deb no Ubuntu
+22.04 e 24.04 e no Debian 12 e 13. Uma tag `v*` publica o Release. Detalhes em
+[packaging/README.md](packaging/README.md) e na decisão D17.
+
 ## Licença e créditos
 
-TradeRock é software livre sob a **GNU AGPL-3.0**. Veja [LICENSE](LICENSE) e
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+TradeRock é software livre sob a **GNU AGPL-3.0**. Veja [LICENSE](LICENSE),
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) e a tela **Sobre** do app.

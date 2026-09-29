@@ -6,6 +6,13 @@ internal static class Program
     [STAThread] // exigido pelo WebView2 no Windows
     private static int Main(string[] args)
     {
+        // Antes de tudo: não cria pasta de dados nem banco (usado pelos pacotes e pelo CI).
+        if (args is ["--version"])
+        {
+            Console.WriteLine($"TradeRock {AppVersion.Current}");
+            return 0;
+        }
+
         var app = TradeRockServer.Create(args);
         var options = app.Services.GetRequiredService<ServerOptions>();
         var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("TradeRock");

@@ -73,6 +73,22 @@ Opções:
    - Log de diagnóstico: rode com `--Logging:LogLevel:TradeRock=Debug` para ver as linhas `worker:`,
      que são o log verboso do motor. Nenhum desses logs tem chaves.
 
+## Testar os pacotes
+
+Gere com `scripts/package-linux.sh` (ou baixe o artefato `traderock-linux` do CI).
+
+- **.deb:** remova a instalação de desenvolvimento (`scripts/dev-host.sh --uninstall-worker`) e rode
+  `sudo apt install ./dist/traderock_*.deb`. Abra pelo menu de aplicativos e siga o roteiro acima. O
+  diálogo de senha deve citar "Rodar o componente de rede do TradeRock".
+- **AppImage:**
+  1. `chmod +x dist/TradeRock-*.AppImage` e abra com dois cliques ou pelo terminal (precisa de FUSE).
+  2. Etapa 4 → **Instalar o componente de rede**. O diálogo de senha cita `/bin/sh`: é o script de
+     instalação. Confira `/usr/local/lib/traderock` (dono root) e
+     `/usr/share/polkit-1/actions/io.github.traderock.worker.appimage.policy`.
+  3. Teste a placa: o diálogo agora cita o componente de rede.
+  4. **Configurações → Remover o componente de rede** apaga os dois.
+- `sudo scripts/smoke-linux.sh deb|appimage <pacote>` faz a parte automática sem Switch.
+
 ## Como as peças se encaixam
 
 ```

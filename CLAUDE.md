@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D16).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D17).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -26,7 +26,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 - Nunca distribuir prod.keys nem ROMs.
 - O app principal **nunca** roda como root e nunca pede nem guarda senha. O root fica isolado no
   worker (pkexec + polkit, D15).
-- Sem telemetria. A verificação de atualizações é opcional e desligável (Entrega 8).
+- Sem telemetria e sem verificação de atualizações: o app não consulta a internet (D17).
 
 ## Decisões do autor (resumo)
 
@@ -43,6 +43,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Cofre | Caixas de 30 posições com Caixa de entrada. Lixeira recuperável. Injeção em `.sav` sobrescreve, com backup. Exportação padrão: .pk3 de 100 bytes |
 | Assistente | RTL8821CE também recomendada. Seletor de simulação só em desenvolvimento |
 | Worker | Em Python (runtime embutido). Canal por stdin/stdout em vez de socket Unix. Polkit `auth_admin_keep`. Patches do FRLG-LDN-Trade-Console aplicados. `iw` e `ip` estáticos embutidos (o autor não quer mandar a pessoa instalar pré-requisitos) |
+| Pacotes | .deb e AppImage. Sem verificação de atualizações (a pessoa baixa o Release). Tag `v*` publica o Release direto. Tela Sobre com créditos e oferta do código-fonte |
 | Teste com o Switch | Até 30 s. Sessão de outro jogo decifrada não aprova. Vale até mudar a placa ou o prod.keys (não expira) |
 
 ## Estado das entregas
@@ -56,24 +57,15 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 5 | Catálogo de hardware + assistente de primeira execução (7 etapas) | feita |
 | 6 | Worker privilegiado + polkit + PythonLdnEngine + fluxo de teste no host | feita, **sem teste com hardware real** |
 | 7 | Teste do beacon com a placa Wi-Fi (etapa 6 do assistente) | feita, **sem teste com hardware real** |
-| 8 | Empacotamento Linux (AppImage e .deb) e CI | **próxima** |
-| 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | — |
+| 8 | Empacotamento Linux (AppImage e .deb) e CI | feita; AppImage com FUSE, pkexec e janela **não testados** |
+| 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | **próxima** |
 | 10 | Modo servidor na rede | — |
 | 11 | Build e instalador Windows (só ESP32) | — |
 
-A branch mais recente é `entrega-7-beacon`. O `main` do GitHub ainda tem só o commit inicial.
+A branch mais recente é `entrega-8-pacotes`. O `main` do GitHub ainda tem só o commit inicial.
 
 ## Pendências já combinadas
 
-- **Entrega 8:**
-  - atualização do catálogo de hardware e do app pelo GitHub Releases, opcional e desligável; precisa
-    da URL do repositório (`theusrsilva/TradeRock`);
-  - `.deb` com `Depends: pkexec | policykit-1` e `procps`;
-  - oferecer o código-fonte do `ip` embutido, que é GPL-2.0;
-  - AppImage: copiar o worker para uma pasta do root na primeira execução, com confirmação, porque
-    o `exec.path` do polkit não pode apontar para dentro do AppImage.
-
-  Detalhes em D15 e em `scripts/build-worker.sh` / `install-worker.sh`.
 - **Entrega 9:** passo do firmware do ESP32 em Configurações. Primeiro detectar se o firmware já está
   gravado (`LDN_HELLO` → `LDN_HELLO 1 <modelo> <caps> <mtu>`, ou `esptool verify-flash`); só depois
   oferecer gravar. O firmware do easyworld usa o ESP-IDF v6.1 fixo, no commit fff9895c. O GB-Link
@@ -83,7 +75,8 @@ A branch mais recente é `entrega-7-beacon`. O `main` do GitHub ainda tem só o 
   - `.sav` real e o formato de save NSO do Switch;
   - troca com Switch real;
   - teste com o Switch (Entrega 7, D16);
-  - teste da placa com root.
+  - teste da placa com root;
+  - AppImage montado por FUSE, instalação do worker pelo pkexec (diálogo) e a janela a partir dos pacotes.
 
   O roteiro de teste no host está em [docs/dev-host.md](docs/dev-host.md).
 
@@ -98,7 +91,8 @@ A branch mais recente é `entrega-7-beacon`. O `main` do GitHub ainda tem só o 
 | `frontend/` | React + Vite + TS + Tailwind; o build vai para `app/TradeRock.App/wwwroot` |
 | `catalog/hardware-catalog.json` | Catálogo de placas |
 | `engines/` | Submódulos (frlg-ldn-trade, frlg-ldn-trade-esp32, PKHeX-Plugins) e `patches/` |
-| `scripts/` | `ci.sh`, `dev-host.sh`, `build-worker.sh`, `build-nettools.sh`, `install-worker.sh` |
+| `scripts/` | `ci.sh`, `dev-host.sh`, `build-worker.sh`, `build-nettools.sh`, `install-worker.sh`, `package-linux.sh`, `smoke-linux.sh` |
+| `packaging/linux/` | Atalho, ícone e `worker-setup.sh` (instalação do worker do AppImage como root) |
 
 ## Ambiente
 

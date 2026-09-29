@@ -49,7 +49,8 @@ public sealed record SystemSnapshot(
     string? SimulatedScenario = null,
     WorkerInstall? Worker = null,
     LdnNetworkConfig? LdnNetwork = null,
-    IReadOnlyList<string>? MissingTools = null)
+    IReadOnlyList<string>? MissingTools = null,
+    BundledWorkerStatus? BundledWorker = null) // só no AppImage: o worker embutido para instalar
 {
     /// <summary>Ferramentas que o motor com a placa Wi-Fi chama. iw e ip vêm embutidos no worker.</summary>
     public static readonly string[] WifiTools = ["iw", "ip", "sysctl"];

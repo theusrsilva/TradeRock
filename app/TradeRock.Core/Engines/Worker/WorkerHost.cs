@@ -18,6 +18,9 @@ public sealed class WorkerOptions
     /// <summary>Em desenvolvimento a instalação dev (scripts/install-worker.sh dev) vem antes da release.</summary>
     public bool PreferDev { get; init; }
 
+    /// <summary>Rodando do AppImage (há um worker embutido para instalar): a cópia instalada por ele vem primeiro.</summary>
+    public bool PreferAppImage { get; init; }
+
     /// <summary>Tempo para a pessoa digitar a senha no diálogo do sistema.</summary>
     public TimeSpan AuthTimeout { get; init; } = TimeSpan.FromMinutes(5);
 }
@@ -25,7 +28,7 @@ public sealed class WorkerOptions
 /// <summary>Inicia o launcher do worker via pkexec. A senha é pedida pelo polkit, nunca pelo app.</summary>
 public sealed class PkexecWorkerLauncher(WorkerOptions options) : IWorkerLauncher
 {
-    public WorkerInstall? Find() => OperatingSystem.IsLinux() ? WorkerLocator.Find(preferDev: options.PreferDev) : null;
+    public WorkerInstall? Find() => OperatingSystem.IsLinux() ? WorkerLocator.Find(preferDev: options.PreferDev, preferAppImage: options.PreferAppImage) : null;
 
     public Task<IWorkerConnection> LaunchAsync(WorkerInstall install, CancellationToken ct)
     {
@@ -214,6 +217,28 @@ public sealed class WorkerHost(IWorkerLauncher launcher, WorkerOptions options, 
     {
         var client = await GetAsync(ct);
         return await client.RequestAsync("net_install", null, TimeSpan.FromSeconds(60), ct);
+    }
+
+    /// <summary>
+    /// Encerra o worker da sessão (ele devolve o rádio e sai). Usado antes de instalar ou remover os
+    /// arquivos dele; a próxima operação inicia outro (e pede a senha de novo).
+    /// </summary>
+    public async Task StopAsync(CancellationToken ct)
+    {
+        await _startLock.WaitAsync(ct);
+        try
+        {
+            if (_client is not null)
+            {
+                await _client.DisposeAsync();
+                _client = null;
+                Hello = null;
+            }
+        }
+        finally
+        {
+            _startLock.Release();
+        }
     }
 
     public async ValueTask DisposeAsync()

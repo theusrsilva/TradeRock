@@ -29,7 +29,7 @@ public class WorkerLocatorTests
             Directory.CreateDirectory(Path.GetDirectoryName(full)!);
             File.WriteAllText(full, "");
         }
-        foreach (var c in WorkerLocator.Candidates.Where(c => c.Flavor == "release" ? release : dev))
+        foreach (var c in WorkerLocator.Candidates.Where(c => c.Flavor == "release" ? release : c.Flavor == "dev" && dev))
         {
             Touch(c.Launcher);
             if (policies)

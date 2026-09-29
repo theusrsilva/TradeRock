@@ -1,4 +1,3 @@
-using System.Reflection;
 using TradeRock.Core.Pokemon;
 
 namespace TradeRock.App.Api;
@@ -7,8 +6,7 @@ public static class AppEndpoints
 {
     public static void MapAppEndpoints(this IEndpointRouteBuilder api)
     {
-        var version = typeof(AppEndpoints).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
+        var version = AppVersion.Current;
 
         api.MapGet("/health", (IHostEnvironment env, WindowBridge window) => Results.Ok(new
         {

@@ -8,6 +8,7 @@ import { trainerNameErrors } from '../lib/trainer'
 import type { Engine, MyTrainer, Pokemon, TradeSettings } from '../lib/types'
 import { Link } from 'react-router'
 import { useTheme, type ThemeChoice } from '../theme'
+import { AppImageWorkerSettings } from './setup/AppImageWorker'
 
 type NumberSetting = Exclude<keyof TradeSettings, 'allowIllegal'>
 
@@ -182,6 +183,7 @@ export default function SettingsPage() {
             </li>
           ))}
         </ul>
+        <AppImageWorkerSettings />
       </Card>
 
       {settings && (

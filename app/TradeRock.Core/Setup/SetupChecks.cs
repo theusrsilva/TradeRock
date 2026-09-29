@@ -230,7 +230,17 @@ public static class SetupChecks
         return new SetupCheck("switch_test", 6, CheckStatus.Error, true, "switch_test_failed", args);
     }
 
-    private static SetupCheck WorkerCheck(SystemSnapshot system) => system.Worker switch
+    private static SetupCheck WorkerCheck(SystemSnapshot system) => system switch
+    {
+        // AppImage: o worker vem embutido e é instalado (ou atualizado) pelo próprio app, com confirmação.
+        { BundledWorker: { Available: true, Installed: false }, Worker: null or { Flavor: "appimage" } } =>
+            new SetupCheck("worker", 4, CheckStatus.Error, true, "worker_appimage_missing"),
+        { BundledWorker: { Available: true, UpToDate: false }, Worker: { Flavor: "appimage" } } =>
+            new SetupCheck("worker", 4, CheckStatus.Error, true, "worker_appimage_outdated"),
+        _ => InstalledWorkerCheck(system),
+    };
+
+    private static SetupCheck InstalledWorkerCheck(SystemSnapshot system) => system.Worker switch
     {
         null => new SetupCheck("worker", 4, CheckStatus.Error, true, "worker_missing"),
         { PkexecFound: false } => new SetupCheck("worker", 4, CheckStatus.Error, true, "pkexec_missing",

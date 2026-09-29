@@ -3,7 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,3 +24,111 @@ jobs:
 
       - name: Build e testes
         run: docker run --rm -v "$PWD:/workspace" -w /workspace traderock-dev scripts/ci.sh
+
+  # .deb e AppImage (scripts/package-linux.sh). Na tag, também o código-fonte completo e o das
+  # ferramentas de rede embutidas, que vão no Release.
+  package:
+    needs: build-test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Versão
+        id: version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            echo "args=--sources" >> "$GITHUB_OUTPUT"
+          else
+            base=$(sed -n 's|.*<Version>\(.*\)</Version>.*|\1|p' Directory.Build.props)
+            echo "version=$base-ci.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Python embutido, Zig, fontes e binários do iw/ip e runtime do AppImage (todos com sha256 fixo).
+      - name: Cache de downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/traderock
+          key: traderock-${{ hashFiles('scripts/build-worker.sh', 'scripts/build-nettools.sh', 'scripts/package-linux.sh', 'worker/requirements.lock') }}
+
+      - name: Imagem de build
+        run: docker build -t traderock-dev --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) .devcontainer
+
+      - name: Pacotes
+        run: |
+          mkdir -p ~/.cache/traderock
+          docker run --rm -v "$PWD:/workspace" -v "$HOME/.cache/traderock:/home/dev/.cache/traderock" -w /workspace \
+            traderock-dev scripts/package-linux.sh "${{ steps.version.outputs.version }}" ${{ steps.version.outputs.args }}
+
+      - name: Conferir o .deb (tudo do root, nada gravável por outros)
+        run: |
+          deb=$(ls dist/*.deb)
+          dpkg-deb -I "$deb"
+          if dpkg-deb -c "$deb" | awk '$2 != "root/root"' | grep .; then echo "arquivo que não é do root"; exit 1; fi
+          if dpkg-deb -c "$deb" | awk '$1 !~ /^l/ && substr($1,6,1) == "w" || $1 !~ /^l/ && substr($1,9,1) == "w"' | grep .; then
+            echo "arquivo gravável por grupo/outros"; exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: traderock-linux
+          path: dist/
+          if-no-files-found: error
+
+  # Instala o .deb em sistemas limpos, roda o app como usuário comum e fala com o worker como root.
+  smoke-deb:
+    needs: package
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:22.04", "ubuntu:24.04", "debian:12", "debian:13"]
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: traderock-linux
+          path: dist
+      - name: Fumaça
+        run: bash scripts/smoke-linux.sh deb dist/*.deb
+
+  # AppImage (extrair e rodar, sem FUSE) + instalação do worker embutido com o script do app.
+  smoke-appimage:
+    needs: package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: traderock-linux
+          path: dist
+      - name: Bibliotecas da janela (o app confere na inicialização)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libwebkit2gtk-4.1-0 libnotify4
+      - name: Fumaça
+        run: chmod +x dist/*.AppImage && sudo bash scripts/smoke-linux.sh appimage dist/*.AppImage
+
+  # Tag v*: publica o Release (direto, sem rascunho) com os pacotes, o código-fonte e os checksums.
+  release:
+    if: github.ref_type == 'tag'
+    needs: [package, smoke-deb, smoke-appimage]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: traderock-linux
+          path: dist
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          prerelease=""
+          [[ $version == *-* ]] && prerelease="--prerelease"
+          (cd dist && sha256sum -c SHA256SUMS)
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" \
+            --title "TradeRock $version" --generate-notes $prerelease

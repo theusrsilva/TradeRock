@@ -8,6 +8,7 @@ import SettingsPage from './pages/SettingsPage'
 import SetupPage from './pages/setup/SetupPage'
 import TradePage from './pages/trade/TradePage'
 import { useTheme } from './theme'
+import AboutPage from './pages/AboutPage'
 
 export default function App() {
   useTheme() // aplica o tema salvo em qualquer página
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/historico" element={<HistoryPage />} />
           <Route path="/configuracoes" element={<SettingsPage />} />
           <Route path="/configurar" element={<SetupPage />} />
+          <Route path="/sobre" element={<AboutPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>
       </Layout>

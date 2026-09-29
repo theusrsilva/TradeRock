@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui'
 import { api, ApiError } from '../../lib/api'
 import type { CardTestResult, SetupStatus } from '../../lib/types'
+import { AppImageWorkerInstall } from './AppImageWorker'
 
 /**
  * Etapa 4 com a placa Wi-Fi: teste real da placa e configuração do NetworkManager.
@@ -68,6 +69,7 @@ export function WifiActions({
       </ul>
 
       {!workerOk && <p className="text-sm text-amber-700 dark:text-amber-300">{t('wizard.cardTest.needsWorker')}</p>}
+      <AppImageWorkerInstall status={status} onStatus={onStatus} />
       {workerOk && !toolsOk && <p className="text-sm text-amber-700 dark:text-amber-300">{t('wizard.cardTest.needsTools')}</p>}
 
       <div className="flex flex-wrap items-center gap-2">

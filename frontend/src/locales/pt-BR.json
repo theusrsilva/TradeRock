@@ -242,7 +242,9 @@
     "keys_missing": "O prod.keys não foi enviado.",
     "card_test_crashed": "O teste da placa parou com um erro.",
     "busy": "O componente de rede ainda está terminando a operação anterior. Tente de novo em alguns segundos.",
-    "beacon_test_crashed": "O teste com o Switch parou com um erro. Tente de novo; se continuar, exporte o relatório no resumo."
+    "beacon_test_crashed": "O teste com o Switch parou com um erro. Tente de novo; se continuar, exporte o relatório no resumo.",
+    "worker_install_failed": "A instalação do componente de rede falhou. Tente de novo; se continuar, exporte o relatório no resumo.",
+    "worker_not_bundled": "Esta versão do TradeRock não traz o componente de rede para instalar."
   },
   "history": {
     "title": "Histórico de trocas",
@@ -708,7 +710,7 @@
       "esp32_serial_test_pending": "Teste de comunicação com o ESP32.",
       "switch_test_ok": "Teste com o Switch aprovado: a sala foi encontrada no canal {{channel}} e decifrada. Rádio e prod.keys confirmados.",
       "switch_test_pending": "Teste com o Switch (sala encontrada e decifrada).",
-      "worker_missing": "Componente de rede não instalado. Ele vem com o pacote do TradeRock (.deb); se você compilou o app, rode scripts/dev-host.sh.",
+      "worker_missing": "Componente de rede não instalado. Ele vem com o pacote do TradeRock (.deb); no AppImage, o assistente oferece instalar. Se você compilou o app, rode scripts/dev-host.sh.",
       "pkexec_missing": "Falta o pkexec, que o sistema usa para pedir a senha de administrador.",
       "worker_unsafe": "A instalação do componente de rede ({{path}}) pode ser alterada sem ser administrador. Por segurança, o TradeRock não vai usá-la. Instale de novo.",
       "worker_policy_missing": "A permissão do componente de rede (política do polkit) não está instalada. Instale o TradeRock de novo.",
@@ -724,7 +726,9 @@
       "switch_test_needs_radio": "Escolha e prepare o rádio (etapas 3 e 4) antes do teste com o Switch.",
       "switch_test_needs_keys": "Envie um prod.keys válido (etapa 2) antes do teste com o Switch.",
       "switch_test_not_run": "Faça o teste com o Switch abaixo: é ele que confirma o rádio e o prod.keys.",
-      "switch_test_failed": "O teste com o Switch não passou. Veja o resultado abaixo."
+      "switch_test_failed": "O teste com o Switch não passou. Veja o resultado abaixo.",
+      "worker_appimage_missing": "O componente de rede ainda não foi instalado a partir do AppImage. Use o botão abaixo.",
+      "worker_appimage_outdated": "O componente de rede instalado é de outra versão do TradeRock. Use o botão abaixo para atualizar."
     },
     "deliveries": {
       "entrega-6": "componente de rede e teste da placa",
@@ -825,5 +829,36 @@
         "missing_master_key_12": "O seu prod.keys não tem a chave do protocolo mais novo do LDN (master_key_12). Consoles atualizados usam esse protocolo: extraia as chaves de novo com o sistema atualizado."
       }
     }
+  },
+  "workerInstall": {
+    "title": "Instalar o componente de rede",
+    "outdatedTitle": "Atualizar o componente de rede",
+    "why": "O componente de rede é a parte do TradeRock que usa a placa Wi-Fi como administrador. Ele vem dentro do AppImage, mas o sistema só deixa rodá-lo como administrador depois de copiado para uma pasta do sistema.",
+    "where": "Ele vai para",
+    "password": "O sistema pede a senha de administrador para copiar (é o sistema que pede, não o TradeRock).",
+    "remove": "Você pode removê-lo a qualquer momento em Configurações.",
+    "install": "Instalar o componente de rede",
+    "update": "Atualizar o componente de rede",
+    "installing": "Instalando…",
+    "settingsTitle": "Componente de rede (AppImage)",
+    "state": {
+      "missing": "Não instalado. Ele é necessário para trocar com a placa Wi-Fi.",
+      "outdated": "Instalado, mas de outra versão do TradeRock. Atualize para usar a placa Wi-Fi.",
+      "ok": "Instalado em /usr/local/lib/traderock."
+    },
+    "removeButton": "Remover o componente de rede",
+    "confirmRemove": "Remover agora",
+    "removeHelp": "Apaga /usr/local/lib/traderock e a política do polkit. O sistema pede a senha de administrador. Seus Pokémon e configurações não são apagados."
+  },
+  "about": {
+    "title": "Sobre o TradeRock",
+    "version": "Versão {{version}}",
+    "releases": "Pacotes e código-fonte de cada versão:",
+    "credits": "Créditos e licenças",
+    "creditsHelp": "O TradeRock usa estes projetos. As licenças foram conferidas no código-fonte de cada um.",
+    "project": "Projeto",
+    "use": "Uso no TradeRock",
+    "license": "Licença",
+    "link": "Sobre"
   }
 }

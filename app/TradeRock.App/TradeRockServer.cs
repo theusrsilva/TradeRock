@@ -93,6 +93,7 @@ public static class TradeRockServer
         api.MapVault();
         api.MapSaves();
         api.MapSetup();
+        api.MapWorker();
     }
 
     /// <summary>Endereço real após o start (a porta 0 vira uma porta livre).</summary>

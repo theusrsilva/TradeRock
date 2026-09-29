@@ -191,8 +191,8 @@ em memória. **Falta testar com um `.sav` real.**
   status (`recommended`, `works`, `untested`, `unstable`, `problematic`, `unsupported`), a fonte
   (README, issue ou PR do motor) e a data da conferência. As placas sem relato ficam como
   `untested`, com aviso. O RTL8821CE também é `recommended`, porque o README do frlg-ldn-trade o
-  lista com confiabilidade alta. A atualização do catálogo pelo GitHub Releases fica para a
-  Entrega 8.
+  lista com confiabilidade alta. O catálogo muda junto com as versões do app (sem atualização
+  automática, D17).
 - **Placa ↔ catálogo.** A comparação é pelo nome do módulo ou do driver em
   `/sys/class/ieee80211/*/device/driver`, porque o módulo (`rtw88_8821ce`) e o driver
   (`rtw_8821ce`) podem ter nomes diferentes. Os conversores USB-serial são identificados por
@@ -236,7 +236,7 @@ em memória. **Falta testar com um `.sav` real.**
   - O app confere com `access(W_OK)` que nem o launcher nem as pastas acima dele são graváveis pelo
     usuário; se forem, recusa (`worker_unsafe`).
   - Em desenvolvimento: `/usr/local/lib/traderock-dev` (ação `...worker.dev`).
-  - No pacote (Entrega 8): `/usr/lib/traderock`.
+  - No .deb: `/usr/lib/traderock`. No AppImage: `/usr/local/lib/traderock` (D17).
 - **Motor sem fork.** O submódulo fica intocado. Os dois patches do FRLG-LDN-Trade-Console (AGPL,
   creditados) são aplicados numa cópia durante o build:
   - varredura com dwell de 0,6 s nos canais 2,4 e 5 GHz;
@@ -337,3 +337,52 @@ em memória. **Falta testar com um `.sav` real.**
 - **Protocolo do worker 2** (versão 0.7.0), por causa da operação nova `beacon_test`. Um worker
   instalado de uma versão anterior é recusado com `worker_version`, e o `dev-host.sh` reinstala.
 - **Simulação** (só em desenvolvimento): a etapa 6 tem um seletor para escolher o resultado do teste.
+
+## D17. Pacotes Linux e CI (Entrega 8)
+
+- **Sem verificação de atualizações** (decisão do autor). Nem o app nem o catálogo consultam a
+  internet: quem quiser baixa a versão mais recente na página de Releases. O catálogo embutido é
+  atualizado a cada versão.
+- **.deb** (`scripts/package-linux.sh`):
+  - app *self-contained* em `/usr/lib/traderock/app`;
+  - worker em `/usr/lib/traderock`, o local "release" que o app já procurava;
+  - tudo do root pelo próprio pacote;
+  - dependências com alternativas para Ubuntu 22.04/24.04 e Debian 12/13 (nomes com `t64`, ICU 70 a
+    76). O ICU e o OpenSSL são carregados pelo .NET; o WebKitGTK, pelo Photino.
+- **AppImage.** O polkit não aceita um `exec.path` dentro da montagem do AppImage (o caminho muda a
+  cada execução e é do usuário). Por isso o worker vem embutido (`worker-payload`) e é instalado
+  pelo app, com confirmação:
+  - em `/usr/local/lib/traderock`, com a ação `io.github.traderock.worker.appimage`, para não brigar
+    com o .deb; rodando do AppImage, o app prefere essa cópia;
+  - por `pkexec /bin/sh -c "<script>" worker-setup install <pasta> <política>`, com o worker como
+    `.tar` na entrada padrão. O script (`packaging/linux/worker-setup.sh`) fica embutido no app e vai
+    na linha de comando. Nenhum arquivo gravável pelo usuário é executado como root, e o root não
+    precisa ler a montagem FUSE, que o kernel só libera para o dono;
+  - o script extrai numa pasta temporária ao lado, confere o launcher e a política, põe dono root e
+    tira a escrita de outros, e troca a pasta antiga com um `mv`. Se algo falha, a instalação
+    anterior fica intacta;
+  - o `PAYLOAD-ID` (versão + sha256 do conteúdo) diz se a cópia instalada é a deste AppImage; se não
+    for, o assistente mostra "atualizar";
+  - a remoção fica em Configurações. Antes de instalar ou remover, o worker da sessão é encerrado;
+  - o pkexec usa a ação padrão do polkit (`org.freedesktop.policykit.exec`, `auth_admin`). A senha é
+    pedida pelo sistema.
+- **Runtime do AppImage:** `type2-runtime` estático (sem libfuse2), squashfs com zstd. O upstream só
+  publica o "continuous"; o sha256 fica fixo no script e o arquivo fica no cache do CI. Se o
+  upstream mudar, o build falha com uma mensagem clara.
+- **Versão:** `Directory.Build.props` (0.8.0), ou a tag no CI (`v0.8.1` → 0.8.1). Fora de tag, o CI
+  usa `0.8.0-ci.<execução>`. O comando `traderock --version` não cria pasta de dados nem banco.
+- **CI:**
+  - `package` monta os pacotes na imagem do devcontainer, com cache dos downloads (todos com sha256);
+  - confere no `.deb` que todo arquivo é do root e que nada é gravável por grupo/outros;
+  - `smoke-deb` instala o .deb em Ubuntu 22.04/24.04 e Debian 12/13 limpos, roda o app como usuário
+    comum, confere que ele acha o worker (seguro, com `iw`/`ip` embutidos), fala com o worker como
+    root, remove o pacote e confere que os dados do usuário ficaram;
+  - `smoke-appimage` roda o AppImage (extrair e rodar, sem FUSE) e instala e remove o worker embutido
+    com o mesmo script do app;
+  - a tag `v*` publica o Release direto (decisão do autor), com o .deb, o AppImage, o `SHA256SUMS`, o
+    código-fonte completo com os submódulos (AGPL) e as fontes do `iw`, `iproute2` e `libnl` (GPL-2.0
+    e LGPL-2.1).
+- **Tela Sobre** (`/sobre`, link no rodapé): versão, licença, oferta do código-fonte e a tabela do
+  `THIRD-PARTY-NOTICES.md`, lida no build.
+- **Não verificado:** o AppImage montado por FUSE, o diálogo do pkexec e a janela nativa. O teste
+  deste ambiente usou "extrair e rodar" e rodou o script de instalação como root, sem pkexec.

@@ -242,7 +242,9 @@
     "keys_missing": "prod.keys hasn't been uploaded.",
     "card_test_crashed": "The card test stopped with an error.",
     "busy": "The network component is still finishing the previous operation. Try again in a few seconds.",
-    "beacon_test_crashed": "The Switch test stopped with an error. Try again; if it keeps happening, export the report in the summary."
+    "beacon_test_crashed": "The Switch test stopped with an error. Try again; if it keeps happening, export the report in the summary.",
+    "worker_install_failed": "Installing the network component failed. Try again; if it keeps happening, export the report in the summary.",
+    "worker_not_bundled": "This TradeRock version does not ship the network component to install."
   },
   "history": {
     "title": "Trade history",
@@ -708,7 +710,7 @@
       "esp32_serial_test_pending": "ESP32 communication test.",
       "switch_test_ok": "Switch test passed: the room was found on channel {{channel}} and decrypted. Radio and prod.keys confirmed.",
       "switch_test_pending": "Switch test (room found and decrypted).",
-      "worker_missing": "Network component not installed. It ships with the TradeRock package (.deb); if you built the app yourself, run scripts/dev-host.sh.",
+      "worker_missing": "Network component not installed. It ships with the TradeRock package (.deb); with the AppImage, the wizard offers to install it. If you built the app yourself, run scripts/dev-host.sh.",
       "pkexec_missing": "pkexec is missing (the system uses it to ask for the administrator password).",
       "worker_unsafe": "The network component install ({{path}}) can be changed without administrator rights. For safety, TradeRock won't use it. Reinstall it.",
       "worker_policy_missing": "The network component permission (polkit policy) is not installed. Reinstall TradeRock.",
@@ -724,7 +726,9 @@
       "switch_test_needs_radio": "Choose and prepare the radio (steps 3 and 4) before the Switch test.",
       "switch_test_needs_keys": "Upload a valid prod.keys (step 2) before the Switch test.",
       "switch_test_not_run": "Run the Switch test below: it is what confirms the radio and the prod.keys.",
-      "switch_test_failed": "The Switch test did not pass. See the result below."
+      "switch_test_failed": "The Switch test did not pass. See the result below.",
+      "worker_appimage_missing": "The network component has not been installed from the AppImage yet. Use the button below.",
+      "worker_appimage_outdated": "The installed network component is from another TradeRock version. Use the button below to update it."
     },
     "deliveries": {
       "entrega-6": "network component and card test",
@@ -825,5 +829,36 @@
         "missing_master_key_12": "Your prod.keys does not have the key for the newer LDN protocol (master_key_12). Updated consoles use that protocol: dump the keys again with the system up to date."
       }
     }
+  },
+  "workerInstall": {
+    "title": "Install the network component",
+    "outdatedTitle": "Update the network component",
+    "why": "The network component is the part of TradeRock that uses the Wi-Fi card as administrator. It ships inside the AppImage, but the system only lets it run as administrator after it is copied to a system folder.",
+    "where": "It goes to",
+    "password": "The system asks for the administrator password to copy it (the system asks, not TradeRock).",
+    "remove": "You can remove it at any time in Settings.",
+    "install": "Install the network component",
+    "update": "Update the network component",
+    "installing": "Installing…",
+    "settingsTitle": "Network component (AppImage)",
+    "state": {
+      "missing": "Not installed. It is needed to trade with the Wi-Fi card.",
+      "outdated": "Installed, but from another TradeRock version. Update it to use the Wi-Fi card.",
+      "ok": "Installed in /usr/local/lib/traderock."
+    },
+    "removeButton": "Remove the network component",
+    "confirmRemove": "Remove now",
+    "removeHelp": "Deletes /usr/local/lib/traderock and the polkit policy. The system asks for the administrator password. Your Pokémon and settings are not deleted."
+  },
+  "about": {
+    "title": "About TradeRock",
+    "version": "Version {{version}}",
+    "releases": "Packages and source code of every version:",
+    "credits": "Credits and licenses",
+    "creditsHelp": "TradeRock uses these projects. The licenses were checked in each one's source code.",
+    "project": "Project",
+    "use": "Use in TradeRock",
+    "license": "License",
+    "link": "About"
   }
 }

@@ -8,14 +8,14 @@ namespace TradeRock.Core.Engines.Worker;
 /// pudessem, qualquer programa da sessão trocaria o código que o polkit roda como root).
 /// </summary>
 public sealed record WorkerInstall(
-    string Flavor, // release | dev
+    string Flavor, // release (.deb) | appimage (instalado pelo AppImage) | dev
     string Launcher,
     bool PolicyInstalled,
     bool Safe,
     bool PkexecFound,
     bool BundledTools = false); // iw e ip embutidos em <instalação>/bin
 
-/// <summary>Instalações conhecidas do worker (scripts/install-worker.sh e, na Entrega 8, os pacotes).</summary>
+/// <summary>Instalações conhecidas do worker: o .deb, a cópia instalada pelo AppImage e a de desenvolvimento.</summary>
 public static class WorkerLocator
 {
     public sealed record Candidate(string Flavor, string Prefix, string ActionId)
@@ -24,11 +24,17 @@ public static class WorkerLocator
         public string Policy => $"/usr/share/polkit-1/actions/{ActionId}.policy";
     }
 
-    public static IReadOnlyList<Candidate> Candidates { get; } =
-    [
-        new("release", "/usr/lib/traderock", "io.github.traderock.worker"),
-        new("dev", "/usr/local/lib/traderock-dev", "io.github.traderock.worker.dev"),
-    ];
+    public static readonly Candidate Release = new("release", "/usr/lib/traderock", "io.github.traderock.worker");
+
+    /// <summary>
+    /// Cópia do worker que o AppImage instala (com confirmação) na primeira vez: o polkit não aceita um
+    /// exec.path dentro da montagem do AppImage. Política própria, para não brigar com o .deb.
+    /// </summary>
+    public static readonly Candidate AppImage = new("appimage", "/usr/local/lib/traderock", "io.github.traderock.worker.appimage");
+
+    public static readonly Candidate Dev = new("dev", "/usr/local/lib/traderock-dev", "io.github.traderock.worker.dev");
+
+    public static IReadOnlyList<Candidate> Candidates { get; } = [Release, AppImage, Dev];
 
     /// <summary>Ferramentas que o worker traz prontas (scripts/build-nettools.sh).</summary>
     public static readonly string[] BundledTools = ["iw", "ip"];
@@ -36,13 +42,14 @@ public static class WorkerLocator
     public static readonly string[] PkexecPaths = ["/usr/bin/pkexec", "/bin/pkexec"];
 
     /// <param name="root">Raiz do sistema de arquivos (testes usam uma pasta falsa).</param>
-    /// <param name="preferDev">Em desenvolvimento, a instalação dev vem antes da release.</param>
-    public static WorkerInstall? Find(string root = "/", bool preferDev = false, Func<string, bool>? writable = null)
+    /// <param name="preferDev">Em desenvolvimento, a instalação dev vem antes das outras.</param>
+    /// <param name="preferAppImage">Rodando do AppImage: a cópia que ele instalou vem primeiro (é da mesma versão).</param>
+    public static WorkerInstall? Find(string root = "/", bool preferDev = false, Func<string, bool>? writable = null, bool preferAppImage = false)
     {
         writable ??= IsWritableByMe;
         string R(string path) => Path.Combine(root, path.TrimStart('/'));
 
-        var order = preferDev ? Candidates.Reverse() : Candidates;
+        var order = Candidates.OrderBy(c => preferDev && c == Dev ? 0 : preferAppImage && c == AppImage ? 1 : 2);
         foreach (var c in order)
         {
             if (!File.Exists(R(c.Launcher)))
