@@ -56,6 +56,18 @@ public sealed class SetupTranslationTests
             new("phy1", true, "passed_some_channels", default, []),
             new("phy1", false, "tx_failed", default, []),
         };
+        // Teste com o Switch: todos os resultados, com e sem a master_key_12.
+        var saved = DateTimeOffset.UnixEpoch;
+        foreach (var protocols in new[] { new[] { 1 }, new[] { 1, 3 } })
+        foreach (var code in SwitchTestCodes.Append("found_decrypted"))
+        {
+            var keys = new KeysValidation(true, [], [], [], protocols, 3, saved);
+            var sw = new SwitchTestResult("phy1", code == "found_decrypted", code, default, [], [], KeysSavedAt: saved);
+            var state = new SetupState { Radio = "wifi", Phy = "phy1", SwitchTest = sw };
+            foreach (var check in SetupChecks.Evaluate(linux, RadioAdvisor.Advise(linux, catalog), state, keys, catalog))
+                yield return check;
+        }
+
         foreach (var worker in workers)
         foreach (var test in tests)
         foreach (var net in new[] { new LdnNetworkConfig(false, false), new LdnNetworkConfig(true, true) })
@@ -78,7 +90,12 @@ public sealed class SetupTranslationTests
         "invalid_request", "missing_tools", "phy_not_found", "busy", "not_root", "worker_missing", "worker_unsafe",
         "worker_policy_missing", "pkexec_missing", "auth_cancelled", "not_authorized", "worker_exited",
         "worker_timeout", "worker_version", "worker_start_failed", "wifi_not_configured", "keys_missing",
+        "beacon_test_crashed",
     ];
+
+    /// <summary>Resultados do teste com o Switch (beacon_child.py verdict), menos o aprovado.</summary>
+    public static readonly string[] SwitchTestCodes =
+        ["found_not_decrypted", "other_session", "not_found", "monitor_failed", "channel_failed", "scan_failed", "engine_error", "cancelled"];
 
     /// <summary>Resultados do teste da placa (card_child.py verdict) e falhas do próprio teste.</summary>
     public static readonly string[] CardTestCodes =
@@ -95,9 +112,13 @@ public sealed class SetupTranslationTests
         var root = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "frontend", "src", "locales", $"{lang}.json"))).RootElement;
         var failures = root.GetProperty("failures");
         var card = root.GetProperty("wizard").GetProperty("cardTest").GetProperty("codes");
+        var sw = root.GetProperty("wizard").GetProperty("switchTest").GetProperty("codes");
+        var hints = root.GetProperty("wizard").GetProperty("switchTest").GetProperty("hints");
         var reasons = root.GetProperty("settings").GetProperty("engineReasons");
         var missing = WorkerFailureCodes.Where(c => !failures.TryGetProperty(c, out _))
             .Concat(CardTestCodes.Where(c => !card.TryGetProperty(c, out _)))
+            .Concat(SwitchTestCodes.Append("found_decrypted").Where(c => !sw.TryGetProperty(c, out _)).Select(c => "switchTest." + c))
+            .Concat(new[] { "missing_master_key_12" }.Where(c => !hints.TryGetProperty(c, out _)))
             .Concat(new[] { "not_linux", "worker_missing", "wifi_not_configured" }.Where(c => !reasons.TryGetProperty(c, out _)))
             .ToList();
         Assert.Empty(missing);

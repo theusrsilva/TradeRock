@@ -277,11 +277,63 @@ em memória. **Falta testar com um `.sav` real.**
     o assistente mostra o comando.
   - O `pkexec` não pode ser embutido: é setuid root e depende do polkit do sistema. Ele vira
     dependência do .deb na Entrega 8.
-- **Teste com o Switch (etapa 6).** Enquanto não existe (Entrega 7), ele não é essencial com a placa
-  Wi-Fi. A própria troca diz se as chaves conferem (`beacon_not_decrypted`).
+- **Teste com o Switch (etapa 6).** Na Entrega 6 ele ainda não existia e não bloqueava a troca. Desde a
+  Entrega 7 (D16), ele é essencial com a placa Wi-Fi.
 - **Runtime embutido.**
   - cpython 3.12.14 do python-build-standalone (release 20260929, sha256 fixo).
   - Dependências com `pip --require-hashes` (`worker/requirements.lock`).
   - Sem Tk, IDLE, testes, `libpython` compartilhada nem `pip`: ~100 MB.
   - Só os módulos de extensão passam por `strip`, porque o binário e a `libpython` quebram com o
     `strip` do binutils.
+
+## D16. Teste com o Switch pela placa Wi-Fi (Entrega 7)
+
+- **Só escuta, sem entrar na sala.** O processo filho `worker/traderock_worker/beacon_child.py` usa a
+  API da biblioteca LDN (ldn 0.0.17), conferida no código-fonte:
+  - `wlan.create_factory` e `Factory.create_monitor` criam o monitor;
+  - `Monitor.set_channel` passa pelos canais;
+  - `ldn.Scanner(derivations, monitor).receive()` devolve cada anúncio que decifrou, com
+    `KeyDerivation` para os protocolos LDN 1 e 3.
+
+  É o mesmo que o `ldn.scan` faz por dentro. A diferença é que o teste repete as voltas até achar a
+  sala ou o tempo acabar, e segue quando um canal falha (placa sem 5 GHz), em vez de abortar.
+- **Anúncio que não decifra.** A biblioteca registra "Failed to parse advertisement frame" no logger
+  `ldn` (D5). O teste conta esses avisos por canal. Depois do primeiro, faz mais uma volta completa
+  (a sala do FRLG pode decifrar em outro canal) e para, porque com chaves erradas esperar não muda
+  nada.
+- **Canais e tempo por canal iguais aos da troca:** 1, 6, 11, 36, 40, 44 e 48, com 0,6 s em cada
+  (`FRLG_CHANNELS` e `FRLG_SCAN_DWELL` do patch 0001). Assim, "achou no teste" significa "a troca vai
+  achar". Um teste em Python confere esses valores no patch.
+- **Sala do FRLG** reconhecida pelas regras do motor, importadas do `frlgsim.transport` com os
+  patches, sem lista própria:
+  - `LiveTransport.LOCAL_COMMUNICATION_ID` e `KNOWN_COMM_IDS`;
+  - ou `_looks_like_frlg_beacon`.
+- **Resultados** (`verdict`), nesta ordem:
+  1. `found_decrypted`: a sala foi decifrada. É o único que aprova.
+  2. `found_not_decrypted`: algum anúncio não decifrou. Vence `other_session`, porque a sala pode usar
+     o outro protocolo LDN. Se o `prod.keys` só tem a `master_key_00`, a verificação acrescenta a dica
+     `missing_master_key_12`.
+  3. `other_session`: as chaves decifraram outro jogo, mas a sala do FRLG não apareceu. Não aprova
+     (decisão do autor).
+  4. `not_found`.
+
+  Falhas do rádio: `monitor_failed`, `channel_failed` e `scan_failed`. Há ainda `cancelled`.
+- **Duração:** até 30 s (`SetupService.SwitchTestSeconds`), parando assim que acha a sala.
+  - Cancelar no app aborta o pedido HTTP; o `WorkerHost` manda `cancel` e o worker interrompe o filho
+    com SIGINT.
+  - Como no teste da placa, o rádio volta ao estado anterior antes da resposta.
+  - Um teste cancelado não apaga o resultado anterior.
+- **Chaves:** vão como bytes, como na troca. Ficam numa pasta temporária do root com permissão 600
+  e são apagadas no fim. O resultado não traz nada das chaves nem endereços MAC; o relatório traz o
+  código, o comm id e o canal.
+- **Validade:** o resultado fica no estado do assistente e vale para a placa (phy + driver) e para o
+  `prod.keys` testados.
+  - O `prod.keys` é identificado pela data de gravação do arquivo (`KeysValidation.SavedAt`), nunca
+    pelo conteúdo.
+  - Enviar o arquivo de novo pede um teste novo.
+  - O resultado não expira com o tempo (decisão do autor).
+- **Essencial com a placa Wi-Fi.** O `ReadyToTrade` só libera a troca real depois do teste. Com o
+  ESP32, o teste continua "em breve" (Entrega 9).
+- **Protocolo do worker 2** (versão 0.7.0), por causa da operação nova `beacon_test`. Um worker
+  instalado de uma versão anterior é recusado com `worker_version`, e o `dev-host.sh` reinstala.
+- **Simulação** (só em desenvolvimento): a etapa 6 tem um seletor para escolher o resultado do teste.

@@ -4,12 +4,13 @@ Troque Pokémon com **Pokémon FireRed e LeafGreen do Nintendo Switch / Switch 2
 wireless local do jogo (LDN). O seu PC, ou uma plaquinha ESP32, finge ser um segundo Switch na
 sala de troca do Direct Corner.
 
-> **Estado:** em desenvolvimento (Entrega 6 de 11). Já dá para **criar Pokémon legais** no app,
+> **Estado:** em desenvolvimento (Entrega 7 de 11). Já dá para **criar Pokémon legais** no app,
 > organizá-los no **cofre** (caixas, tags, busca, exportação, injeção em `.sav` de GBA), fazer o
 > assistente de troca de ponta a ponta em **modo demonstração** (motor simulado) e seguir o
 > **assistente de configuração**, que confere o sistema, a placa Wi-Fi ou o ESP32 e o `prod.keys`.
-> O motor com a **placa Wi-Fi** (worker + polkit + frlg-ldn-trade) está pronto, mas **ainda não foi
-> testado com um Switch de verdade**. Veja [docs/dev-host.md](docs/dev-host.md).
+> O motor com a **placa Wi-Fi** (worker + polkit + frlg-ldn-trade) e o **teste com o Switch** (a sala é
+> encontrada e decifrada, sem entrar nela) estão prontos, mas **ainda não foram testados com um Switch
+> de verdade**. Veja [docs/dev-host.md](docs/dev-host.md).
 
 O TradeRock nunca baixa, sugere fontes nem distribui `prod.keys` ou ROMs. Use só as chaves
 extraídas do seu próprio console.
@@ -197,9 +198,15 @@ usuário nem caminhos pessoais.
 Com a placa Wi-Fi, a etapa 4 faz o **teste real da placa**: modo monitor e transmissão de quadros de
 ação nos canais 1, 6 e 11, pela mesma biblioteca LDN da troca, sem Switch nem prod.keys. Ela também
 oferece **configurar o NetworkManager**, que cria `/etc/NetworkManager/conf.d/zz-ldn-unmanaged.conf`
-e `/etc/systemd/network/10-traderock-ldn.link`, sempre com confirmação. O teste com o Switch chega na
-Entrega 7 e o firmware do ESP32 na 9; até lá, esses itens aparecem como "em breve". Enquanto o teste
-com o Switch não existe, ele não bloqueia a troca com a placa Wi-Fi.
+e `/etc/systemd/network/10-traderock-ldn.link`, sempre com confirmação.
+
+A etapa 6 faz o **teste com o Switch**: com a sala do Direct Corner aberta como Leader, o app escuta
+os anúncios da sala por até 30 segundos e tenta decifrá-los com o `prod.keys`, sem entrar na sala.
+O resultado diz se a sala foi encontrada e decifrada (rádio e chaves confirmados), encontrada mas
+não decifrada (chaves erradas), se só apareceu outro jogo ou se nada foi encontrado. Com a placa
+Wi-Fi, esse teste é **essencial**: a troca só é liberada depois dele, e ele precisa ser refeito quando
+a placa ou o `prod.keys` mudam. Com o ESP32, o teste chega junto com o motor, na Entrega 9, e até lá
+aparece como "em breve".
 
 Em desenvolvimento (`ASPNETCORE_ENVIRONMENT=Development`), um seletor no topo do assistente simula
 9 cenários: Linux com placa compatível, instável, desconhecida ou problemática, sem Wi-Fi, WSL,

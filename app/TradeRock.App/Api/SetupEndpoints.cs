@@ -8,6 +8,7 @@ public static class SetupEndpoints
 {
     public sealed record SimulationDto(string? Scenario);
     public sealed record CardTestDto(string Phy);
+    public sealed record SwitchTestDto(string Phy, string? SimulatedOutcome = null);
 
     public static void MapSetup(this IEndpointRouteBuilder api)
     {
@@ -70,6 +71,29 @@ public static class SetupEndpoints
             }
         });
 
+        // Teste com o Switch: procura a sala (aberta como Leader) e tenta decifrar o anúncio, sem entrar.
+        // Leva até SetupService.SwitchTestSeconds; se a pessoa cancelar (o pedido é abortado), o worker para.
+        setup.MapPost("/switch-test", async (SwitchTestDto body, SetupService service, CancellationToken ct) =>
+        {
+            try
+            {
+                var result = await service.RunSwitchTestAsync(body.Phy, body.SimulatedOutcome, ct);
+                return Results.Ok(new { result, status = ToDto(await service.StatusAsync(ct)) });
+            }
+            catch (ArgumentException e)
+            {
+                return Results.BadRequest(new { error = e.ParamName == "outcome" ? "outcome_invalid" : "phy_invalid" });
+            }
+            catch (ProdKeysException e)
+            {
+                return Results.BadRequest(new { error = e.Code });
+            }
+            catch (WorkerException e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+        });
+
         // Configuração do NetworkManager/udev para as interfaces do LDN (feita pelo worker, como root).
         setup.MapPost("/network-config", async (SetupService service, CancellationToken ct) =>
         {
@@ -124,5 +148,7 @@ public static class SetupEndpoints
         checks = s.Checks,
         readyToTrade = s.ReadyToTrade,
         catalogUpdatedAt = HardwareCatalog.Embedded.UpdatedAt,
+        switchTestSeconds = SetupService.SwitchTestSeconds,
+        simulatedSwitchOutcomes = s.System.SimulatedScenario is null ? null : SetupService.SimulatedSwitchOutcomes,
     };
 }

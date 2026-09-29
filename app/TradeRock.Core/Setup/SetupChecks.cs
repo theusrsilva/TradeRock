@@ -21,8 +21,8 @@ public sealed record SetupState
     /// <summary>Último teste real da placa (modo monitor + quadros de ação).</summary>
     public CardTestResult? CardTest { get; init; }
 
-    public bool SwitchTestPassed { get; init; }
-    public DateTimeOffset? SwitchTestAt { get; init; }
+    /// <summary>Último teste com o Switch (beacon da sala encontrado e decifrado).</summary>
+    public SwitchTestResult? SwitchTest { get; init; }
 }
 
 public sealed record CardTestChannel(int Channel, bool Set, int Sent, int Received, string? Error);
@@ -39,6 +39,37 @@ public sealed record CardTestResult(
     string? Driver = null) // módulo/driver da placa testada: o mesmo phyN pode ser outra placa depois
 {
     public bool IsFor(WifiCard card) => Phy == card.Phy && (Driver is null || Driver == (card.Module ?? card.Driver));
+}
+
+public sealed record SwitchTestNetwork(string CommId, int Channel, int Protocol, bool Frlg, int Participants, int MaxParticipants);
+
+public sealed record SwitchTestChannel(int Channel, bool Usable, string? Error);
+
+/// <summary>
+/// Resultado do teste com o Switch (worker/traderock_worker/beacon_child.py). <see cref="Code"/> é estável:
+/// found_decrypted, found_not_decrypted, other_session, not_found, monitor_failed, channel_failed,
+/// scan_failed, engine_error, cancelled.
+/// </summary>
+public sealed record SwitchTestResult(
+    string Phy,
+    bool Passed,
+    string Code,
+    DateTimeOffset At,
+    IReadOnlyList<SwitchTestNetwork> Networks,
+    IReadOnlyList<SwitchTestChannel> Channels,
+    int Undecryptable = 0,
+    IReadOnlyList<int>? UndecryptableChannels = null,
+    int Sweeps = 0,
+    double Seconds = 0,
+    string? Error = null,
+    bool Simulated = false,
+    string? Driver = null,
+    DateTimeOffset? KeysSavedAt = null) // o prod.keys testado (data de gravação, nunca o conteúdo)
+{
+    /// <summary>Vale para esta placa e este prod.keys: trocar qualquer um dos dois pede um teste novo.</summary>
+    public bool IsFor(WifiCard card, KeysValidation? keys) =>
+        Phy == card.Phy && (Driver is null || Driver == (card.Module ?? card.Driver))
+        && keys is not null && KeysSavedAt == keys.SavedAt;
 }
 
 public enum CheckStatus
@@ -108,13 +139,8 @@ public static class SetupChecks
         else if (state.Radio == RadioAdvisor.Esp32)
             checks.AddRange(Esp32Checks(system, state, catalog));
 
-        // Etapa 6: teste com o Switch (beacon encontrado e decifrado)
-        // Com a placa Wi-Fi, o teste chega na Entrega 7; até lá ele não bloqueia a troca (a própria
-        // troca mostra se as chaves conferem). Com o ESP32, o motor inteiro ainda não existe.
-        checks.Add(state.SwitchTestPassed
-            ? new SetupCheck("switch_test", 6, CheckStatus.Ok, true, "switch_test_ok")
-            : new SetupCheck("switch_test", 6, CheckStatus.Pending, state.Radio != RadioAdvisor.Wifi, "switch_test_pending",
-                AvailableIn: state.Radio == RadioAdvisor.Esp32 ? "entrega-9" : "entrega-7"));
+        // Etapa 6: teste com o Switch (beacon da sala encontrado e decifrado, sem entrar na sala).
+        checks.Add(SwitchTestCheck(advice, state, keys));
 
         return checks;
     }
@@ -178,6 +204,30 @@ public static class SetupChecks
             yield return system.LdnNetwork is { Complete: true }
                 ? new SetupCheck("network_manager", 4, CheckStatus.Ok, false, "network_manager_ok")
                 : new SetupCheck("network_manager", 4, CheckStatus.Warning, false, "network_manager_unconfigured");
+    }
+
+    private static SetupCheck SwitchTestCheck(RadioAdvice advice, SetupState state, KeysValidation? keys)
+    {
+        // Com o ESP32, o motor inteiro chega na Entrega 9.
+        if (state.Radio == RadioAdvisor.Esp32)
+            return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_pending", AvailableIn: "entrega-9");
+        var card = advice.Cards.FirstOrDefault(c => c.Card.Phy == state.Phy)?.Card;
+        if (state.Radio != RadioAdvisor.Wifi || card is null)
+            return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_radio");
+        if (keys is not { Valid: true })
+            return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_keys");
+
+        var test = state.SwitchTest is { } t && t.IsFor(card, keys) ? t : null;
+        if (test is null)
+            return new SetupCheck("switch_test", 6, CheckStatus.Error, true, "switch_test_not_run");
+        if (test.Passed)
+            return new SetupCheck("switch_test", 6, CheckStatus.Ok, true, "switch_test_ok",
+                Args(("channel", test.Networks.FirstOrDefault(n => n.Frlg)?.Channel.ToString() ?? "?")));
+        var args = new Dictionary<string, string> { ["code"] = test.Code };
+        // Anúncio que não decifra com um prod.keys só com a master_key_00: a sala pode ser do protocolo 3.
+        if (test.Code == "found_not_decrypted" && !keys.Protocols.Contains(3))
+            args["hint"] = "missing_master_key_12";
+        return new SetupCheck("switch_test", 6, CheckStatus.Error, true, "switch_test_failed", args);
     }
 
     private static SetupCheck WorkerCheck(SystemSnapshot system) => system.Worker switch
@@ -328,6 +378,15 @@ public static class SetupReport
         if (status.State.CardTest is { } test)
             sb.AppendLine($"- Teste da placa ({test.Phy}): {test.Code}{(test.Simulated ? " (simulado)" : "")} · " +
                 string.Join(", ", test.Channels.Select(c => $"canal {c.Channel}: {(c.Set ? $"{c.Sent} enviados, {c.Received} recebidos" : "não sintonizou")}")));
+        if (status.State.SwitchTest is { } sw)
+        {
+            var networks = sw.Networks.Count == 0 ? "nenhuma sessão decifrada"
+                : string.Join(", ", sw.Networks.Select(n => $"{(n.Frlg ? "FRLG" : "outro jogo")} {n.CommId} no canal {n.Channel} (LDN {n.Protocol})"));
+            var skipped = sw.Channels.Where(c => !c.Usable).Select(c => c.Channel).ToList();
+            sb.AppendLine($"- Teste com o Switch ({sw.Phy}): {sw.Code}{(sw.Simulated ? " (simulado)" : "")} · {networks} · " +
+                $"{sw.Undecryptable} anúncio(s) sem decifrar · {sw.Sweeps} volta(s) em {sw.Seconds:0.#} s" +
+                (skipped.Count > 0 ? $" · canais indisponíveis: {string.Join(", ", skipped)}" : ""));
+        }
         sb.AppendLine($"- Grupo da porta serial: {s.SerialGroup}{(s.User is { } u ? (u.Groups.Contains(s.SerialGroup) ? " (usuário no grupo)" : " (usuário fora do grupo)") : "")}");
         sb.AppendLine();
         sb.AppendLine("### Verificações");

@@ -6,7 +6,8 @@ public sealed record KeysValidation(
     IReadOnlyList<string> PresentRequired,
     IReadOnlyList<string> MissingRequired,
     IReadOnlyList<int> Protocols, // versões do LDN suportadas: 1 (master_key_00) e/ou 3 (master_key_12)
-    int KeyCount);
+    int KeyCount,
+    DateTimeOffset? SavedAt = null); // quando o arquivo foi gravado: identifica o prod.keys sem olhar o conteúdo
 
 public sealed class ProdKeysException(string code) : Exception(code)
 {
@@ -122,7 +123,7 @@ public sealed class ProdKeys(AppPaths paths)
     {
         if (!File.Exists(FilePath))
             return null;
-        return Validate(File.ReadAllBytes(FilePath));
+        return Validate(File.ReadAllBytes(FilePath)) with { SavedAt = File.GetLastWriteTimeUtc(FilePath) };
     }
 
     public void Delete()

@@ -241,7 +241,8 @@
     "wifi_not_configured": "Escolha a placa Wi-Fi no assistente de configuração.",
     "keys_missing": "O prod.keys não foi enviado.",
     "card_test_crashed": "O teste da placa parou com um erro.",
-    "busy": "O componente de rede ainda está terminando a operação anterior. Tente de novo em alguns segundos."
+    "busy": "O componente de rede ainda está terminando a operação anterior. Tente de novo em alguns segundos.",
+    "beacon_test_crashed": "O teste com o Switch parou com um erro. Tente de novo; se continuar, exporte o relatório no resumo."
   },
   "history": {
     "title": "Histórico de trocas",
@@ -705,7 +706,7 @@
       "udev_rule_optional": "Opcional: regra udev para a porta ter sempre o nome {{path}}.",
       "esp32_firmware_pending": "Conferir e gravar o firmware do ESP32.",
       "esp32_serial_test_pending": "Teste de comunicação com o ESP32.",
-      "switch_test_ok": "Teste com o Switch aprovado.",
+      "switch_test_ok": "Teste com o Switch aprovado: a sala foi encontrada no canal {{channel}} e decifrada. Rádio e prod.keys confirmados.",
       "switch_test_pending": "Teste com o Switch (sala encontrada e decifrada).",
       "worker_missing": "Componente de rede não instalado. Ele vem com o pacote do TradeRock (.deb); se você compilou o app, rode scripts/dev-host.sh.",
       "pkexec_missing": "Falta o pkexec, que o sistema usa para pedir a senha de administrador.",
@@ -719,11 +720,14 @@
       "card_test_passed_no_rx": "A placa transmitiu, mas não recebeu nada durante o teste. Pode ser só falta de redes Wi-Fi por perto; se a troca não achar o Switch, desconfie da recepção.",
       "card_test_passed_some_channels": "A placa funcionou, mas não sintonizou todos os canais (1, 6 e 11). A troca pode falhar se o Switch usar um deles.",
       "network_manager_ok": "NetworkManager configurado para não atrapalhar a troca.",
-      "network_manager_unconfigured": "O NetworkManager pode atrapalhar a troca. Configure abaixo (recomendado)."
+      "network_manager_unconfigured": "O NetworkManager pode atrapalhar a troca. Configure abaixo (recomendado).",
+      "switch_test_needs_radio": "Escolha e prepare o rádio (etapas 3 e 4) antes do teste com o Switch.",
+      "switch_test_needs_keys": "Envie um prod.keys válido (etapa 2) antes do teste com o Switch.",
+      "switch_test_not_run": "Faça o teste com o Switch abaixo: é ele que confirma o rádio e o prod.keys.",
+      "switch_test_failed": "O teste com o Switch não passou. Veja o resultado abaixo."
     },
     "deliveries": {
       "entrega-6": "componente de rede e teste da placa",
-      "entrega-7": "teste com o Switch pela placa Wi-Fi",
       "entrega-9": "suporte ao ESP32"
     },
     "cardTest": {
@@ -763,6 +767,63 @@
       "configure": "Configurar o NetworkManager",
       "confirmText": "O TradeRock vai criar estes dois arquivos (como administrador) e recarregar a configuração do NetworkManager, sem derrubar a conexão atual:",
       "confirm": "Confirmar e configurar"
+    },
+    "switchTest": {
+      "title": "Teste com o Switch",
+      "before": "Antes de começar, no Switch:",
+      "stepOpen": "abra o FireRed ou o LeafGreen e entre no Direct Corner (2º andar do Centro Pokémon);",
+      "stepLeader": "escolha ser o Leader e fique na tela de espera da sala;",
+      "stepNear": "deixe o Switch perto do PC (até uns 2 metros).",
+      "noJoin": "O TradeRock só escuta: ele não entra na sala, e o Switch não recebe nenhum pedido.",
+      "offline": "Durante o teste (até {{seconds}} segundos), o Wi-Fi normal desta placa fica desligado. No fim ele volta sozinho.",
+      "needsCard": "Primeiro passe no teste da placa (etapa 4).",
+      "needsKeys": "Primeiro envie o prod.keys (etapa 2).",
+      "run": "Procurar a sala",
+      "again": "Procurar de novo",
+      "running": "Procurando a sala… {{seconds}} s",
+      "cancel": "Cancelar",
+      "waitPassword": "Se aparecer a janela de senha do sistema, digite a senha de administrador.",
+      "simulate": "Resultado simulado (desenvolvimento):",
+      "simulated": "resultado simulado",
+      "details": "Detalhes",
+      "found": "Encontrado",
+      "frlg": "sala do FireRed/LeafGreen",
+      "otherGame": "outro jogo",
+      "channel": "canal {{channel}}",
+      "protocol": "LDN {{protocol}}",
+      "undecryptable": "{{count}} anúncio(s) que não decifraram, no(s) canal(is) {{channels}}",
+      "unusable": "Canais que a placa não sintonizou: {{channels}}",
+      "sweeps": "{{sweeps}} volta(s) pelos canais em {{seconds}} s",
+      "codes": {
+        "found_decrypted": "Sala encontrada e decifrada! Rádio e prod.keys confirmados: a troca está liberada.",
+        "found_not_decrypted": "A sala foi encontrada, mas não foi decifrada: o prod.keys não está certo.",
+        "other_session": "O prod.keys funciona (uma sessão de outro jogo foi decifrada), mas a sala do FireRed/LeafGreen não apareceu.",
+        "not_found": "Nenhuma sala encontrada.",
+        "monitor_failed": "A placa não entrou em modo monitor. Refaça o teste da placa (etapa 4).",
+        "channel_failed": "A placa não sintonizou nenhum canal. Outro programa pode estar usando a placa.",
+        "scan_failed": "A procura parou com um erro. Tente de novo; se continuar, exporte o relatório no resumo.",
+        "engine_error": "O componente de rede não conseguiu iniciar a procura. Tente de novo; se continuar, exporte o relatório no resumo.",
+        "cancelled": "Procura cancelada."
+      },
+      "tips": {
+        "found_not_decrypted": [
+          "Use o prod.keys extraído do seu próprio Switch, com o sistema atualizado. Chaves de outro console ou de uma versão antiga não servem.",
+          "Envie o arquivo de novo na etapa 2 e repita o teste."
+        ],
+        "other_session": [
+          "Confira se você abriu o Direct Corner como Leader e se ainda está na tela de espera.",
+          "Se outro Switch por perto estiver jogando no modo local, afaste-o ou desligue o modo local dele."
+        ],
+        "not_found": [
+          "Confira se o Switch está no Direct Corner como Leader, na tela de espera (a sala some quando você sai dela).",
+          "Aproxime o Switch do PC.",
+          "Confira se o Switch não está no modo avião.",
+          "Se continuar, refaça o teste da placa (etapa 4): a recepção pode ser o problema."
+        ]
+      },
+      "hints": {
+        "missing_master_key_12": "O seu prod.keys não tem a chave do protocolo mais novo do LDN (master_key_12). Consoles atualizados usam esse protocolo: extraia as chaves de novo com o sistema atualizado."
+      }
     }
   }
 }

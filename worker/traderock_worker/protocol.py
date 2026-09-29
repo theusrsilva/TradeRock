@@ -97,3 +97,21 @@ def trade_params(msg):
         sid=None if sid is None else _int(sid, "sid", 0, 0xFFFF),
         approval_seconds=_int(msg.get("approvalSeconds", 60), "approvalSeconds", 10, 900),
     )
+
+
+@dataclass(frozen=True)
+class BeaconParams:
+    phy: str
+    keys: bytes
+    seconds: int
+
+
+def beacon_params(msg):
+    keys = _b64(msg.get("keys"), "keys", MAX_KEYS)
+    if not keys:
+        raise RequestError("invalid_request", "keys vazio")
+    return BeaconParams(
+        phy=phy(msg.get("phy")),
+        keys=keys,
+        seconds=_int(msg.get("seconds", 30), "seconds", 5, 120),
+    )

@@ -119,6 +119,100 @@ public sealed class SetupService(SettingsStore settings, ProdKeys keys, ISystemP
         return result;
     }
 
+    /// <summary>Quanto tempo o teste com o Switch procura a sala (para antes, se achar).</summary>
+    public const int SwitchTestSeconds = 30;
+
+    /// <summary>Resultados que a simulação (desenvolvimento) sabe produzir.</summary>
+    public static readonly string[] SimulatedSwitchOutcomes =
+        ["found_decrypted", "found_not_decrypted", "other_session", "not_found", "monitor_failed"];
+
+    /// <summary>
+    /// Teste com o Switch pelo worker: procura o anúncio da sala e tenta decifrá-lo com o prod.keys,
+    /// sem entrar nela. Na simulação, o resultado é o pedido em <paramref name="simulatedOutcome"/>.
+    /// O resultado fica no estado, amarrado à placa e ao prod.keys testados.
+    /// </summary>
+    public async Task<SwitchTestResult> RunSwitchTestAsync(string phy, string? simulatedOutcome, CancellationToken ct)
+    {
+        var status = await StatusAsync(ct);
+        var card = status.Advice.Cards.FirstOrDefault(c => c.Card.Phy == phy)
+            ?? throw new ArgumentException("Placa desconhecida.", nameof(phy));
+        if (status.Keys is not { Valid: true } validKeys)
+            throw new ProdKeysException("keys_missing");
+
+        SwitchTestResult result;
+        if (status.System.SimulatedScenario is not null)
+        {
+            result = SimulateSwitchTest(phy, simulatedOutcome ?? "found_decrypted", time.GetUtcNow());
+        }
+        else
+        {
+            var bytes = await File.ReadAllBytesAsync(keys.FilePath, ct);
+            try
+            {
+                result = ParseSwitchTest(phy, await worker.BeaconTestAsync(phy, bytes, SwitchTestSeconds, ct), time.GetUtcNow());
+            }
+            finally
+            {
+                Array.Clear(bytes);
+            }
+        }
+        result = result with { Driver = card.Card.Module ?? card.Card.Driver, KeysSavedAt = validKeys.SavedAt };
+
+        // Cancelado não apaga um resultado anterior: só não conta como teste novo.
+        if (result.Code != "cancelled")
+        {
+            var state = await settings.GetAsync(StateKey, new SetupState(), ct);
+            await settings.SetAsync(StateKey, state with { Phy = phy, SwitchTest = result }, ct);
+        }
+        return result;
+    }
+
+    public static SwitchTestResult SimulateSwitchTest(string phy, string outcome, DateTimeOffset at)
+    {
+        if (!SimulatedSwitchOutcomes.Contains(outcome))
+            throw new ArgumentException("Resultado desconhecido.", nameof(outcome));
+        var channels = new[] { 1, 6, 11, 36, 40, 44, 48 }.Select(c => new SwitchTestChannel(c, outcome != "monitor_failed", null)).ToList();
+        var networks = outcome switch
+        {
+            "found_decrypted" => [new SwitchTestNetwork("0x0100610011000000", 6, 3, true, 1, 2)],
+            "other_session" => [new SwitchTestNetwork("0x0100abcd00000000", 1, 3, false, 2, 8)],
+            _ => new List<SwitchTestNetwork>(),
+        };
+        return new SwitchTestResult(phy, outcome == "found_decrypted", outcome, at, networks, outcome == "monitor_failed" ? [] : channels,
+            Undecryptable: outcome == "found_not_decrypted" ? 4 : 0,
+            UndecryptableChannels: outcome == "found_not_decrypted" ? [6] : [],
+            Sweeps: outcome == "found_decrypted" ? 1 : outcome == "found_not_decrypted" ? 2 : 7,
+            Seconds: outcome switch { "found_decrypted" => 2.4, "found_not_decrypted" => 8.4, "monitor_failed" => 0.2, _ => 30 },
+            Error: outcome == "monitor_failed" ? "OSError: [Errno 95] Operation not supported" : null,
+            Simulated: true);
+    }
+
+    public static SwitchTestResult ParseSwitchTest(string phy, JsonObject json, DateTimeOffset at)
+    {
+        var networks = (json["networks"] as JsonArray ?? [])
+            .OfType<JsonObject>()
+            .Select(n => new SwitchTestNetwork(
+                n["commId"]?.GetValue<string>() ?? "?",
+                n["channel"]?.GetValue<int>() ?? 0,
+                n["protocol"]?.GetValue<int>() ?? 0,
+                n["frlg"]?.GetValue<bool>() ?? false,
+                n["participants"]?.GetValue<int>() ?? 0,
+                n["maxParticipants"]?.GetValue<int>() ?? 0))
+            .ToList();
+        var channels = (json["channels"] as JsonArray ?? [])
+            .OfType<JsonObject>()
+            .Select(c => new SwitchTestChannel(c["channel"]?.GetValue<int>() ?? 0, c["usable"]?.GetValue<bool>() ?? false, c["error"]?.GetValue<string>()))
+            .ToList();
+        var undecryptableChannels = (json["undecryptableChannels"] as JsonArray ?? []).Select(c => c?.GetValue<int>() ?? 0).ToList();
+        return new SwitchTestResult(phy, json["passed"]?.GetValue<bool>() ?? false, json["code"]?.GetValue<string>() ?? "unknown", at,
+            networks, channels,
+            Undecryptable: json["undecryptable"]?.GetValue<int>() ?? 0,
+            UndecryptableChannels: undecryptableChannels,
+            Sweeps: json["sweeps"]?.GetValue<int>() ?? 0,
+            Seconds: json["seconds"]?.GetValue<double>() ?? 0,
+            Error: json["error"]?.GetValue<string>());
+    }
+
     public static CardTestResult ParseCardTest(string phy, JsonObject json, DateTimeOffset at)
     {
         var channels = (json["channels"] as JsonArray ?? [])

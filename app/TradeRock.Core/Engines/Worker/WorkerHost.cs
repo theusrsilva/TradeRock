@@ -179,6 +179,37 @@ public sealed class WorkerHost(IWorkerLauncher launcher, WorkerOptions options, 
         return await client.RequestAsync("card_test", new JsonObject { ["phy"] = phy }, TimeSpan.FromSeconds(120), ct);
     }
 
+    /// <summary>
+    /// Teste com o Switch: escuta os anúncios da sala por até <paramref name="seconds"/> segundos, sem
+    /// entrar nela. As chaves vão como bytes (o worker nunca abre caminhos vindos do app). Se o pedido
+    /// for cancelado (a pessoa fechou ou cancelou), o worker é avisado para parar e devolver o rádio.
+    /// </summary>
+    public async Task<JsonObject> BeaconTestAsync(string phy, byte[] keys, int seconds, CancellationToken ct)
+    {
+        var client = await GetAsync(ct);
+        var args = new JsonObject { ["phy"] = phy, ["keys"] = Convert.ToBase64String(keys), ["seconds"] = seconds };
+        try
+        {
+            return await client.RequestAsync("beacon_test", args, TimeSpan.FromSeconds(seconds + 60), ct);
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                await client.RequestAsync("cancel", null, TimeSpan.FromSeconds(10), CancellationToken.None);
+            }
+            catch (WorkerException)
+            {
+                // o worker já saiu: o rádio volta quando ele encerra
+            }
+            throw;
+        }
+        finally
+        {
+            args["keys"] = null;
+        }
+    }
+
     public async Task<JsonObject> InstallNetworkConfigAsync(CancellationToken ct)
     {
         var client = await GetAsync(ct);

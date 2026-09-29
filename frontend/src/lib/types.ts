@@ -483,6 +483,35 @@ export interface CardTestResult {
   driver: string | null
 }
 
+export type SwitchTestCode =
+  | 'found_decrypted'
+  | 'found_not_decrypted'
+  | 'other_session'
+  | 'not_found'
+  | 'monitor_failed'
+  | 'channel_failed'
+  | 'scan_failed'
+  | 'engine_error'
+  | 'cancelled'
+
+/** Teste com o Switch (worker/traderock_worker/beacon_child.py). */
+export interface SwitchTestResult {
+  phy: string
+  passed: boolean
+  code: SwitchTestCode
+  at: string
+  networks: { commId: string; channel: number; protocol: number; frlg: boolean; participants: number; maxParticipants: number }[]
+  channels: { channel: number; usable: boolean; error: string | null }[]
+  undecryptable: number
+  undecryptableChannels: number[] | null
+  sweeps: number
+  seconds: number
+  error: string | null
+  simulated: boolean
+  driver: string | null
+  keysSavedAt: string | null
+}
+
 export interface SetupStatus {
   system: {
     os: 'linux' | 'windows' | 'other'
@@ -515,10 +544,21 @@ export interface SetupStatus {
     esp32ModuleConfirmed: boolean
     keysSkipped: boolean
     cardTest: CardTestResult | null
-    switchTestPassed: boolean
+    switchTest: SwitchTestResult | null
   }
-  keys: { valid: boolean; invalidLines: number[]; presentRequired: string[]; missingRequired: string[]; protocols: number[]; keyCount: number } | null
+  keys: {
+    valid: boolean
+    invalidLines: number[]
+    presentRequired: string[]
+    missingRequired: string[]
+    protocols: number[]
+    keyCount: number
+    savedAt: string | null
+  } | null
   checks: SetupCheck[]
   readyToTrade: boolean
   catalogUpdatedAt: string
+  switchTestSeconds: number
+  /** Só na simulação (desenvolvimento): resultados que o teste com o Switch pode devolver. */
+  simulatedSwitchOutcomes: SwitchTestCode[] | null
 }

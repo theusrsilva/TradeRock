@@ -175,10 +175,17 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
     private static string Check(JsonElement status, string id) =>
         status.GetProperty("checks").EnumerateArray().First(c => c.GetProperty("id").GetString() == id).GetProperty("code").GetString()!;
 
+    private static readonly string KeysFile = $"aes_kek_generation_source = {Hex}\naes_key_generation_source = {Hex}\nmaster_key_00 = {Hex}\n";
+
+    private async Task UploadKeysAsync()
+    {
+        using var form = new MultipartFormDataContent { { new ByteArrayContent(Encoding.UTF8.GetBytes(KeysFile)), "file", "prod.keys" } };
+        await Json(await _client.PostAsync("/api/setup/keys", form));
+    }
+
     private async Task ConfigureWifiAsync()
     {
-        var keys = $"aes_kek_generation_source = {Hex}\naes_key_generation_source = {Hex}\nmaster_key_00 = {Hex}\n";
-        using var form = new MultipartFormDataContent { { new ByteArrayContent(Encoding.UTF8.GetBytes(keys)), "file", "prod.keys" } };
+        using var form = new MultipartFormDataContent { { new ByteArrayContent(Encoding.UTF8.GetBytes(KeysFile)), "file", "prod.keys" } };
         await Json(await _client.PostAsync("/api/setup/keys", form));
         await Json(await _client.PutAsJsonAsync("/api/setup/state", new { radio = "wifi", phy = "phy1" }));
     }
@@ -196,8 +203,15 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         var test = await Json(await _client.PostAsJsonAsync("/api/setup/card-test", new { phy = "phy1" }));
         Assert.True(test.GetProperty("result").GetProperty("passed").GetBoolean());
         Assert.Equal("card_test_passed", Check(test.GetProperty("status"), "card_test"));
-        // O teste com o Switch chega na Entrega 7: com a placa Wi-Fi, ele não bloqueia a troca.
-        Assert.True(test.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
+        // Falta o teste com o Switch (Entrega 7): ele é essencial com a placa Wi-Fi.
+        Assert.Equal("switch_test_not_run", Check(test.GetProperty("status"), "switch_test"));
+        Assert.False(test.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
+
+        var sw = await Json(await _client.PostAsJsonAsync("/api/setup/switch-test", new { phy = "phy1" }));
+        Assert.Equal("found_decrypted", sw.GetProperty("result").GetProperty("code").GetString());
+        Assert.Equal("switch_test_ok", Check(sw.GetProperty("status"), "switch_test"));
+        Assert.True(sw.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
+        Assert.Equal(KeysFile.Length, _worker.BeaconKeysBytes); // as chaves vão como bytes para o worker
 
         await Json(await _client.PostAsync("/api/setup/network-config", null));
         Assert.Contains(_worker.Requests, r => r["op"]!.GetValue<string>() == "net_install");
@@ -207,6 +221,8 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
 
         var report = await _client.GetStringAsync("/api/setup/report");
         Assert.Contains("Teste da placa (phy1): passed", report);
+        Assert.Contains("Teste com o Switch (phy1): found_decrypted", report);
+        Assert.Contains("canais indisponíveis: 36", report);
         Assert.DoesNotContain(Hex, report);
     }
 
@@ -259,7 +275,72 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
     {
         await ConfigureWifiAsync();
         await Json(await _client.PostAsJsonAsync("/api/setup/card-test", new { phy = "phy1" }));
+        await Json(await _client.PostAsJsonAsync("/api/setup/switch-test", new { phy = "phy1" }));
         Assert.Equal(HttpStatusCode.NoContent, (await _client.PutAsJsonAsync("/api/engines/selected", new { id = "python-ldn" })).StatusCode);
+    }
+
+    private static JsonElement CheckElement(JsonElement status, string id) =>
+        status.GetProperty("checks").EnumerateArray().First(c => c.GetProperty("id").GetString() == id);
+
+    [Theory]
+    [InlineData("found_not_decrypted")]
+    [InlineData("other_session")]
+    [InlineData("not_found")]
+    public async Task Teste_com_o_switch_reprovado_bloqueia_a_troca(string code)
+    {
+        _worker.BeaconMode = code;
+        await ConfigureWifiAsync();
+        await Json(await _client.PostAsJsonAsync("/api/setup/card-test", new { phy = "phy1" }));
+        var sw = await Json(await _client.PostAsJsonAsync("/api/setup/switch-test", new { phy = "phy1" }));
+        var check = CheckElement(sw.GetProperty("status"), "switch_test");
+        Assert.Equal("switch_test_failed", check.GetProperty("code").GetString());
+        Assert.Equal(code, check.GetProperty("args").GetProperty("code").GetString());
+        // prod.keys só com a master_key_00: o anúncio pode ser do protocolo LDN 3.
+        Assert.Equal(code == "found_not_decrypted", check.GetProperty("args").TryGetProperty("hint", out _));
+        Assert.False(sw.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Teste_com_o_switch_vale_so_para_o_mesmo_prod_keys()
+    {
+        await ReadyAsync();
+        Assert.True((await Json(await _client.GetAsync("/api/setup"))).GetProperty("readyToTrade").GetBoolean());
+        await Task.Delay(20); // a data de gravação do arquivo muda
+        await UploadKeysAsync();
+        var status = await Json(await _client.GetAsync("/api/setup"));
+        Assert.Equal("switch_test_not_run", Check(status, "switch_test"));
+        Assert.False(status.GetProperty("readyToTrade").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Teste_com_o_switch_sem_chaves_e_placa_desconhecida()
+    {
+        await Json(await _client.PutAsJsonAsync("/api/setup/state", new { radio = "wifi", phy = "phy1" }));
+        Assert.Equal("switch_test_needs_keys", Check(await Json(await _client.GetAsync("/api/setup")), "switch_test"));
+        var response = await _client.PostAsJsonAsync("/api/setup/switch-test", new { phy = "phy1" });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("keys_missing", await response.Content.ReadAsStringAsync());
+        await UploadKeysAsync();
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsJsonAsync("/api/setup/switch-test", new { phy = "phy7" })).StatusCode);
+        Assert.Equal(0, _worker.Launches);
+    }
+
+    [Fact]
+    public async Task Cancelar_o_teste_com_o_switch_avisa_o_worker()
+    {
+        _worker.BeaconMode = "hang";
+        await ConfigureWifiAsync();
+        using var cts = new CancellationTokenSource();
+        var request = _client.PostAsJsonAsync("/api/setup/switch-test", new { phy = "phy1" }, cts.Token);
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!_worker.Requests.Any(r => r["op"]!.GetValue<string>() == "beacon_test") && DateTime.UtcNow < deadline)
+            await Task.Delay(20);
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => request);
+        while (!_worker.Requests.Any(r => r["op"]!.GetValue<string>() == "cancel") && DateTime.UtcNow < deadline)
+            await Task.Delay(20);
+        Assert.Contains(_worker.Requests, r => r["op"]!.GetValue<string>() == "cancel");
+        Assert.Equal("switch_test_not_run", Check(await Json(await _client.GetAsync("/api/setup")), "switch_test"));
     }
 
     private async Task<List<JsonElement>> EventsUntilFinishedAsync(Func<JsonElement, Task>? onEvent = null)

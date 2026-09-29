@@ -53,15 +53,22 @@ Opções:
    - Durante uns 10 s, o Wi-Fi da placa cai e volta sozinho.
    - Anote o resultado por canal (enviados e recebidos).
 3. **Etapa 4 → Configurar o NetworkManager** (recomendado).
-4. **Configurações → Motor de troca → Placa Wi-Fi do PC.** Concluir o assistente já seleciona esse
+4. **Etapa 6 → Procurar a sala**, com o Switch no Direct Corner como Leader, na tela de espera:
+   - o teste escuta por até 30 s e para ao achar a sala; o Wi-Fi da placa cai e volta sozinho;
+   - anote o resultado e abra **Detalhes** (canal, protocolo LDN, anúncios que não decifraram,
+     canais que a placa não sintonizou);
+   - repita com a sala fechada (deve dar "nenhuma sala") e, se tiver, com um prod.keys de outra
+     versão (deve dar "encontrada, mas não decifrada");
+   - confira que o Switch **não** recebe pedido de entrada durante o teste.
+5. **Configurações → Motor de troca → Placa Wi-Fi do PC.** Concluir o assistente já seleciona esse
    motor.
-5. **Trocar**, com o Switch no Direct Corner como Leader:
+6. **Trocar**, com o Switch no Direct Corner como Leader:
    - aprove o pedido de entrada ("EMU", ou o nome que você escolheu);
    - sente na cadeira da esquerda;
    - troque;
    - cancele no menu de troca;
    - saia da sala.
-6. Se algo falhar:
+7. Se algo falhar:
    - **Resumo → Exportar relatório.**
    - Log de diagnóstico: rode com `--Logging:LogLevel:TradeRock=Debug` para ver as linhas `worker:`,
      que são o log verboso do motor. Nenhum desses logs tem chaves.
@@ -73,6 +80,7 @@ app (usuário) ──pkexec──▶ /usr/local/lib/traderock-dev/traderock-work
      ▲   stdin/stdout JSON        │
      └────────────────────────────┤  python3 -I worker/run.py
                                   ├─ --child card   teste da placa (ldn.wlan)
+                                  ├─ --child beacon teste com o Switch (ldn.Scanner, sem entrar na sala)
                                   └─ --child trade  uma tentativa de troca (frlgtrade.run_live)
 ```
 
@@ -94,6 +102,8 @@ app (usuário) ──pkexec──▶ /usr/local/lib/traderock-dev/traderock-work
 - `python3 -m unittest discover -s worker/tests -t worker` cobre:
   - validação, rádio (com `/sys` falso) e mapeamento de eventos;
   - o wrapper contra um motor falso e o laço de protocolo;
+  - o teste com o Switch (`beacon_child.run_scan`) com dublês de `trio` e da biblioteca LDN
+    (`worker/tests/fake_ldn`): sala achada, chaves erradas, outro jogo, placa sem 5 GHz;
   - um teste que confere se cada frase do motor usada no mapeamento ainda existe no submódulo.
 - `WorkerTests.cs` cobre a API de ponta a ponta com um worker falso: assistente, teste da placa,
-  troca, cancelamento e retry.
+  teste com o Switch (resultados, validade e cancelamento), troca, cancelamento e retry.

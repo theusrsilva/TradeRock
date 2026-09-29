@@ -6,5 +6,5 @@ a entrada fecha (o app saiu ou travou), cancela o que estiver rodando, devolve o
 anterior e sai.
 """
 
-VERSION = "0.6.0"
-PROTOCOL = 1
+VERSION = "0.7.0"
+PROTOCOL = 2  # 2: beacon_test (Entrega 7)

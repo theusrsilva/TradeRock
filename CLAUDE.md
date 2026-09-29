@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D15).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D16).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -43,6 +43,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Cofre | Caixas de 30 posições com Caixa de entrada. Lixeira recuperável. Injeção em `.sav` sobrescreve, com backup. Exportação padrão: .pk3 de 100 bytes |
 | Assistente | RTL8821CE também recomendada. Seletor de simulação só em desenvolvimento |
 | Worker | Em Python (runtime embutido). Canal por stdin/stdout em vez de socket Unix. Polkit `auth_admin_keep`. Patches do FRLG-LDN-Trade-Console aplicados. `iw` e `ip` estáticos embutidos (o autor não quer mandar a pessoa instalar pré-requisitos) |
+| Teste com o Switch | Até 30 s. Sessão de outro jogo decifrada não aprova. Vale até mudar a placa ou o prod.keys (não expira) |
 
 ## Estado das entregas
 
@@ -54,25 +55,16 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 4 | Cofre (caixas, tags, lixeira, exportação, injeção em .sav) | feita |
 | 5 | Catálogo de hardware + assistente de primeira execução (7 etapas) | feita |
 | 6 | Worker privilegiado + polkit + PythonLdnEngine + fluxo de teste no host | feita, **sem teste com hardware real** |
-| 7 | Teste do beacon com a placa Wi-Fi (etapa 6 do assistente) | **próxima** |
-| 8 | Empacotamento Linux (AppImage e .deb) e CI | — |
+| 7 | Teste do beacon com a placa Wi-Fi (etapa 6 do assistente) | feita, **sem teste com hardware real** |
+| 8 | Empacotamento Linux (AppImage e .deb) e CI | **próxima** |
 | 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | — |
 | 10 | Modo servidor na rede | — |
 | 11 | Build e instalador Windows (só ESP32) | — |
 
-A branch mais recente é `entrega-6-worker`. O `main` do GitHub ainda tem só o commit inicial.
+A branch mais recente é `entrega-7-beacon`. O `main` do GitHub ainda tem só o commit inicial.
 
 ## Pendências já combinadas
 
-- **Entrega 7.** Hoje a etapa 6 do assistente (teste com o Switch) aparece como "em breve" e **não é
-  essencial com a placa Wi-Fi** (`SetupChecks.Evaluate`). Na Entrega 7, ela volta a ser essencial.
-  O teste procura o beacon da sala e tenta decifrá-lo, sem entrar na sala. Há três resultados:
-  - encontrado e decifrado;
-  - encontrado mas não decifrado (chaves erradas);
-  - nada encontrado.
-
-  Para isso, a biblioteca LDN tem `ldn.scan` e registra "Failed to parse advertisement frame" quando
-  um anúncio não decifra. O worker já observa esse aviso em `trade_child.py` (`BeaconWatch`).
 - **Entrega 8:**
   - atualização do catálogo de hardware e do app pelo GitHub Releases, opcional e desligável; precisa
     da URL do repositório (`theusrsilva/TradeRock`);
@@ -90,6 +82,7 @@ A branch mais recente é `entrega-6-worker`. O `main` do GitHub ainda tem só o 
   - janela nativa e diálogos do Photino (o ambiente de desenvolvimento era WSL, sem WebKitGTK);
   - `.sav` real e o formato de save NSO do Switch;
   - troca com Switch real;
+  - teste com o Switch (Entrega 7, D16);
   - teste da placa com root.
 
   O roteiro de teste no host está em [docs/dev-host.md](docs/dev-host.md).
@@ -101,7 +94,7 @@ A branch mais recente é `entrega-6-worker`. O `main` do GitHub ainda tem só o 
 | `app/TradeRock.App` | ASP.NET Core + Photino (API em `Api/`, DI em `ServiceSetup.cs`) |
 | `app/TradeRock.Core` | Domínio: `Trading/`, `Engines/` (Fake, PythonLdn, `Worker/`), `Pokemon/`, `Builder/`, `Storage/` (EF Core + SQLite), `Saves/`, `Setup/` (catálogo, probe do Linux, verificações, prod.keys) |
 | `app/TradeRock.Tests` | xUnit v3; worker falso em `FakeWorker.cs` |
-| `worker/` | Worker Python: `traderock_worker/` (server, radio, trade_child, card_child, events, protocol) e `tests/` |
+| `worker/` | Worker Python: `traderock_worker/` (server, radio, trade_child, card_child, beacon_child, events, protocol) e `tests/` (dublês de trio/ldn em `fake_ldn`) |
 | `frontend/` | React + Vite + TS + Tailwind; o build vai para `app/TradeRock.App/wwwroot` |
 | `catalog/hardware-catalog.json` | Catálogo de placas |
 | `engines/` | Submódulos (frlg-ldn-trade, frlg-ldn-trade-esp32, PKHeX-Plugins) e `patches/` |

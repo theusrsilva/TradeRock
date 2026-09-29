@@ -5,6 +5,7 @@ import base64
 import glob
 import io
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -18,7 +19,8 @@ WORKER = os.path.dirname(TESTS)
 REPO = os.path.dirname(WORKER)
 sys.path.insert(0, WORKER)
 
-from traderock_worker import card_child, events, protocol, radio, server  # noqa: E402
+from traderock_worker import beacon_child, card_child, events, protocol, radio, server  # noqa: E402
+from tests.fake_ldn import FakeTrio, make_ldn  # noqa: E402
 
 PK3 = base64.b64encode(bytes(100)).decode()
 KEYS = base64.b64encode(b"master_key_00 = 00\n").decode()
@@ -51,6 +53,21 @@ class ProtocolTests(unittest.TestCase):
         for over in bad:
             with self.subTest(over=over), self.assertRaises(protocol.RequestError):
                 protocol.trade_params(trade_msg(**over))
+
+
+class BeaconParamsTests(unittest.TestCase):
+    def test_valido_e_padrao(self):
+        p = protocol.beacon_params({"phy": "phy1", "keys": KEYS})
+        self.assertEqual((p.phy, p.seconds), ("phy1", 30))
+        self.assertEqual(protocol.beacon_params({"phy": "phy0", "keys": KEYS, "seconds": 60}).seconds, 60)
+
+    def test_rejeita(self):
+        for over in (dict(phy="phy0 x"), dict(keys=""), dict(keys="%%"), dict(seconds=1), dict(seconds=600),
+                     dict(seconds="30")):
+            msg = {"phy": "phy0", "keys": KEYS}
+            msg.update(over)
+            with self.subTest(over=over), self.assertRaises(protocol.RequestError):
+                protocol.beacon_params(msg)
 
 
 class EventMapTests(unittest.TestCase):
@@ -97,6 +114,26 @@ class EventMapTests(unittest.TestCase):
         self.assertIn("def profile_from_overrides(*, ot=None, version=None, trainer_id=None,", config)
         for name in ("class TradePlan", "class LdnConfig", "class JoinerOptions", "class TradeRunConfig"):
             self.assertIn(name, config)
+
+    def test_api_do_motor_usada_pelo_teste_do_beacon(self):
+        """O beacon_child reconhece a sala do FRLG pelas regras do transport (submódulo + patch 0001)."""
+        engine = os.path.join(REPO, "engines", "frlg-ldn-trade")
+        if not os.path.isdir(os.path.join(engine, "frlgsim")):
+            self.skipTest("submódulo ausente")
+        with open(os.path.join(engine, "frlgsim", "transport.py"), encoding="utf-8") as f:
+            transport = f.read()
+        with open(os.path.join(REPO, "engines", "patches", "frlg-ldn-trade",
+                               "0001-transport-scan-and-retry-fixes.patch"), encoding="utf-8") as f:
+            patch = f.read()
+        self.assertIn("class LiveTransport:", transport)
+        self.assertIn("LOCAL_COMMUNICATION_ID = 0x0100610011000000", transport)
+        self.assertIn("+    KNOWN_COMM_IDS = (", patch)
+        self.assertIn("+def _looks_like_frlg_beacon(app_data):", patch)
+        # canais e tempo por canal iguais aos da varredura do motor
+        self.assertIn('"FRLG_CHANNELS", "1,6,11,36,40,44,48"', patch)
+        self.assertIn('os.environ.get("FRLG_SCAN_DWELL", "0.60")', patch)
+        self.assertEqual(beacon_child.CHANNELS, (1, 6, 11, 36, 40, 44, 48))
+        self.assertEqual(beacon_child.DWELL, 0.6)
 
 
 class FakeRunner:
@@ -200,6 +237,96 @@ class CardVerdictTests(unittest.TestCase):
         self.assertEqual(v({"monitor": True, "channels": [self.ch()]}), {"passed": True, "code": "passed"})
 
 
+class BeaconVerdictTests(unittest.TestCase):
+    def test_ordem(self):
+        v = beacon_child.verdict
+        frlg = {"frlg": True}
+        other = {"frlg": False}
+        ok_ch = [{"channel": 1, "usable": True, "error": None}]
+        base = {"monitor": True, "channels": ok_ch, "networks": [], "undecryptable": 0}
+        self.assertEqual(v({**base, "networks": [frlg], "undecryptable": 3}), {"passed": True, "code": "found_decrypted"})
+        self.assertEqual(v({**base, "cancelled": True})["code"], "cancelled")
+        self.assertEqual(v({**base, "monitor": False})["code"], "monitor_failed")
+        self.assertEqual(v({**base, "channels": [{"channel": 1, "usable": False}]})["code"], "channel_failed")
+        self.assertEqual(v({**base, "networks": [other], "undecryptable": 1})["code"], "found_not_decrypted")
+        self.assertEqual(v({**base, "networks": [other]})["code"], "other_session")
+        self.assertEqual(v({**base, "error": "x"})["code"], "scan_failed")
+        self.assertEqual(v(base), {"passed": False, "code": "not_found"})
+
+    def test_erro_legivel(self):
+        group = ExceptionGroup("Exceptions from Trio nursery", [OSError(95, "Operation not supported")])
+        self.assertEqual(beacon_child.error_text(group), "OSError: [Errno 95] Operation not supported")
+
+
+class BeaconScanTests(unittest.TestCase):
+    """run_scan de verdade, com trio e ldn falsos e um "ar" roteirizado por canal."""
+
+    def setUp(self):
+        self._dwell = beacon_child.DWELL
+        beacon_child.DWELL = 0.005
+        self.watch = beacon_child.UndecryptableWatch()
+        logging.getLogger("ldn").addHandler(self.watch)
+        self.is_frlg = beacon_child.frlg_matcher(os.path.join(TESTS, "fake_engine"))
+
+    def tearDown(self):
+        beacon_child.DWELL = self._dwell
+        logging.getLogger("ldn").removeHandler(self.watch)
+
+    def scan(self, seconds=0.5, **fake):
+        ldn, wlan, state = make_ldn(**fake)
+        progress = []
+        result = beacon_child.run_scan(ldn, FakeTrio, wlan, {}, {"phy": "phy0", "seconds": seconds},
+                                       self.is_frlg, self.watch, progress.append)
+        result.update(beacon_child.verdict(result))
+        return result, state.get("monitor"), progress
+
+    def test_sala_encontrada_para_na_hora(self):
+        result, monitor, progress = self.scan(air={11: "frlg"})
+        self.assertEqual(result["code"], "found_decrypted")
+        self.assertEqual(monitor.visits, [1, 6, 11])  # não continua depois de achar
+        self.assertEqual(result["networks"], [{"commId": "0x0100610011000000", "channel": 11, "protocol": 1,
+                                               "frlg": True, "participants": 1, "maxParticipants": 2}])
+        self.assertTrue(any(p.get("stage") == "network" for p in progress))
+
+    def test_sala_pelo_formato_do_beacon(self):
+        result, _, _ = self.scan(air={6: "shaped"})
+        self.assertEqual(result["code"], "found_decrypted")
+
+    def test_chaves_erradas_para_depois_de_uma_volta_extra(self):
+        result, monitor, _ = self.scan(seconds=5, air={6: "bad"})
+        self.assertEqual(result["code"], "found_not_decrypted")
+        self.assertEqual(result["undecryptableChannels"], [6])
+        self.assertEqual(result["sweeps"], 2)
+        self.assertEqual(len(monitor.visits), 14)
+        self.assertLess(result["seconds"], 5)
+
+    def test_outro_jogo_nao_aprova(self):
+        result, _, _ = self.scan(air={1: "other"})
+        self.assertEqual(result["code"], "other_session")
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["networks"][0]["frlg"])
+
+    def test_nada_ate_o_tempo_acabar(self):
+        result, _, _ = self.scan(seconds=0.2)
+        self.assertEqual(result["code"], "not_found")
+        self.assertGreaterEqual(result["sweeps"], 2)
+        self.assertEqual(result["undecryptable"], 0)
+
+    def test_placa_sem_5ghz_segue_nos_outros_canais(self):
+        result, monitor, _ = self.scan(seconds=0.3, bad_channels=(36, 40, 44, 48), air={})
+        self.assertEqual(result["code"], "not_found")
+        unusable = [c["channel"] for c in result["channels"] if not c["usable"]]
+        self.assertEqual(unusable, [36, 40, 44, 48])
+        self.assertTrue(set(monitor.visits) <= {1, 6, 11})
+
+    def test_nenhum_canal_e_monitor_falhou(self):
+        result, _, _ = self.scan(bad_channels=(1, 6, 11, 36, 40, 44, 48))
+        self.assertEqual(result["code"], "channel_failed")
+        result, _, _ = self.scan(monitor_error="Operation not supported")
+        self.assertEqual(result["code"], "monitor_failed")
+        self.assertIn("Operation not supported", result["error"])
+
+
 def run_trade_child(params, scenario, timeout=20):
     """Roda o trade_child de verdade contra o motor falso (tests/fake_engine)."""
     env = {"PATH": os.environ.get("PATH", ""), "FAKE_SCENARIO": scenario}
@@ -281,6 +408,13 @@ class ServerHarness:
         self.scenario = "success"
 
     def fake_child(self, kind):
+        if kind == "beacon":
+            code = ("import json,sys; p=json.loads(sys.stdin.readline()); "
+                    "k=open(p['keys'],'rb').read(); "
+                    "print(json.dumps({'type':'progress','stage':'listening'})); "
+                    "print(json.dumps({'type':'result','result':{'passed':True,'code':'found_decrypted',"
+                    "'keysBytes':len(k),'seconds':p['seconds'],'keysPath':p['keys']}}))")
+            return [sys.executable, "-c", code]
         if kind == "card":
             code = ("import json,sys; sys.stdin.readline(); print(json.dumps({'type':'result','result':"
                     "{'monitor':True,'channels':[],'passed':True,'code':'passed'}}))")
@@ -323,7 +457,7 @@ class ServerTests(unittest.TestCase):
     def test_hello_e_operacao_desconhecida(self):
         self.h.send({"id": 1, "op": "hello"})
         msg, _ = self.h.read_until(lambda m: m.get("id") == 1)
-        self.assertEqual(msg["result"]["protocol"], 1)
+        self.assertEqual(msg["result"]["protocol"], 2)
         self.h.send({"id": 2, "op": "rm"})
         msg, _ = self.h.read_until(lambda m: m.get("id") == 2)
         self.assertEqual(msg["error"]["code"], "unknown_op")
@@ -368,6 +502,21 @@ class ServerTests(unittest.TestCase):
         msg, _ = self.h.read_until(lambda m: m.get("id") == 2)
         self.assertTrue(msg["result"]["passed"])
         self.assertIn(["ip", "link", "set", "wlp2s0", "down"], self.h.runner.calls)
+        self.assertIn(["ip", "link", "set", "wlp2s0", "up"], self.h.runner.calls)
+
+    def test_beacon_test(self):
+        self.h.send({"id": 1, "op": "beacon_test", "phy": "phy9", "keys": KEYS})
+        msg, _ = self.h.read_until(lambda m: m.get("id") == 1)
+        self.assertEqual(msg["error"]["code"], "phy_not_found")
+        self.h.send({"id": 2, "op": "beacon_test", "phy": "phy0", "keys": KEYS, "seconds": 20})
+        msg, seen = self.h.read_until(lambda m: m.get("id") == 2)
+        result = msg["result"]
+        self.assertEqual(result["code"], "found_decrypted")
+        self.assertEqual(result["keysBytes"], len(base64.b64decode(KEYS)))
+        self.assertEqual(result["seconds"], 20)
+        self.assertTrue(any(m.get("event") == "debug" and "listening" in m["text"] for m in seen))
+        # chaves apagadas e rádio devolvido
+        self.assertFalse(os.path.exists(result["keysPath"]))
         self.assertIn(["ip", "link", "set", "wlp2s0", "up"], self.h.runner.calls)
 
     def test_ferramentas_faltando(self):

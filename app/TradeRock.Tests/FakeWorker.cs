@@ -21,6 +21,12 @@ public sealed class FakeWorker : IWorkerLauncher
     /// <summary>success | hang (espera o cancelamento) | no_network | card_fail</summary>
     public string Mode { get; set; } = "success";
 
+    /// <summary>Resultado do beacon_test: um código do beacon_child.py, ou "hang" (espera o cancelamento).</summary>
+    public string BeaconMode { get; set; } = "found_decrypted";
+
+    /// <summary>Tamanho do prod.keys que chegou no último beacon_test (o conteúdo não é guardado).</summary>
+    public int? BeaconKeysBytes;
+
     public int Launches;
     public ConcurrentQueue<JsonObject> Requests { get; } = new();
 
@@ -85,7 +91,7 @@ public sealed class FakeWorker : IWorkerLauncher
                     }
                     await Reply(id, new JsonObject
                     {
-                        ["version"] = "0.6.0", ["protocol"] = 1, ["root"] = true,
+                        ["version"] = "0.7.0", ["protocol"] = WorkerClient.Protocol, ["root"] = true,
                         ["engineCommit"] = "13809c2", ["missingTools"] = new JsonArray(),
                     });
                     break;
@@ -98,6 +104,10 @@ public sealed class FakeWorker : IWorkerLauncher
                         ["passed"] = passed,
                         ["code"] = passed ? "passed" : "monitor_failed",
                     });
+                    break;
+                case "beacon_test":
+                    BeaconKeysBytes = Convert.FromBase64String(msg["keys"]!.GetValue<string>()).Length;
+                    _ = Task.Run(() => BeaconAsync(id?.DeepClone(), Send, cancelled));
                     break;
                 case "net_install":
                     await Reply(id, new JsonObject { ["networkManager"] = true, ["udevLink"] = true });
@@ -118,6 +128,37 @@ public sealed class FakeWorker : IWorkerLauncher
         }
         await c.FromWorkerPipe.Writer.CompleteAsync();
         c.Exit.TrySetResult(0);
+    }
+
+    private async Task BeaconAsync(JsonNode? id, Func<JsonObject, Task> send, TaskCompletionSource cancelled)
+    {
+        var code = BeaconMode;
+        if (code == "hang")
+        {
+            await cancelled.Task;
+            code = "cancelled";
+        }
+        var frlg = code == "found_decrypted";
+        var networks = frlg || code == "other_session"
+            ? new JsonArray(new JsonObject
+            {
+                ["commId"] = frlg ? "0x0100610011000000" : "0x0100abcd00000000", ["channel"] = 11, ["protocol"] = 1,
+                ["frlg"] = frlg, ["participants"] = 1, ["maxParticipants"] = 2,
+            })
+            : [];
+        await send(new JsonObject
+        {
+            ["id"] = id, ["ok"] = true,
+            ["result"] = new JsonObject
+            {
+                ["passed"] = frlg, ["code"] = code, ["monitor"] = true, ["networks"] = networks,
+                ["channels"] = new JsonArray(new JsonObject { ["channel"] = 1, ["usable"] = true, ["error"] = null },
+                    new JsonObject { ["channel"] = 36, ["usable"] = false, ["error"] = "OSError: [Errno 22]" }),
+                ["undecryptable"] = code == "found_not_decrypted" ? 3 : 0,
+                ["undecryptableChannels"] = code == "found_not_decrypted" ? new JsonArray(6) : [],
+                ["sweeps"] = 2, ["seconds"] = 7.5, ["cancelled"] = code == "cancelled",
+            },
+        });
     }
 
     private async Task TradeAsync(Func<JsonObject, Task> send, int trades, Task cancelled)

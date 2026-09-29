@@ -395,6 +395,55 @@ public sealed class SetupChecksTests
     }
 
     [Fact]
+    public void Teste_com_o_switch_vale_so_para_a_mesma_placa_e_o_mesmo_prod_keys()
+    {
+        var saved = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
+        var keys = GoodKeys with { SavedAt = saved };
+        var ok = new SwitchTestResult("phy1", true, "found_decrypted", default,
+            [new SwitchTestNetwork("0x0100610011000000", 6, 1, true, 1, 2)], [], Driver: "mt76x0u", KeysSavedAt: saved);
+        SetupState State(SwitchTestResult? test) => new() { Radio = "wifi", Phy = "phy1", SwitchTest = test };
+
+        var check = Get(Checks("linux-compatible", State(ok), keys), "switch_test");
+        Assert.Equal(CheckStatus.Ok, check.Status);
+        Assert.Equal("6", check.Args!["channel"]);
+        Assert.Equal("switch_test_not_run", Get(Checks("linux-compatible", State(null), keys), "switch_test").Code);
+        Assert.Equal("switch_test_not_run", Get(Checks("linux-compatible", State(ok with { Driver = "rtl8xxxu" }), keys), "switch_test").Code);
+        Assert.Equal("switch_test_not_run", Get(Checks("linux-compatible", State(ok), keys with { SavedAt = saved.AddMinutes(1) }), "switch_test").Code);
+        Assert.Equal("switch_test_needs_keys", Get(Checks("linux-compatible", State(ok), null), "switch_test").Code);
+        Assert.True(Get(Checks("linux-compatible", State(null), keys), "switch_test").Essential);
+
+        // Anúncio que não decifra: com só a master_key_00, a dica aponta a master_key_12.
+        var bad = ok with { Passed = false, Code = "found_not_decrypted", Networks = [] };
+        var failed = Get(Checks("linux-compatible", State(bad), keys), "switch_test");
+        Assert.Equal("switch_test_failed", failed.Code);
+        Assert.Equal("missing_master_key_12", failed.Args!["hint"]);
+        Assert.False(Get(Checks("linux-compatible", State(bad), keys with { Protocols = [1, 3] }), "switch_test").Args!.ContainsKey("hint"));
+
+        // ESP32: o teste chega com o motor, na Entrega 9.
+        var esp = Get(Checks("linux-esp32", new SetupState { Radio = "esp32" }, keys), "switch_test");
+        Assert.Equal(("switch_test_pending", "entrega-9"), (esp.Code, esp.AvailableIn));
+    }
+
+    [Fact]
+    public void Resultado_do_teste_com_o_switch_vindo_do_worker()
+    {
+        var json = System.Text.Json.Nodes.JsonNode.Parse("""
+            {"passed": false, "code": "found_not_decrypted", "monitor": true, "networks": [],
+             "channels": [{"channel": 1, "usable": true, "error": null}, {"channel": 36, "usable": false, "error": "OSError"}],
+             "undecryptable": 4, "undecryptableChannels": [6, 11], "sweeps": 2, "seconds": 8.4, "error": null}
+            """)!.AsObject();
+        var r = SetupService.ParseSwitchTest("phy1", json, default);
+        Assert.Equal(("found_not_decrypted", false, 4, 2), (r.Code, r.Passed, r.Undecryptable, r.Sweeps));
+        Assert.Equal([6, 11], r.UndecryptableChannels);
+        Assert.False(r.Channels[1].Usable);
+        Assert.Equal(8.4, r.Seconds);
+
+        foreach (var outcome in SetupService.SimulatedSwitchOutcomes)
+            Assert.Equal(outcome == "found_decrypted", SetupService.SimulateSwitchTest("phy1", outcome, default).Passed);
+        Assert.Throws<ArgumentException>(() => SetupService.SimulateSwitchTest("phy1", "xyz", default));
+    }
+
+    [Fact]
     public void Placa_que_e_a_internet_do_pc_avisa()
     {
         var checks = Checks("linux-unstable", new SetupState { Radio = "wifi", Phy = "phy0" }, GoodKeys);
@@ -467,9 +516,9 @@ public sealed class SetupChecksTests
         var system = SetupScenarios.All["linux-compatible"];
         var catalog = HardwareCatalog.Embedded;
         var advice = RadioAdvisor.Advise(system, catalog);
-        var state = new SetupState { Radio = "wifi", Phy = "phy1", SwitchTestPassed = true };
+        var state = new SetupState { Radio = "wifi", Phy = "phy1" };
         var status = new SetupStatus(system, advice, state, GoodKeys, SetupChecks.Evaluate(system, advice, state, GoodKeys, catalog));
-        Assert.False(status.ReadyToTrade); // worker e teste da placa chegam na Entrega 6
+        Assert.False(status.ReadyToTrade); // falta o teste da placa e o teste com o Switch
     }
 
     [Fact]

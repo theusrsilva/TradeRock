@@ -4,7 +4,7 @@ Pedido:   {"id": 1, "op": "hello"}
 Resposta: {"id": 1, "ok": true, "result": {...}}  ou  {"id": 1, "ok": false, "error": {"code", "message"}}
 Evento:   {"event": "trade" | "trade_end" | "debug", ...}
 
-Uma operação de rádio por vez (card_test ou start_trade). `cancel` interrompe a troca em andamento.
+Uma operação de rádio por vez (card_test, beacon_test ou start_trade). `cancel` interrompe a operação em andamento.
 """
 
 import base64
@@ -19,12 +19,13 @@ import tempfile
 import threading
 
 from . import PROTOCOL, VERSION
-from .protocol import MAX_LINE, RequestError, phy as check_phy, trade_params
+from .protocol import MAX_LINE, RequestError, beacon_params, phy as check_phy, trade_params
 from .radio import NetworkConfig, Radio, SAFE_PATH, which
 
 GRACEFUL_CANCEL_SECONDS = 30   # primeiro SIGINT: o motor sai da sala e espera o Switch fechar
 HARD_CANCEL_SECONDS = 10       # segundo SIGINT: encerra na hora; depois disso, SIGKILL
 CARD_TEST_TIMEOUT = 60
+BEACON_TEST_MARGIN = 30        # além do tempo de escuta pedido: criar o monitor, devolver o rádio
 # O motor chama iw e ip (embutidos no worker) e sysctl (procps, presente em praticamente todo Linux);
 # sem eles ele quebra no meio (FileNotFoundError) ou deixa de receber os anúncios do Switch.
 REQUIRED_TOOLS = ("iw", "ip", "sysctl")
@@ -92,6 +93,7 @@ class Server:
             "hello": self.op_hello,
             "status": self.op_status,
             "card_test": self.op_card_test,
+            "beacon_test": self.op_beacon_test,
             "start_trade": self.op_start_trade,
             "cancel": self.op_cancel,
             "net_status": self.op_net_status,
@@ -201,39 +203,77 @@ class Server:
         self._op_thread.start()
 
     def _card_test(self, req_id, phy):
+        self._run_test(req_id, phy, "card", {"phy": phy}, CARD_TEST_TIMEOUT, "card_test_crashed")
+
+    def _run_test(self, req_id, phy, kind, params, timeout, crash_code, tmp=None):
+        """Roda um filho de teste (uma linha JSON de entrada, um "result" na saída) com o rádio
+        emprestado; devolve o rádio antes de responder."""
         snapshot = self.radio.snapshot(phy)
         result, error = None, None
         try:
             self.radio.take(snapshot)
-            child = self._spawn("card")
-            child.stdin.write((json.dumps({"phy": phy}) + "\n").encode())
+            if self._cancel:
+                raise Cancelled()
+            child = self._spawn(kind)
+            child.stdin.write((json.dumps(params) + "\n").encode())
             child.stdin.close()
-            timer = threading.Timer(CARD_TEST_TIMEOUT, child.kill)
+            timer = threading.Timer(timeout, child.kill)
             timer.start()
             try:
-                out = child.stdout.read()
+                for raw in child.stdout:
+                    try:
+                        msg = json.loads(raw)
+                    except ValueError:
+                        continue
+                    if msg.get("type") == "result":
+                        result = msg["result"]
+                    elif msg.get("type") == "progress":
+                        self.debug(f"{kind}: {json.dumps(msg, ensure_ascii=False)}"[:2000])
                 child.wait()
             finally:
                 timer.cancel()
-            for line in out.decode("utf-8", "replace").splitlines():
-                try:
-                    msg = json.loads(line)
-                except ValueError:
-                    continue
-                if msg.get("type") == "result":
-                    result = msg["result"]
             if result is None:
                 error = f"o teste terminou sem resultado (código {child.returncode})"
+        except Cancelled:
+            result = {"passed": False, "code": "cancelled", "cancelled": True}
         except Exception as e:  # noqa: BLE001
             error = f"{type(e).__name__}: {e}"
         finally:
             # Primeiro devolve o rádio, depois responde: quando o app recebe a resposta, o Wi-Fi já voltou.
             self.radio.restore(snapshot)
+            if tmp is not None:
+                shutil.rmtree(tmp, ignore_errors=True)
             self._end()
         if result is None:
-            self.fail(req_id, "card_test_crashed", error)
+            self.fail(req_id, crash_code, error)
         else:
             self.reply(req_id, result)
+
+    # -- teste com o Switch (beacon) ---------------------------------------------------------
+    def op_beacon_test(self, req_id, msg):
+        params = beacon_params(msg)
+        self._require_tools()
+        if not self.radio.phy_exists(params.phy):
+            raise RequestError("phy_not_found", f"{params.phy} não existe")
+        if not self._begin("beacon_test", req_id):
+            return
+        self._op_thread = threading.Thread(target=self._beacon_test, args=(req_id, params), daemon=True)
+        self._op_thread.start()
+
+    def _beacon_test(self, req_id, p):
+        tmp = tempfile.mkdtemp(prefix="traderock-beacon-")  # 0700, do root
+        try:
+            keys = os.path.join(tmp, "prod.keys")
+            fd = os.open(keys, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "wb") as f:
+                f.write(p.keys)
+        except OSError as e:
+            shutil.rmtree(tmp, ignore_errors=True)
+            self._end()
+            self.fail(req_id, "beacon_test_crashed", str(e))
+            return
+        self._run_test(req_id, p.phy, "beacon", {"phy": p.phy, "keys": keys, "seconds": p.seconds},
+                       p.seconds + BEACON_TEST_MARGIN, "beacon_test_crashed", tmp=tmp)
 
     # -- troca ---------------------------------------------------------------------------------
     def op_start_trade(self, req_id, msg):

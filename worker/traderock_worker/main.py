@@ -1,4 +1,4 @@
-"""Ponto de entrada: o servidor (padrão) ou um dos processos filhos (--child trade|card)."""
+"""Ponto de entrada: o servidor (padrão) ou um dos processos filhos (--child trade|card|beacon)."""
 
 import json
 import os
@@ -13,6 +13,9 @@ def run(argv, root):
         if argv[1] == "card":
             from . import card_child
             return card_child.main()
+        if argv[1] == "beacon":
+            from . import beacon_child
+            return beacon_child.main(engine_dir)
         return 2
     from . import server
     return server.main(install_info(root))

@@ -30,7 +30,7 @@ public interface IWorkerConnection : IAsyncDisposable
 /// </summary>
 public sealed class WorkerClient : IAsyncDisposable
 {
-    public const int Protocol = 1;
+    public const int Protocol = 2; // 2: beacon_test (Entrega 7)
 
     private readonly IWorkerConnection _connection;
     private readonly ILogger _logger;

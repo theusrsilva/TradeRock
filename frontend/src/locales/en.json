@@ -241,7 +241,8 @@
     "wifi_not_configured": "Pick the Wi-Fi card in the setup wizard.",
     "keys_missing": "prod.keys hasn't been uploaded.",
     "card_test_crashed": "The card test stopped with an error.",
-    "busy": "The network component is still finishing the previous operation. Try again in a few seconds."
+    "busy": "The network component is still finishing the previous operation. Try again in a few seconds.",
+    "beacon_test_crashed": "The Switch test stopped with an error. Try again; if it keeps happening, export the report in the summary."
   },
   "history": {
     "title": "Trade history",
@@ -705,7 +706,7 @@
       "udev_rule_optional": "Optional: udev rule so the port is always named {{path}}.",
       "esp32_firmware_pending": "Check and flash the ESP32 firmware.",
       "esp32_serial_test_pending": "ESP32 communication test.",
-      "switch_test_ok": "Switch test passed.",
+      "switch_test_ok": "Switch test passed: the room was found on channel {{channel}} and decrypted. Radio and prod.keys confirmed.",
       "switch_test_pending": "Switch test (room found and decrypted).",
       "worker_missing": "Network component not installed. It ships with the TradeRock package (.deb); if you built the app yourself, run scripts/dev-host.sh.",
       "pkexec_missing": "pkexec is missing (the system uses it to ask for the administrator password).",
@@ -719,11 +720,14 @@
       "card_test_passed_no_rx": "The card transmitted but received nothing during the test. It may just be that there are no Wi-Fi networks nearby; if trading can't find the Switch, suspect reception.",
       "card_test_passed_some_channels": "The card works but didn't tune to every channel (1, 6 and 11). Trading may fail if the Switch uses one of them.",
       "network_manager_ok": "NetworkManager set up so it doesn't interfere with trading.",
-      "network_manager_unconfigured": "NetworkManager may interfere with trading. Set it up below (recommended)."
+      "network_manager_unconfigured": "NetworkManager may interfere with trading. Set it up below (recommended).",
+      "switch_test_needs_radio": "Choose and prepare the radio (steps 3 and 4) before the Switch test.",
+      "switch_test_needs_keys": "Upload a valid prod.keys (step 2) before the Switch test.",
+      "switch_test_not_run": "Run the Switch test below: it is what confirms the radio and the prod.keys.",
+      "switch_test_failed": "The Switch test did not pass. See the result below."
     },
     "deliveries": {
       "entrega-6": "network component and card test",
-      "entrega-7": "Switch test with the Wi-Fi card",
       "entrega-9": "ESP32 support"
     },
     "cardTest": {
@@ -763,6 +767,63 @@
       "configure": "Set up NetworkManager",
       "confirmText": "TradeRock will create these two files (as administrator) and reload the NetworkManager configuration, without dropping your current connection:",
       "confirm": "Confirm and set up"
+    },
+    "switchTest": {
+      "title": "Switch test",
+      "before": "Before you start, on the Switch:",
+      "stepOpen": "open FireRed or LeafGreen and go to the Direct Corner (2nd floor of the Pokémon Center);",
+      "stepLeader": "choose to be the Leader and stay on the room's waiting screen;",
+      "stepNear": "keep the Switch close to the PC (within about 2 meters).",
+      "noJoin": "TradeRock only listens: it does not join the room, and the Switch gets no join request.",
+      "offline": "During the test (up to {{seconds}} seconds), this card's normal Wi-Fi is turned off. It comes back on its own at the end.",
+      "needsCard": "First pass the card test (step 4).",
+      "needsKeys": "First upload the prod.keys (step 2).",
+      "run": "Look for the room",
+      "again": "Look again",
+      "running": "Looking for the room… {{seconds}} s",
+      "cancel": "Cancel",
+      "waitPassword": "If the system password window appears, type the administrator password.",
+      "simulate": "Simulated result (development):",
+      "simulated": "simulated result",
+      "details": "Details",
+      "found": "Found",
+      "frlg": "FireRed/LeafGreen room",
+      "otherGame": "another game",
+      "channel": "channel {{channel}}",
+      "protocol": "LDN {{protocol}}",
+      "undecryptable": "{{count}} advertisement(s) that did not decrypt, on channel(s) {{channels}}",
+      "unusable": "Channels the card could not tune: {{channels}}",
+      "sweeps": "{{sweeps}} pass(es) over the channels in {{seconds}} s",
+      "codes": {
+        "found_decrypted": "Room found and decrypted! Radio and prod.keys confirmed: trading is unlocked.",
+        "found_not_decrypted": "The room was found but could not be decrypted: the prod.keys is not right.",
+        "other_session": "The prod.keys works (a session from another game was decrypted), but the FireRed/LeafGreen room did not show up.",
+        "not_found": "No room found.",
+        "monitor_failed": "The card did not enter monitor mode. Run the card test again (step 4).",
+        "channel_failed": "The card could not tune any channel. Another program may be using the card.",
+        "scan_failed": "The search stopped with an error. Try again; if it keeps happening, export the report in the summary.",
+        "engine_error": "The network component could not start the search. Try again; if it keeps happening, export the report in the summary.",
+        "cancelled": "Search cancelled."
+      },
+      "tips": {
+        "found_not_decrypted": [
+          "Use the prod.keys dumped from your own Switch, with the system up to date. Keys from another console or an old version do not work.",
+          "Upload the file again in step 2 and repeat the test."
+        ],
+        "other_session": [
+          "Check that you opened the Direct Corner as the Leader and are still on the waiting screen.",
+          "If another Switch nearby is playing in local mode, move it away or turn its local mode off."
+        ],
+        "not_found": [
+          "Check that the Switch is in the Direct Corner as the Leader, on the waiting screen (the room disappears when you leave it).",
+          "Move the Switch closer to the PC.",
+          "Check that the Switch is not in airplane mode.",
+          "If it keeps happening, run the card test again (step 4): reception may be the problem."
+        ]
+      },
+      "hints": {
+        "missing_master_key_12": "Your prod.keys does not have the key for the newer LDN protocol (master_key_12). Updated consoles use that protocol: dump the keys again with the system up to date."
+      }
     }
   }
 }

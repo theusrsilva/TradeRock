@@ -8,6 +8,7 @@ import { api } from '../../lib/api'
 import { downloadBlob } from '../../lib/appInfo'
 import type { HardwareCatalog, SetupStatus } from '../../lib/types'
 import { CatalogNotice, CheckList, CompatBadge, Esp32Illustration, Esp32Table, WifiTable } from './parts'
+import { SwitchTest } from './SwitchTest'
 import { WifiActions } from './WifiActions'
 
 const TOTAL = 7
@@ -116,6 +117,7 @@ export default function SetupPage() {
         {step === 6 && (
           <>
             <ContentFile name="wizard/06-teste" />
+            {status.state.radio === 'wifi' && <SwitchTest status={status} onStatus={setStatus} />}
             <CheckList checks={stepChecks(6)} />
           </>
         )}
