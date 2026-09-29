@@ -17,8 +17,28 @@ public sealed record SetupState
     public bool Esp32ModuleConfirmed { get; init; }
 
     public bool KeysSkipped { get; init; }
+
+    /// <summary>Último teste real da placa (modo monitor + quadros de ação).</summary>
+    public CardTestResult? CardTest { get; init; }
+
     public bool SwitchTestPassed { get; init; }
     public DateTimeOffset? SwitchTestAt { get; init; }
+}
+
+public sealed record CardTestChannel(int Channel, bool Set, int Sent, int Received, string? Error);
+
+/// <summary>Resultado do teste da placa (worker/traderock_worker/card_child.py). <see cref="Code"/> é estável.</summary>
+public sealed record CardTestResult(
+    string Phy,
+    bool Passed,
+    string Code,
+    DateTimeOffset At,
+    IReadOnlyList<CardTestChannel> Channels,
+    string? Error = null,
+    bool Simulated = false,
+    string? Driver = null) // módulo/driver da placa testada: o mesmo phyN pode ser outra placa depois
+{
+    public bool IsFor(WifiCard card) => Phy == card.Phy && (Driver is null || Driver == (card.Module ?? card.Driver));
 }
 
 public enum CheckStatus
@@ -89,9 +109,11 @@ public static class SetupChecks
             checks.AddRange(Esp32Checks(system, state, catalog));
 
         // Etapa 6: teste com o Switch (beacon encontrado e decifrado)
+        // Com a placa Wi-Fi, o teste chega na Entrega 7; até lá ele não bloqueia a troca (a própria
+        // troca mostra se as chaves conferem). Com o ESP32, o motor inteiro ainda não existe.
         checks.Add(state.SwitchTestPassed
             ? new SetupCheck("switch_test", 6, CheckStatus.Ok, true, "switch_test_ok")
-            : new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_pending",
+            : new SetupCheck("switch_test", 6, CheckStatus.Pending, state.Radio != RadioAdvisor.Wifi, "switch_test_pending",
                 AvailableIn: state.Radio == RadioAdvisor.Esp32 ? "entrega-9" : "entrega-7"));
 
         return checks;
@@ -108,7 +130,11 @@ public static class SetupChecks
         }
         yield return new SetupCheck("native_linux", 4, CheckStatus.Ok, true, "native_linux_ok");
 
-        yield return new SetupCheck("worker", 4, CheckStatus.Pending, true, "worker_pending", AvailableIn: "entrega-6");
+        yield return WorkerCheck(system);
+
+        if (system.MissingTools is { Count: > 0 } missing)
+            yield return new SetupCheck("tools", 4, CheckStatus.Error, true, "tools_missing",
+                Args(("tools", string.Join(", ", missing))), Fix: InstallCommand(system.Distro, missing.Select(ToolPackage)));
 
         var card = advice.Cards.FirstOrDefault(c => c.Card.Phy == state.Phy);
         if (advice.Cards.Count == 0)
@@ -135,11 +161,54 @@ public static class SetupChecks
             yield return new SetupCheck("phy_internet", 4, CheckStatus.Warning, false, "phy_is_internet",
                 Args(("iface", string.Join(", ", card.Card.Interfaces))));
 
-        // O teste real (modo monitor + action frames) é o que diz se a placa serve.
-        yield return new SetupCheck("card_test", 4, CheckStatus.Pending, true, "card_test_pending", cardArgs, AvailableIn: "entrega-6");
+        // O teste real (modo monitor + quadros de ação) é o que diz se a placa serve.
+        var test = state.CardTest is { } t && t.IsFor(card.Card) ? t : null;
+        yield return test switch
+        {
+            null => new SetupCheck("card_test", 4, CheckStatus.Error, true, "card_test_not_run", cardArgs),
+            { Passed: true } => new SetupCheck("card_test", 4, CheckStatus.Ok, true, "card_test_passed", cardArgs),
+            _ => new SetupCheck("card_test", 4, CheckStatus.Error, true, "card_test_failed",
+                new Dictionary<string, string>(cardArgs) { ["code"] = test.Code }),
+        };
+        // Passou, mas com ressalva (nada recebido, ou só alguns canais): avisa sem bloquear.
+        if (test is { Passed: true, Code: not "passed" })
+            yield return new SetupCheck("card_test_note", 4, CheckStatus.Warning, false, $"card_test_{test.Code}", cardArgs);
 
         if (system.NetworkManagerRunning)
-            yield return new SetupCheck("network_manager", 4, CheckStatus.Pending, false, "network_manager_pending", AvailableIn: "entrega-6");
+            yield return system.LdnNetwork is { Complete: true }
+                ? new SetupCheck("network_manager", 4, CheckStatus.Ok, false, "network_manager_ok")
+                : new SetupCheck("network_manager", 4, CheckStatus.Warning, false, "network_manager_unconfigured");
+    }
+
+    private static SetupCheck WorkerCheck(SystemSnapshot system) => system.Worker switch
+    {
+        null => new SetupCheck("worker", 4, CheckStatus.Error, true, "worker_missing"),
+        { PkexecFound: false } => new SetupCheck("worker", 4, CheckStatus.Error, true, "pkexec_missing",
+            Fix: InstallCommand(system.Distro, [IsFamily(system.Distro, "debian") ? "pkexec" : "polkit"])),
+        { Safe: false } w => new SetupCheck("worker", 4, CheckStatus.Error, true, "worker_unsafe", Args(("path", w.Launcher))),
+        { PolicyInstalled: false } => new SetupCheck("worker", 4, CheckStatus.Error, true, "worker_policy_missing"),
+        { } w => new SetupCheck("worker", 4, CheckStatus.Ok, true, "worker_installed", Args(("flavor", w.Flavor))),
+    };
+
+    /// <summary>Pacote que traz cada ferramenta (o "ip" vem do iproute2).</summary>
+    private static string ToolPackage(string tool) => tool == "ip" ? "iproute2" : tool;
+
+    private static bool IsFamily(DistroInfo? d, string family) =>
+        d is not null && (d.Id == family || d.IdLike.Split(' ').Contains(family));
+
+    /// <summary>Comando de instalação para a família da distribuição (null se não souber).</summary>
+    public static string? InstallCommand(DistroInfo? d, IEnumerable<string> packages)
+    {
+        var list = string.Join(' ', packages);
+        if (IsFamily(d, "debian") || IsFamily(d, "ubuntu"))
+            return $"sudo apt install {list}";
+        if (IsFamily(d, "arch"))
+            return $"sudo pacman -S {list}";
+        if (IsFamily(d, "fedora") || IsFamily(d, "rhel"))
+            return $"sudo dnf install {list.Replace("iproute2", "iproute")}";
+        if (IsFamily(d, "suse") || IsFamily(d, "opensuse"))
+            return $"sudo zypper install {list}";
+        return null;
     }
 
     private static IEnumerable<SetupCheck> Esp32Checks(SystemSnapshot system, SetupState state, HardwareCatalog catalog)
@@ -251,6 +320,14 @@ public static class SetupReport
         sb.AppendLine("### Configuração");
         sb.AppendLine($"- Rádio escolhido: {status.State.Radio ?? "nenhum"}{(status.State.Phy is { } phy ? $" ({phy})" : "")}{(status.State.Esp32Board is { } b ? $" ({b})" : "")}");
         sb.AppendLine($"- prod.keys: {(status.Keys is null ? "não enviado" : status.Keys.Valid ? "formato válido" : "formato inválido")}");
+        sb.AppendLine($"- Componente de rede: {(s.Worker is { } w ? $"instalado ({w.Flavor}{(w.Safe ? "" : ", inseguro")}{(w.PolicyInstalled ? "" : ", sem política polkit")}{(w.PkexecFound ? "" : ", sem pkexec")})" : "não instalado")}");
+        if (s.MissingTools is { Count: > 0 } tools)
+            sb.AppendLine($"- Ferramentas faltando: {string.Join(", ", tools)}");
+        if (s.LdnNetwork is { } net)
+            sb.AppendLine($"- Configuração de rede do LDN: NetworkManager {(net.NetworkManager ? "ok" : "não")}, udev {(net.UdevLink ? "ok" : "não")}");
+        if (status.State.CardTest is { } test)
+            sb.AppendLine($"- Teste da placa ({test.Phy}): {test.Code}{(test.Simulated ? " (simulado)" : "")} · " +
+                string.Join(", ", test.Channels.Select(c => $"canal {c.Channel}: {(c.Set ? $"{c.Sent} enviados, {c.Received} recebidos" : "não sintonizou")}")));
         sb.AppendLine($"- Grupo da porta serial: {s.SerialGroup}{(s.User is { } u ? (u.Groups.Contains(s.SerialGroup) ? " (usuário no grupo)" : " (usuário fora do grupo)") : "")}");
         sb.AppendLine();
         sb.AppendLine("### Verificações");

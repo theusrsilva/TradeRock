@@ -472,6 +472,17 @@ export interface SetupCheck {
   availableIn: string | null
 }
 
+export interface CardTestResult {
+  phy: string
+  passed: boolean
+  code: string
+  at: string
+  channels: { channel: number; set: boolean; sent: number; received: number; error: string | null }[]
+  error: string | null
+  simulated: boolean
+  driver: string | null
+}
+
 export interface SetupStatus {
   system: {
     os: 'linux' | 'windows' | 'other'
@@ -483,6 +494,9 @@ export interface SetupStatus {
     brlttyRunning: boolean
     networkManagerRunning: boolean
     simulatedScenario: string | null
+    worker: { flavor: 'release' | 'dev'; launcher: string; policyInstalled: boolean; safe: boolean; pkexecFound: boolean } | null
+    ldnNetwork: { networkManager: boolean; udevLink: boolean; complete: boolean } | null
+    missingTools: string[] | null
   }
   serialGroup: string
   advice: {
@@ -500,6 +514,7 @@ export interface SetupStatus {
     esp32Board: string | null
     esp32ModuleConfirmed: boolean
     keysSkipped: boolean
+    cardTest: CardTestResult | null
     switchTestPassed: boolean
   }
   keys: { valid: boolean; invalidLines: number[]; presentRequired: string[]; missingRequired: string[]; protocols: number[]; keyCount: number } | null

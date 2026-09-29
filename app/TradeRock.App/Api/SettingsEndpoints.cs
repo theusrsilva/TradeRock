@@ -44,7 +44,14 @@ public static class SettingsEndpoints
         {
             if (coordinator.IsBusy)
                 return Results.Conflict(new { error = "busy" });
-            return await registry.SelectAsync(body.Id, ct) ? Results.NoContent() : Results.NotFound();
+            var engine = registry.All.FirstOrDefault(e => e.Id == body.Id);
+            if (engine is null)
+                return Results.NotFound();
+            var availability = await engine.CheckAvailabilityAsync(ct);
+            if (!availability.Available)
+                return Results.Conflict(new { error = "engine_unavailable", reason = availability.ReasonCode });
+            await registry.SelectAsync(body.Id, ct);
+            return Results.NoContent();
         });
 
         var presets = api.MapGroup("/trainer-presets");

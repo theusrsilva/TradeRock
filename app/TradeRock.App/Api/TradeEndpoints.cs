@@ -64,8 +64,15 @@ public static class TradeEndpoints
 
             // Motor real só com o assistente concluído no essencial (chaves, rádio, teste com o Switch).
             // O modo demonstração continua liberado.
-            if (!engine.IsSimulation && !(await setup.StatusAsync(ct)).ReadyToTrade)
-                return Results.BadRequest(new { error = "invalid", errors = new[] { "setup_incomplete" } });
+            if (!engine.IsSimulation)
+            {
+                var status = await setup.StatusAsync(ct);
+                // Cenário simulado no assistente (desenvolvimento): os dados não são deste PC.
+                if (status.System.SimulatedScenario is not null)
+                    return Results.BadRequest(new { error = "invalid", errors = new[] { "setup_simulated" } });
+                if (!status.ReadyToTrade)
+                    return Results.BadRequest(new { error = "invalid", errors = new[] { "setup_incomplete" } });
+            }
             var request = new TradeRequest(
                 party, body.OfferedSlots, body.Game,
                 new TrainerProfile(body.Trainer.Name, body.Trainer.Tid, body.Trainer.Sid),

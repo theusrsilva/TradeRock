@@ -217,3 +217,61 @@ em memória. **Falta testar com um `.sav` real.**
   usuário, caminhos pessoais ou chaves.
 - **Simulação** só com `ASPNETCORE_ENVIRONMENT=Development`. Nos outros ambientes, as rotas
   `/api/setup/scenarios` e `/api/setup/simulation` respondem 404.
+
+## D15. Worker privilegiado e motor da placa Wi-Fi (Entrega 6)
+
+- **Worker em Python, não em C#.**
+  - Ele roda no mesmo Python embutido que o motor precisa e importa o `frlgtrade` diretamente, sem
+    um segundo runtime nem o `clang` para AOT.
+  - O esboço C# de `worker/TradeRock.Worker` foi removido.
+- **Canal: stdin/stdout do processo do `pkexec`, em vez de socket Unix.**
+  - Só quem iniciou o worker fala com ele, sem arquivo de socket nem checagem de UID.
+  - Quando o app sai, o EOF faz o worker cancelar, devolver o rádio e sair.
+- **Polkit.**
+  - `allow_active=auth_admin_keep`: a senha é pedida pelo sistema, uma vez por sessão do app.
+  - `allow_any` e `allow_inactive` ficam em `no`.
+  - A política autoriza só o launcher, pela anotação `org.freedesktop.policykit.exec.path`.
+  - O launcher ignora argumentos e roda `python3 -I -B worker/run.py`.
+- **Tudo que roda como root é do root e somente leitura** (`scripts/install-worker.sh`).
+  - O app confere com `access(W_OK)` que nem o launcher nem as pastas acima dele são graváveis pelo
+    usuário; se forem, recusa (`worker_unsafe`).
+  - Em desenvolvimento: `/usr/local/lib/traderock-dev` (ação `...worker.dev`).
+  - No pacote (Entrega 8): `/usr/lib/traderock`.
+- **Motor sem fork.** O submódulo fica intocado. Os dois patches do FRLG-LDN-Trade-Console (AGPL,
+  creditados) são aplicados numa cópia durante o build:
+  - varredura com dwell de 0,6 s nos canais 2,4 e 5 GHz;
+  - espera pela aprovação;
+  - monitor auxiliar para o mt76x0u;
+  - correção do `save_received(args)`.
+
+  O wrapper (`trade_child.py`) monta a configuração com os dataclasses de `frlgsim/config.py`, troca
+  `trade_runtime.ConsoleLog` por um logger que emite eventos e envolve `save_received` para mandar
+  cada recebido no commit. Um teste confere que cada frase mapeada e cada assinatura usada ainda
+  existem no submódulo.
+- **Retry no TradeRock.** O worker define `FRLG_JOIN_ATTEMPTS=1`, para que cada tentativa do
+  coordenador seja uma tentativa do motor. Define também `FRLG_JOIN_IP_WAIT=100`, abaixo dos 120 s
+  de aprovação do coordenador, para o motor desistir primeiro com o código `join_not_approved`.
+- **Rádio devolvido.** O upstream derruba a interface normal da placa e não a religa. O worker anota
+  o estado (ligada? gerenciada pelo NM?) antes de cada operação e restaura no fim, depois de apagar as
+  interfaces `ldn*`.
+- **Teste da placa.** Usa a API da biblioteca LDN (`create_monitor`, `set_channel`, `send_frame`,
+  `recv`) nos canais 1, 6 e 11. Transmitir sem erro não prova que o quadro saiu no ar; isso exigiria
+  um segundo rádio. O resultado vale para o phy e o driver testados, já que `phyN` pode virar outra
+  placa.
+- **NetworkManager + udev.** São dois arquivos:
+  - `zz-ldn-unmanaged.conf`, com `[device-traderock-ldn] match-device=interface-name:ldn*
+    managed=0`, uma seção própria que não sobrescreve `unmanaged-devices` de outros arquivos;
+  - `10-traderock-ldn.link`, com `OriginalName=ldn*` e `NamePolicy=`, que resolve o problema do
+    PR #9 do upstream (o udev renomeava `ldnclient` para `wlx<mac>`).
+
+  Recarregados com `nmcli general reload conf` e `udevadm control --reload`, sem derrubar a conexão.
+- **Pré-requisitos.** `iw` e `ip` são conferidos antes (`missing_tools`); sem eles, o motor quebrava
+  no meio com `FileNotFoundError`.
+- **Teste com o Switch (etapa 6).** Enquanto não existe (Entrega 7), ele não é essencial com a placa
+  Wi-Fi. A própria troca diz se as chaves conferem (`beacon_not_decrypted`).
+- **Runtime embutido.**
+  - cpython 3.12.14 do python-build-standalone (release 20260929, sha256 fixo).
+  - Dependências com `pip --require-hashes` (`worker/requirements.lock`).
+  - Sem Tk, IDLE, testes, `libpython` compartilhada nem `pip`: ~100 MB.
+  - Só os módulos de extensão passam por `strip`, porque o binário e a `libpython` quebram com o
+    `strip` do binutils.

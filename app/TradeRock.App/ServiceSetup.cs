@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TradeRock.Core;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Engines;
+using TradeRock.Core.Engines.Worker;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Storage;
 using TradeRock.Core.Trading;
@@ -37,7 +38,17 @@ public static class ServiceSetup
         services.AddSingleton<TradeCoordinator>();
         services.AddSingleton<WindowBridge>();
 
-        // Motores. Nesta entrega só o FakeEngine (modo demonstração); os reais chegam nas Entregas 6 e 9.
+        // Worker privilegiado (placa Wi-Fi, só Linux). Em desenvolvimento, a instalação dev
+        // (scripts/install-worker.sh dev) vem antes da release.
+        var development = string.Equals(config["environment"], "Development", StringComparison.OrdinalIgnoreCase);
+        services.AddSingleton(new WorkerOptions
+        {
+            PreferDev = config.GetValue("Engines:PythonLdn:PreferDevWorker", development),
+        });
+        services.AddSingleton<IWorkerLauncher, PkexecWorkerLauncher>();
+        services.AddSingleton<WorkerHost>();
+
+        // Motores: o primeiro registrado é o padrão (simulação). O ESP32 chega na Entrega 9.
         var fake = new FakeEngineOptions
         {
             SpeedFactor = config.GetValue("Engines:Fake:SpeedFactor", 1.0),
@@ -45,6 +56,11 @@ public static class ServiceSetup
         };
         services.AddSingleton(fake);
         services.AddSingleton<ITradeEngine, FakeEngine>();
+        services.AddSingleton(new PythonLdnEngineOptions
+        {
+            ApprovalSeconds = config.GetValue("Engines:PythonLdn:ApprovalSeconds", 100),
+        });
+        services.AddSingleton<ITradeEngine, PythonLdnEngine>();
         services.AddSingleton<EngineRegistry>();
     }
 

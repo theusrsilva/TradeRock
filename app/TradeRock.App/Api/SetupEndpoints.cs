@@ -1,4 +1,5 @@
 using System.Reflection;
+using TradeRock.Core.Engines.Worker;
 using TradeRock.Core.Setup;
 
 namespace TradeRock.App.Api;
@@ -6,6 +7,7 @@ namespace TradeRock.App.Api;
 public static class SetupEndpoints
 {
     public sealed record SimulationDto(string? Scenario);
+    public sealed record CardTestDto(string Phy);
 
     public static void MapSetup(this IEndpointRouteBuilder api)
     {
@@ -47,6 +49,39 @@ public static class SetupEndpoints
         {
             keys.Delete();
             return Results.NoContent();
+        });
+
+        // Teste real da placa. Se o worker ainda não estiver rodando, o sistema pede a senha de
+        // administrador (diálogo do polkit) antes de começar.
+        setup.MapPost("/card-test", async (CardTestDto body, SetupService service, CancellationToken ct) =>
+        {
+            try
+            {
+                var result = await service.RunCardTestAsync(body.Phy, ct);
+                return Results.Ok(new { result, status = ToDto(await service.StatusAsync(ct)) });
+            }
+            catch (ArgumentException)
+            {
+                return Results.BadRequest(new { error = "phy_invalid" });
+            }
+            catch (WorkerException e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+        });
+
+        // Configuração do NetworkManager/udev para as interfaces do LDN (feita pelo worker, como root).
+        setup.MapPost("/network-config", async (SetupService service, CancellationToken ct) =>
+        {
+            try
+            {
+                await service.InstallNetworkConfigAsync(ct);
+                return Results.Ok(ToDto(await service.StatusAsync(ct)));
+            }
+            catch (WorkerException e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
         });
 
         setup.MapGet("/report", async (SetupService service, CancellationToken ct) =>

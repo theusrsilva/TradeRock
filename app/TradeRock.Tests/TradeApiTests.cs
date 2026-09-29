@@ -201,10 +201,10 @@ public sealed class TradeApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Motores_listam_o_fake_como_simulacao()
+    public async Task Motores_listam_o_fake_como_simulacao_e_padrao()
     {
         var engines = await GetJsonAsync("/api/engines");
-        var fake = Assert.Single(engines.EnumerateArray());
+        var fake = engines.EnumerateArray().First();
         Assert.Equal("fake", fake.GetProperty("id").GetString());
         Assert.True(fake.GetProperty("isSimulation").GetBoolean());
         Assert.True(fake.GetProperty("selected").GetBoolean());

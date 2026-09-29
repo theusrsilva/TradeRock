@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TradeRock.Core.Engines.Worker;
 using TradeRock.Core.Setup;
 
 namespace TradeRock.Tests;
@@ -36,6 +37,70 @@ public sealed class SetupTranslationTests
                     yield return check;
             }
         }
+
+        // Placa Wi-Fi: variações do worker, do teste da placa, das ferramentas e da rede.
+        var linux = SetupScenarios.All["linux-compatible"];
+        var workers = new WorkerInstall?[]
+        {
+            null,
+            new("dev", "/x", true, true, true),
+            new("dev", "/x", true, Safe: false, true),
+            new("dev", "/x", PolicyInstalled: false, true, true),
+            new("dev", "/x", true, true, PkexecFound: false),
+        };
+        var tests = new CardTestResult?[]
+        {
+            null,
+            new("phy1", true, "passed", default, []),
+            new("phy1", true, "passed_no_rx", default, []),
+            new("phy1", true, "passed_some_channels", default, []),
+            new("phy1", false, "tx_failed", default, []),
+        };
+        foreach (var worker in workers)
+        foreach (var test in tests)
+        foreach (var net in new[] { new LdnNetworkConfig(false, false), new LdnNetworkConfig(true, true) })
+        {
+            var system = linux with { Worker = worker, LdnNetwork = net, MissingTools = ["iw"] };
+            var state = new SetupState { Radio = "wifi", Phy = "phy1", CardTest = test };
+            foreach (var check in SetupChecks.Evaluate(system, RadioAdvisor.Advise(system, catalog), state, null, catalog))
+                yield return check;
+        }
+    }
+
+    /// <summary>
+    /// Códigos que o worker e o motor da placa Wi-Fi podem devolver (worker/traderock_worker:
+    /// events.py JOIN_FAILURES, trade_child.py, server.py; WorkerHost e PythonLdnEngine).
+    /// </summary>
+    public static readonly string[] WorkerFailureCodes =
+    [
+        "no_network_found", "beacon_not_decrypted", "join_not_approved", "radio_rx_failed", "engine_broken",
+        "join_failed", "join_rejected", "host_cancelled", "connection_lost", "trade_incomplete", "engine_error",
+        "invalid_request", "missing_tools", "phy_not_found", "busy", "not_root", "worker_missing", "worker_unsafe",
+        "worker_policy_missing", "pkexec_missing", "auth_cancelled", "not_authorized", "worker_exited",
+        "worker_timeout", "worker_version", "worker_start_failed", "wifi_not_configured", "keys_missing",
+    ];
+
+    /// <summary>Resultados do teste da placa (card_child.py verdict) e falhas do próprio teste.</summary>
+    public static readonly string[] CardTestCodes =
+        ["passed", "passed_no_rx", "passed_some_channels", "monitor_failed", "channel_failed", "tx_failed", "card_test_crashed"];
+
+    [Theory]
+    [InlineData("pt-BR")]
+    [InlineData("en")]
+    public void Falhas_do_worker_e_do_teste_da_placa_tem_texto(string lang)
+    {
+        var dir = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(dir, "TradeRock.slnx")))
+            dir = Path.GetDirectoryName(dir)!;
+        var root = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "frontend", "src", "locales", $"{lang}.json"))).RootElement;
+        var failures = root.GetProperty("failures");
+        var card = root.GetProperty("wizard").GetProperty("cardTest").GetProperty("codes");
+        var reasons = root.GetProperty("settings").GetProperty("engineReasons");
+        var missing = WorkerFailureCodes.Where(c => !failures.TryGetProperty(c, out _))
+            .Concat(CardTestCodes.Where(c => !card.TryGetProperty(c, out _)))
+            .Concat(new[] { "not_linux", "worker_missing", "wifi_not_configured" }.Where(c => !reasons.TryGetProperty(c, out _)))
+            .ToList();
+        Assert.Empty(missing);
     }
 
     [Theory]

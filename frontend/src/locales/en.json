@@ -200,7 +200,9 @@
     "preset_label_invalid": "give the saved trainer a short name",
     "busy": "a trade is already in progress",
     "illegal_pokemon": "a Pokémon marked for the Switch is illegal. Fix it in the builder or enable advanced mode in Settings.",
-    "illegal_needs_confirmation": "confirm that you want to send an illegal Pokémon"
+    "illegal_needs_confirmation": "confirm that you want to send an illegal Pokémon",
+    "setup_simulated": "the setup wizard is on a simulated scenario (development). Switch back to \"Real system\" to trade for real.",
+    "setup_incomplete": "setup isn't complete yet. Open the setup wizard in Settings and fix the essential items."
   },
   "failures": {
     "no_network_found": "The Switch's room was not found. Check that the Direct Corner is open as Leader and the Switch is close by.",
@@ -216,7 +218,30 @@
     "engine_crashed": "The trade engine stopped with an error.",
     "cancelled": "You cancelled the trade.",
     "internal_error": "TradeRock internal error.",
-    "unknown": "Unknown failure."
+    "unknown": "Unknown failure.",
+    "join_not_approved": "The Switch saw the join request, but it wasn't approved in time. Approve the request on the Switch screen.",
+    "radio_rx_failed": "The join authenticated, but the card stopped receiving the Switch's advertisements. Set up NetworkManager in the setup wizard and try again.",
+    "engine_broken": "The trade engine is incomplete in this install. Reinstall TradeRock.",
+    "trade_incomplete": "Only some of the trades were completed.",
+    "engine_error": "The trade engine stopped with an error.",
+    "invalid_request": "The trade request has data the engine doesn't accept.",
+    "missing_tools": "Programs the engine uses are missing (iw/iproute2). See the setup wizard.",
+    "phy_not_found": "The chosen Wi-Fi card is no longer in the PC. Was it unplugged?",
+    "not_root": "The network component is not running as administrator.",
+    "worker_missing": "The network component is not installed.",
+    "worker_unsafe": "The network component install is not safe. Reinstall TradeRock.",
+    "worker_policy_missing": "The network component permission (polkit) is not installed.",
+    "pkexec_missing": "pkexec is missing, so the administrator password can't be asked.",
+    "auth_cancelled": "The password window was closed. The network component needs the administrator password to use the card.",
+    "not_authorized": "The system didn't authorize the network component. Check the administrator password.",
+    "worker_exited": "The network component stopped.",
+    "worker_timeout": "The network component didn't answer in time.",
+    "worker_version": "The installed network component belongs to another TradeRock version. Reinstall it.",
+    "worker_start_failed": "Couldn't start the network component.",
+    "wifi_not_configured": "Pick the Wi-Fi card in the setup wizard.",
+    "keys_missing": "prod.keys hasn't been uploaded.",
+    "card_test_crashed": "The card test stopped with an error.",
+    "busy": "The network component is still finishing the previous operation. Try again in a few seconds."
   },
   "history": {
     "title": "Trade history",
@@ -239,7 +264,7 @@
     "themeDark": "Dark",
     "language": "Language",
     "engineTitle": "Trade engine",
-    "engineHelp": "The engine is what talks to the Switch. The real engines (Wi-Fi card and ESP32) come in the next stages.",
+    "engineHelp": "The engine is what talks to the Switch. The Wi-Fi card becomes available once set up in the wizard; the ESP32 comes in a later version.",
     "engines": {
       "fake": "Simulation (demo mode)",
       "python-ldn": "PC Wi-Fi card",
@@ -260,7 +285,12 @@
     "choosePokemon": "Pick a Pokémon you caught on the Switch",
     "illegalTitle": "Illegal Pokémon",
     "allowIllegal": "Allow trading illegal Pokémon (advanced mode)",
-    "allowIllegalHelp": "Off: TradeRock won't send the Switch a Pokémon PKHeX considers illegal. On: each trade with an illegal one still asks for confirmation."
+    "allowIllegalHelp": "Off: TradeRock won't send the Switch a Pokémon PKHeX considers illegal. On: each trade with an illegal one still asks for confirmation.",
+    "engineReasons": {
+      "not_linux": "Linux only",
+      "worker_missing": "network component not installed",
+      "wifi_not_configured": "set up the card in the wizard"
+    }
   },
   "close": {
     "title": "Close during a trade?",
@@ -645,7 +675,6 @@
       "not_native_wsl": "WSL doesn't reach the Wi-Fi card: use real Linux or an ESP32.",
       "not_native_vm": "Virtual machines don't reach the Wi-Fi card: use real Linux or an ESP32.",
       "native_linux_ok": "Real Linux install.",
-      "worker_pending": "Network component (installed once, with an administrator password).",
       "no_wifi_card": "No Wi-Fi card found.",
       "phy_not_chosen": "Choose which card to use.",
       "phy_recommended": "{{model}} card ({{driver}}): recommended.",
@@ -655,8 +684,6 @@
       "phy_problematic": "{{model}} card ({{driver}}): known problems.",
       "phy_unsupported": "{{driver}} card: unsupported.",
       "phy_is_internet": "This card is the PC's internet ({{iface}}): internet drops while trading. Use a network cable or a second adapter.",
-      "card_test_pending": "Real card test (monitor mode and frame injection).",
-      "network_manager_pending": "Set up NetworkManager so it doesn’t interfere with trading.",
       "esp32_board_not_chosen": "Tell us which ESP32 you have.",
       "esp32_board_unsupported": "{{model}}: unsupported.",
       "esp32_confirm_module": "Check that the module is ESP32-WROOM-32E.",
@@ -679,12 +706,63 @@
       "esp32_firmware_pending": "Check and flash the ESP32 firmware.",
       "esp32_serial_test_pending": "ESP32 communication test.",
       "switch_test_ok": "Switch test passed.",
-      "switch_test_pending": "Switch test (room found and decrypted)."
+      "switch_test_pending": "Switch test (room found and decrypted).",
+      "worker_missing": "Network component not installed. It ships with the TradeRock package (.deb); if you built the app yourself, run scripts/dev-host.sh.",
+      "pkexec_missing": "pkexec is missing (the system uses it to ask for the administrator password).",
+      "worker_unsafe": "The network component install ({{path}}) can be changed without administrator rights. For safety, TradeRock won't use it. Reinstall it.",
+      "worker_policy_missing": "The network component permission (polkit policy) is not installed. Reinstall TradeRock.",
+      "worker_installed": "Network component installed. The administrator password is asked once, when it's first used.",
+      "tools_missing": "Programs the engine uses to control the card are missing: {{tools}}.",
+      "card_test_not_run": "Test the {{model}} card ({{phy}}) below: this test tells whether it works.",
+      "card_test_passed": "The {{model}} card ({{phy}}) passed: it entered monitor mode and transmitted.",
+      "card_test_failed": "The {{model}} card ({{phy}}) failed the test. See the result below.",
+      "card_test_passed_no_rx": "The card transmitted but received nothing during the test. It may just be that there are no Wi-Fi networks nearby; if trading can't find the Switch, suspect reception.",
+      "card_test_passed_some_channels": "The card works but didn't tune to every channel (1, 6 and 11). Trading may fail if the Switch uses one of them.",
+      "network_manager_ok": "NetworkManager set up so it doesn't interfere with trading.",
+      "network_manager_unconfigured": "NetworkManager may interfere with trading. Set it up below (recommended)."
     },
     "deliveries": {
       "entrega-6": "network component and card test",
       "entrega-7": "Switch test with the Wi-Fi card",
       "entrega-9": "ESP32 support"
+    },
+    "cardTest": {
+      "title": "Card test ({{phy}})",
+      "help": "The test puts the card in monitor mode and transmits the frames the Switch's room uses. It takes about 10 seconds and needs neither the Switch nor prod.keys.",
+      "password": "The first time, the system asks for the administrator password (the system asks, not TradeRock). It then stays valid until you close the app.",
+      "offline": "During the test, this card's normal Wi-Fi is turned off. It comes back by itself at the end.",
+      "offlineInternet": "Heads up: this card is the PC's internet. During the test (and during trades) the internet drops and comes back by itself at the end.",
+      "needsWorker": "First sort out the network component (see the list below).",
+      "needsTools": "First install the missing programs (see the list below).",
+      "run": "Test the card",
+      "again": "Test again",
+      "running": "Testing…",
+      "waitPassword": "If the system password window shows up, type the administrator password.",
+      "whatNow": "What now?",
+      "useEsp32": "Use an ESP32 instead",
+      "channel": "Channel",
+      "sent": "Sent",
+      "received": "Received",
+      "channelFailed": "didn't tune",
+      "codes": {
+        "passed": "The card passed: monitor mode and transmission work.",
+        "passed_no_rx": "The card transmitted but received no frames.",
+        "passed_some_channels": "The card passed but didn't tune to every channel.",
+        "monitor_failed": "The card refused monitor mode. Its driver doesn't work for LDN.",
+        "channel_failed": "The card entered monitor mode but couldn't tune to any channel. Another program may be using it.",
+        "tx_failed": "The card couldn't transmit in monitor mode. Its driver doesn't work for LDN.",
+        "card_test_crashed": "The test stopped with an error. Try again; if it keeps happening, export the report from the summary."
+      },
+      "optionsMany": "You can test again, pick another card in the list above, or use an ESP32 instead of the Wi-Fi card.",
+      "optionsOne": "You can test again or use an ESP32 instead of the Wi-Fi card.",
+      "simulated": "simulated result"
+    },
+    "network": {
+      "title": "NetworkManager",
+      "help": "For each trade, the engine creates a temporary wireless connection (named starting with \"ldn\"). If NetworkManager tries to manage it, the trade authenticates but never completes. This setting tells it to ignore those connections; your internet is unchanged.",
+      "configure": "Set up NetworkManager",
+      "confirmText": "TradeRock will create these two files (as administrator) and reload the NetworkManager configuration, without dropping your current connection:",
+      "confirm": "Confirm and set up"
     }
   }
 }

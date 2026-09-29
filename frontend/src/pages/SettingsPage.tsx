@@ -176,6 +176,9 @@ export default function SettingsPage() {
                 }
               />
               {t(`settings.engines.${engine.id}`, { defaultValue: engine.id })}
+              {!engine.available && engine.reasonCode && (
+                <span className="text-xs text-slate-500">({t(`settings.engineReasons.${engine.reasonCode}`, { defaultValue: engine.reasonCode })})</span>
+              )}
             </li>
           ))}
         </ul>

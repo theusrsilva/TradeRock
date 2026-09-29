@@ -20,3 +20,6 @@ app/TradeRock.App/wwwroot/
 obj-container/
 bin-container/
 *.tsbuildinfo
+build/
+__pycache__/
+*.pyc

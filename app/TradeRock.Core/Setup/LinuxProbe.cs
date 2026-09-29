@@ -20,8 +20,23 @@ public sealed class LinuxProbe(string root = "/")
             SerialPorts: ReadSerialPorts(),
             User: ReadUser(userName ?? Environment.UserName),
             BrlttyRunning: IsProcessRunning("brltty"),
-            NetworkManagerRunning: IsProcessRunning("NetworkManager"));
+            NetworkManagerRunning: IsProcessRunning("NetworkManager"),
+            LdnNetwork: ReadLdnNetworkConfig(),
+            MissingTools: SystemSnapshot.WifiTools.Where(t => !HasTool(t)).ToList());
     }
+
+    public const string NmConfPath = "/etc/NetworkManager/conf.d/zz-ldn-unmanaged.conf";
+    public const string UdevLinkPath = "/etc/systemd/network/10-traderock-ldn.link";
+
+    /// <summary>Os arquivos que o worker instala (worker/traderock_worker/radio.py) estão lá?</summary>
+    public LdnNetworkConfig ReadLdnNetworkConfig() => new(
+        ReadText(NmConfPath)?.Contains("interface-name:ldn*") == true,
+        ReadText(UdevLinkPath)?.Contains("OriginalName=ldn*") == true);
+
+    private static readonly string[] ToolDirs = ["/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin"];
+
+    /// <summary>Mesmo PATH que o worker usa para os comandos do motor.</summary>
+    public bool HasTool(string tool) => ToolDirs.Any(d => File.Exists(P(Path.Combine(d, tool))));
 
     /// <summary>WSL: /proc/version contém "microsoft" (WSL1 e WSL2).</summary>
     public bool IsWsl() =>

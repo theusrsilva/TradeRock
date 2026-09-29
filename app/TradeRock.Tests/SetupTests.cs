@@ -374,8 +374,24 @@ public sealed class SetupChecksTests
         Assert.Equal(CheckStatus.Ok, Get(checks, "native_linux").Status);
         Assert.Equal("phy_recommended", Get(checks, "phy").Code);
         Assert.DoesNotContain(checks, c => c.Id == "phy_internet");
-        Assert.Equal("entrega-6", Get(checks, "card_test").AvailableIn);
-        Assert.Equal("entrega-6", Get(checks, "worker").AvailableIn);
+        Assert.Equal("card_test_not_run", Get(checks, "card_test").Code);
+        Assert.Equal("worker_installed", Get(checks, "worker").Code);
+        Assert.Equal("network_manager_unconfigured", Get(checks, "network_manager").Code);
+        Assert.DoesNotContain(checks, c => c.Id == "tools");
+    }
+
+    [Fact]
+    public void Teste_da_placa_vale_so_para_a_mesma_placa()
+    {
+        var passed = new CardTestResult("phy1", true, "passed", default, [], Driver: "mt76x0u");
+        SetupState State(CardTestResult test) => new() { Radio = "wifi", Phy = "phy1", CardTest = test };
+        Assert.Equal("card_test_passed", Get(Checks("linux-compatible", State(passed), GoodKeys), "card_test").Code);
+        // Outro adaptador USB ligado depois pode virar o mesmo phy1.
+        Assert.Equal("card_test_not_run", Get(Checks("linux-compatible", State(passed with { Driver = "rtl8xxxu" }), GoodKeys), "card_test").Code);
+        var noRx = passed with { Code = "passed_no_rx" };
+        var checks = Checks("linux-compatible", State(noRx), GoodKeys);
+        Assert.Equal(CheckStatus.Ok, Get(checks, "card_test").Status);
+        Assert.False(Get(checks, "card_test_note").Essential);
     }
 
     [Fact]

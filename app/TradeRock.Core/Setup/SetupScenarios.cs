@@ -1,3 +1,5 @@
+using TradeRock.Core.Engines.Worker;
+
 namespace TradeRock.Core.Setup;
 
 /// <summary>
@@ -18,27 +20,30 @@ public static class SetupScenarios
     private static WifiCard Usb(string phy, string iface, string module, string vid, string pid, string name) =>
         new(phy, [iface], module, module, "usb", vid, pid, name, false);
 
+    private static readonly WorkerInstall Worker = new("dev", "/usr/local/lib/traderock-dev/traderock-worker", true, true, true);
+    private static readonly LdnNetworkConfig NotConfigured = new(false, false);
+
     public static IReadOnlyDictionary<string, SystemSnapshot> All { get; } = new Dictionary<string, SystemSnapshot>
     {
         // Notebook com Intel AX200 (internet) e um adaptador USB ALFA ligado.
         ["linux-compatible"] = new("linux", false, null, Ubuntu,
             [Pci("phy0", "wlp2s0", "iwlwifi", internet: true), Usb("phy1", "wlx00c0ca000001", "mt76x0u", "0e8d", "7610", "WiFi")],
-            [], User("dialout"), false, true),
+            [], User("dialout"), false, true, Worker: Worker, LdnNetwork: NotConfigured, MissingTools: []),
 
         // Notebook com RZ616 (mt7921e), que é a conexão de internet.
         ["linux-unstable"] = new("linux", false, null, Ubuntu,
             [Pci("phy0", "wlp1s0", "mt7921e", internet: true)],
-            [], User("dialout"), false, true),
+            [], User("dialout"), false, true, Worker: Worker, LdnNetwork: NotConfigured, MissingTools: []),
 
-        // Placa Broadcom, fora do catálogo.
+        // Placa Broadcom, fora do catálogo; worker ainda não instalado e sem o pacote iw.
         ["linux-unknown"] = new("linux", false, null, Ubuntu,
             [Pci("phy0", "wlp3s0", "brcmfmac", internet: true)],
-            [], User(), false, true),
+            [], User(), false, true, LdnNetwork: NotConfigured, MissingTools: ["iw"]),
 
         // Só a Intel AX200.
         ["linux-problematic"] = new("linux", false, null, Ubuntu,
             [Pci("phy0", "wlp2s0", "iwlwifi", internet: true)],
-            [], User("dialout"), false, true),
+            [], User("dialout"), false, true, Worker: Worker, LdnNetwork: NotConfigured, MissingTools: []),
 
         ["linux-no-wifi"] = new("linux", false, null, Ubuntu, [], [], User("dialout"), false, true),
 

@@ -1,0 +1,11 @@
+--- frlgtrade.py
++++ frlgtrade.py
+@@ -152,7 +152,7 @@
+             if engine.commits > saved_commits:
+                 saved_commits = engine.commits
+                 try:
+-                    n = save_received(engine, args, lg)
++                    n = save_received(engine, run_config, lg)
+                     lg(f"[live] trade committed -> saved {n} received mon(s) to disk now "
+                           f"(robust to an abrupt exit)")
+                 except Exception as e:                       # never let a save error kill the link tail

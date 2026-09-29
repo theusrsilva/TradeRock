@@ -8,6 +8,7 @@ import { api } from '../../lib/api'
 import { downloadBlob } from '../../lib/appInfo'
 import type { HardwareCatalog, SetupStatus } from '../../lib/types'
 import { CatalogNotice, CheckList, CompatBadge, Esp32Illustration, Esp32Table, WifiTable } from './parts'
+import { WifiActions } from './WifiActions'
 
 const TOTAL = 7
 
@@ -34,6 +35,13 @@ export default function SetupPage() {
 
   const patch = async (p: Patch) => setStatus(await api.put<SetupStatus>('/api/setup/state', p))
   const go = (n: number) => setParams({ etapa: String(n) })
+
+  // Concluir com a placa Wi-Fi pronta: as próximas trocas já usam o motor da placa.
+  async function finish() {
+    await patch({ completed: true })
+    if (status?.readyToTrade && status.state.radio === 'wifi' && !status.system.simulatedScenario)
+      await api.put('/api/engines/selected', { id: 'python-ldn' }).catch(() => undefined)
+  }
 
   if (!status || !catalog) return <p className="text-slate-500">{t('wizard.detecting')}</p>
 
@@ -98,7 +106,7 @@ export default function SetupPage() {
         {step === 1 && <WelcomeStep status={status} />}
         {step === 2 && <KeysStep status={status} onChange={load} onSkip={() => void patch({ keysSkipped: true }).then(() => go(3))} />}
         {step === 3 && <RadioStep status={status} catalog={catalog} onChoose={(radio) => void patch({ radio })} />}
-        {step === 4 && <PrepareStep status={status} catalog={catalog} onPatch={(p) => void patch(p)} onRefresh={load} />}
+        {step === 4 && <PrepareStep status={status} catalog={catalog} onPatch={(p) => void patch(p)} onRefresh={load} onStatus={setStatus} />}
         {step === 5 && (
           <>
             <SwitchReady labels={[t('trade.reminder.illustration.center'), t('trade.reminder.illustration.counter'), t('trade.reminder.illustration.leader')]} />
@@ -121,7 +129,7 @@ export default function SetupPage() {
         {step < TOTAL ? (
           <Button onClick={() => go(step + 1)}>{t('wizard.next')}</Button>
         ) : (
-          <Button onClick={() => void patch({ completed: true })}>{t('wizard.finish')}</Button>
+          <Button onClick={() => void finish()}>{t('wizard.finish')}</Button>
         )}
       </div>
     </div>
@@ -281,11 +289,13 @@ function PrepareStep({
   catalog,
   onPatch,
   onRefresh,
+  onStatus,
 }: {
   status: SetupStatus
   catalog: HardwareCatalog
   onPatch: (p: Patch) => void
   onRefresh: () => void
+  onStatus: (s: SetupStatus) => void
 }) {
   const { t } = useTranslation()
   const { state, advice, system } = status
@@ -314,6 +324,7 @@ function PrepareStep({
               ))}
             </fieldset>
           )}
+          <WifiActions status={status} onStatus={onStatus} onUseEsp32={() => onPatch({ radio: 'esp32' })} />
         </>
       ) : (
         <>

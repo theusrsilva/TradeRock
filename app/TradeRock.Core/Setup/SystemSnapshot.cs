@@ -1,3 +1,5 @@
+using TradeRock.Core.Engines.Worker;
+
 namespace TradeRock.Core.Setup;
 
 public sealed record DistroInfo(string Id, string IdLike, string Name);
@@ -22,6 +24,12 @@ public sealed record SerialPortInfo(
     string? ProductName,
     bool DriverMissing = false); // só Windows: dispositivo presente sem driver
 
+/// <summary>Arquivos que tiram as interfaces do LDN do NetworkManager e do renomeador do udev.</summary>
+public sealed record LdnNetworkConfig(bool NetworkManager, bool UdevLink)
+{
+    public bool Complete => NetworkManager && UdevLink;
+}
+
 public sealed record UserInfo(string Name, IReadOnlyList<string> Groups, IReadOnlyList<string> SessionGroups);
 
 /// <summary>
@@ -38,8 +46,14 @@ public sealed record SystemSnapshot(
     UserInfo? User,
     bool BrlttyRunning,
     bool NetworkManagerRunning,
-    string? SimulatedScenario = null)
+    string? SimulatedScenario = null,
+    WorkerInstall? Worker = null,
+    LdnNetworkConfig? LdnNetwork = null,
+    IReadOnlyList<string>? MissingTools = null)
 {
+    /// <summary>Ferramentas que o motor com a placa Wi-Fi chama (iw, ip).</summary>
+    public static readonly string[] WifiTools = ["iw", "ip"];
+
     /// <summary>Grupo que dá acesso às portas seriais: uucp no Arch e derivados, dialout nos demais.</summary>
     public string SerialGroup =>
         Distro is { } d && (d.Id == "arch" || d.IdLike.Split(' ').Contains("arch")) ? "uucp" : "dialout";

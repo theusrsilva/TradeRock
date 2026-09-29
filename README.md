@@ -4,11 +4,12 @@ Troque Pokémon com **Pokémon FireRed e LeafGreen do Nintendo Switch / Switch 2
 wireless local do jogo (LDN). O seu PC, ou uma plaquinha ESP32, finge ser um segundo Switch na
 sala de troca do Direct Corner.
 
-> **Estado:** em desenvolvimento (Entrega 5 de 11). Já dá para **criar Pokémon legais** no app,
+> **Estado:** em desenvolvimento (Entrega 6 de 11). Já dá para **criar Pokémon legais** no app,
 > organizá-los no **cofre** (caixas, tags, busca, exportação, injeção em `.sav` de GBA), fazer o
 > assistente de troca de ponta a ponta em **modo demonstração** (motor simulado) e seguir o
 > **assistente de configuração**, que confere o sistema, a placa Wi-Fi ou o ESP32 e o `prod.keys`.
-> Ainda não troca com um Switch de verdade.
+> O motor com a **placa Wi-Fi** (worker + polkit + frlg-ldn-trade) está pronto, mas **ainda não foi
+> testado com um Switch de verdade**. Veja [docs/dev-host.md](docs/dev-host.md).
 
 O TradeRock nunca baixa, sugere fontes nem distribui `prod.keys` ou ROMs. Use só as chaves
 extraídas do seu próprio console.
@@ -37,7 +38,7 @@ flowchart LR
     eng --> fake["FakeEngine<br/>(simulação, dev)"]
     eng --> py["PythonLdnEngine<br/>(Linux)"]
     eng --> esp["Esp32SerialEngine<br/>(Linux e Windows)"]
-    py -- "socket Unix" --> worker["traderock-worker<br/>(root via pkexec + polkit)"]
+    py -- "stdin/stdout (JSON)" --> worker["traderock-worker<br/>(Python embutido, root via pkexec + polkit)"]
     worker --> wifi["frlg-ldn-trade<br/>+ placa Wi-Fi"]
     esp -- "USB serial" --> board["ESP32 + firmware"]
     wifi -. "LDN" .-> sw["Switch<br/>FireRed/LeafGreen"]
@@ -53,6 +54,15 @@ flowchart LR
   - [`easyworld/frlg-ldn-trade-esp32`](https://github.com/easyworld/frlg-ldn-trade-esp32): core C# e firmware ESP32.
   - [`santacrab2/PKHeX-Plugins`](https://github.com/santacrab2/PKHeX-Plugins): PKHeX.Core.AutoMod.
 
+  O frlg-ldn-trade recebe dois patches do FRLG-LDN-Trade-Console na hora do build
+  ([engines/patches](engines/patches/frlg-ldn-trade/README.md)); o submódulo fica intocado.
+- **Worker privilegiado** (só com a placa Wi-Fi): um processo Python separado, iniciado via `pkexec`
+  com a política polkit do TradeRock. A senha de administrador é pedida pelo sistema, uma vez por
+  sessão do app; o TradeRock nunca a vê. App e worker conversam pela entrada/saída padrão do processo
+  (só quem o iniciou fala com ele); quando o app fecha ou trava, o worker cancela a troca, devolve a
+  placa ao estado anterior (Wi-Fi ligado e gerenciado pelo NetworkManager, se era assim) e sai. Os
+  arquivos (`.pk3` e `prod.keys`) chegam como bytes: o worker nunca abre caminhos vindos do app.
+
 ## Estrutura
 
 ```
@@ -60,7 +70,7 @@ app/TradeRock.App/       executável: servidor + janela
 app/TradeRock.Core/      domínio: troca (coordenador, motores), Pokémon (PKHeX), armazenamento (SQLite)
 app/TradeRock.Tests/     testes (xUnit v3)
 catalog/                 catálogo de placas Wi-Fi, ESP32 e conversores USB-serial (JSON)
-worker/TradeRock.Worker/ worker privilegiado (Linux)
+worker/                  worker privilegiado (Linux, Python): protocolo, rádio, wrapper do motor
 frontend/                React + Vite + TypeScript + Tailwind
 engines/                 submódulos (motores e AutoMod)
 firmware/                firmware ESP32 embutido (vem do submódulo do easyworld)
@@ -182,8 +192,14 @@ Depois compara com o [catálogo](catalog/hardware-catalog.json). Cada item do ca
 privilégios.
 
 O **relatório** exportado no resumo serve para pedir ajuda. Ele não inclui chaves, nome de
-usuário nem caminhos pessoais. O componente de rede e o teste real da placa chegam na Entrega 6,
-o teste com o Switch na 7 e o firmware do ESP32 na 9. Até lá, esses itens aparecem como "em breve".
+usuário nem caminhos pessoais.
+
+Com a placa Wi-Fi, a etapa 4 faz o **teste real da placa**: modo monitor e transmissão de quadros de
+ação nos canais 1, 6 e 11, pela mesma biblioteca LDN da troca, sem Switch nem prod.keys. Ela também
+oferece **configurar o NetworkManager**, que cria `/etc/NetworkManager/conf.d/zz-ldn-unmanaged.conf`
+e `/etc/systemd/network/10-traderock-ldn.link`, sempre com confirmação. O teste com o Switch chega na
+Entrega 7 e o firmware do ESP32 na 9; até lá, esses itens aparecem como "em breve". Enquanto o teste
+com o Switch não existe, ele não bloqueia a troca com a placa Wi-Fi.
 
 Em desenvolvimento (`ASPNETCORE_ENVIRONMENT=Development`), um seletor no topo do assistente simula
 9 cenários: Linux com placa compatível, instável, desconhecida ou problemática, sem Wi-Fi, WSL,
