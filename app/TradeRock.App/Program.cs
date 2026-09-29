@@ -17,6 +17,7 @@ internal static class Program
             // Saída padrão, não o log: a URL contém o token de sessão.
             Console.WriteLine($"TradeRock rodando sem janela. Abra: {TradeRockServer.GetLaunchUri(app)}");
             app.WaitForShutdownAsync().GetAwaiter().GetResult();
+            app.DisposeAsync().AsTask().GetAwaiter().GetResult();
             return 0;
         }
 
@@ -30,13 +31,15 @@ internal static class Program
             return 1;
         }
 
-        RunWindow(TradeRockServer.GetLaunchUri(app), options.DevTools);
+        RunWindow(TradeRockServer.GetLaunchUri(app), options.DevTools, app.Services.GetRequiredService<WindowBridge>());
 
         app.StopAsync().GetAwaiter().GetResult();
+        // Descarta os serviços: o coordenador cancela com segurança qualquer troca que tenha sobrado.
+        app.DisposeAsync().AsTask().GetAwaiter().GetResult();
         return 0;
     }
 
-    private static void RunWindow(Uri launchUri, bool devTools)
+    private static void RunWindow(Uri launchUri, bool devTools, WindowBridge bridge)
     {
         // LogVerbosity = 0 antes de qualquer chamada: o Photino imprime a URL (com o token) no stdout.
         var window = new PhotinoWindow { LogVerbosity = 0 }
@@ -49,6 +52,7 @@ internal static class Program
             .SetContextMenuEnabled(devTools)
             .Load(launchUri);
 
+        bridge.Attach(window);
         window.WaitForClose();
     }
 }

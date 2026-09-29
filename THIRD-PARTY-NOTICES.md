@@ -14,5 +14,7 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | [pret/pokefirered](https://github.com/pret/pokefirered) | Referência das regras do jogo (não distribuído) | sem código incorporado |
 | [ImaEternal/FRLG-LDN-Trade-Console](https://github.com/ImaEternal/FRLG-LDN-Trade-Console) | Referência de UX (não distribuído) | EUPL-1.2, sem código incorporado |
 | [GB-Link/GB-Link-Switch-LDN](https://github.com/GB-Link/GB-Link-Switch-LDN) | Referência (não distribuído) | AGPL-3.0, sem código incorporado |
+| [PokeAPI/sprites](https://github.com/PokeAPI/sprites) | Sprites 1–386 (via `assets/sprites` do easyworld) | Arte © Nintendo, Game Freak e The Pokémon Company; uso não autorizado por eles |
+| Pokémon de demonstração | `assets/party/mewtwo.pk3` e `deoxys.pk3` do easyworld | Fornecidos pelo autor do easyworld |
 
 O TradeRock nunca distribui `prod.keys`, chaves do Switch nem ROMs.

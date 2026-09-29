@@ -4,4 +4,19 @@
     <RootNamespace>TradeRock.Core</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="TradeRock.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PKHeX.Core" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Pokémon de demonstração (modo demonstração e testes), lidos do submódulo do easyworld. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\engines\frlg-ldn-trade-esp32\assets\party\*.pk3" LogicalName="demo/%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

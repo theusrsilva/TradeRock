@@ -4,7 +4,8 @@ Troque Pokémon com **Pokémon FireRed e LeafGreen do Nintendo Switch / Switch 2
 wireless local do jogo (LDN). O seu PC, ou uma plaquinha ESP32, finge ser um segundo Switch na
 sala de troca do Direct Corner.
 
-> **Estado:** em desenvolvimento (Entrega 1 de 11: base do aplicativo). Ainda não troca Pokémon.
+> **Estado:** em desenvolvimento (Entrega 2 de 11). O assistente de troca funciona de ponta a ponta
+> em **modo demonstração** (motor simulado). Ainda não troca com um Switch de verdade.
 
 O TradeRock nunca baixa, sugere fontes nem distribui `prod.keys` ou ROMs. Use só as chaves
 extraídas do seu próprio console.
@@ -53,7 +54,7 @@ flowchart LR
 
 ```
 app/TradeRock.App/       executável: servidor + janela
-app/TradeRock.Core/      domínio e abstrações de plataforma
+app/TradeRock.Core/      domínio: troca (coordenador, motores), Pokémon (PKHeX), armazenamento (SQLite)
 app/TradeRock.Tests/     testes (xUnit v3)
 worker/TradeRock.Worker/ worker privilegiado (Linux)
 frontend/                React + Vite + TypeScript + Tailwind
@@ -129,12 +130,27 @@ Repasse a porta serial para o container:
 O usuário `dev` do container já está no grupo `dialout`. No host, confira qual porta apareceu
 com `ls /dev/ttyUSB* /dev/ttyACM*` depois de conectar a placa.
 
+### Modo demonstração
+
+Sem Switch, placa ou prod.keys, o TradeRock usa o **FakeEngine**, que simula a troca inteira no
+ritmo real. Na etapa "Jogo e treinador" dá para escolher o que o Switch simulado faz: dar certo,
+falhar algumas vezes antes de conectar, chaves erradas, cancelar a troca etc. Para acelerar a
+simulação em desenvolvimento, use `--Engines:Fake:SpeedFactor=0.2` (0 = instantâneo).
+
+Na primeira execução, o app já traz dois Pokémon de demonstração (MEWTWO e DEOXYS, do repositório
+do easyworld). Detalhes do fluxo em [docs/trade-flow.md](docs/trade-flow.md).
+
 ## Pastas de dados
 
 | Sistema | Pasta |
 | --- | --- |
 | Linux | `$XDG_DATA_HOME/traderock` (padrão `~/.local/share/traderock`) |
 | Windows | `%APPDATA%\TradeRock` |
+
+Dentro dela: `traderock.db` (SQLite), `vault/` (arquivos .pk3, nomeados pelo SHA-256), `keys/`
+(prod.keys, permissão 700) e `logs/`.
+
+Migrações do banco: `dotnet tool restore && dotnet ef migrations add <Nome> --project app/TradeRock.Core --output-dir Storage/Migrations`.
 
 ## Solução de problemas
 

@@ -19,3 +19,4 @@ app/TradeRock.App/wwwroot/
 .dev-data/
 obj-container/
 bin-container/
+*.tsbuildinfo

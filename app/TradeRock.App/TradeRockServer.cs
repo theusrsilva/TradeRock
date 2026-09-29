@@ -1,8 +1,8 @@
 using System.Net;
-using System.Reflection;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.FileProviders;
+using TradeRock.App.Api;
 using TradeRock.Core;
 
 namespace TradeRock.App;
@@ -44,10 +44,12 @@ public static class TradeRockServer
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(token);
         builder.Services.AddSingleton(paths);
+        builder.Services.AddTradeRock(paths, builder.Configuration);
 
         configure?.Invoke(builder);
 
         var app = builder.Build();
+        app.InitializeDataAsync().GetAwaiter().GetResult();
 
         app.UseMiddleware<SessionAuthMiddleware>();
 
@@ -82,16 +84,11 @@ public static class TradeRockServer
 
     private static void MapApi(WebApplication app)
     {
-        var version = typeof(TradeRockServer).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
-
-        app.MapGet("/api/health", (IHostEnvironment env) => Results.Ok(new
-        {
-            app = "TradeRock",
-            version,
-            os = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsLinux() ? "linux" : "other",
-            environment = env.EnvironmentName,
-        }));
+        var api = app.MapGroup("/api");
+        api.MapAppEndpoints();
+        api.MapPokemon();
+        api.MapTrades();
+        api.MapSettings();
     }
 
     /// <summary>Endereço real após o start (a porta 0 vira uma porta livre).</summary>

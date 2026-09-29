@@ -1,0 +1,98 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using TradeRock.Core;
+using TradeRock.Core.Engines;
+using TradeRock.Core.Pokemon;
+using TradeRock.Core.Storage;
+using TradeRock.Core.Trading;
+
+namespace TradeRock.App;
+
+public static class ServiceSetup
+{
+    public static JsonNamingPolicy EnumNaming { get; } = JsonNamingPolicy.SnakeCaseLower;
+
+    public static void AddTradeRock(this IServiceCollection services, AppPaths paths, IConfiguration config)
+    {
+        services.ConfigureHttpJsonOptions(o =>
+        {
+            o.SerializerOptions.Converters.Add(new JsonStringEnumConverter(EnumNaming));
+            o.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
+        });
+
+        services.AddSingleton(TimeProvider.System);
+        services.AddDbContextFactory<TradeRockDb>(o => o.UseSqlite($"Data Source={paths.DatabasePath}"));
+        services.AddSingleton<PokemonStore>();
+        services.AddSingleton<SettingsStore>();
+        services.AddSingleton<TradeRecorder>();
+        services.AddSingleton<ITradeRecorder>(sp => sp.GetRequiredService<TradeRecorder>());
+        services.AddSingleton<TradeCoordinator>();
+        services.AddSingleton<WindowBridge>();
+
+        // Motores. Nesta entrega só o FakeEngine (modo demonstração); os reais chegam nas Entregas 6 e 9.
+        var fake = new FakeEngineOptions
+        {
+            SpeedFactor = config.GetValue("Engines:Fake:SpeedFactor", 1.0),
+            HostPokemon = DemoHostPokemon,
+        };
+        services.AddSingleton(fake);
+        services.AddSingleton<ITradeEngine, FakeEngine>();
+        services.AddSingleton<EngineRegistry>();
+    }
+
+    /// <summary>
+    /// O "Switch" simulado manda um Pokémon de demonstração diferente do que foi oferecido,
+    /// para a troca fazer sentido na tela.
+    /// </summary>
+    private static byte[] DemoHostPokemon(TradeRequest request, int tradeIndex)
+    {
+        var offered = Pk3Reader.Read(request.Party[request.OfferedSlots[tradeIndex]].Data).Sha256;
+        var others = DemoPokemon.All.Where(d => Pk3Reader.Read(d.Data).Sha256 != offered).ToList();
+        var pool = others.Count > 0 ? others : DemoPokemon.All.ToList();
+        return pool[tradeIndex % pool.Count].Data;
+    }
+
+    /// <summary>Cria as pastas, aplica as migrações e, na primeira execução, coloca os Pokémon de demonstração.</summary>
+    public static async Task InitializeDataAsync(this WebApplication app)
+    {
+        app.Services.GetRequiredService<AppPaths>().EnsureCreated();
+
+        var dbFactory = app.Services.GetRequiredService<IDbContextFactory<TradeRockDb>>();
+        await using (var db = await dbFactory.CreateDbContextAsync())
+        {
+            await db.Database.MigrateAsync();
+        }
+
+        var settings = app.Services.GetRequiredService<SettingsStore>();
+        if (!await settings.GetAsync("demo.seeded", false, CancellationToken.None))
+        {
+            var store = app.Services.GetRequiredService<PokemonStore>();
+            foreach (var (name, data) in DemoPokemon.All)
+                await store.ImportAsync(data, PokemonOrigin.Demo, name, CancellationToken.None);
+            await settings.SetAsync("demo.seeded", true, CancellationToken.None);
+        }
+    }
+}
+
+/// <summary>Motores disponíveis e o escolhido (guardado nas configurações).</summary>
+public sealed class EngineRegistry(IEnumerable<ITradeEngine> engines, SettingsStore settings)
+{
+    public const string SettingKey = "engine.selected";
+
+    public IReadOnlyList<ITradeEngine> All { get; } = engines.ToList();
+
+    public async Task<ITradeEngine> GetSelectedAsync(CancellationToken ct)
+    {
+        var id = await settings.GetAsync<string?>(SettingKey, null, ct);
+        return All.FirstOrDefault(e => e.Id == id) ?? All[0];
+    }
+
+    public async Task<bool> SelectAsync(string id, CancellationToken ct)
+    {
+        if (All.All(e => e.Id != id))
+            return false;
+        await settings.SetAsync(SettingKey, id, ct);
+        return true;
+    }
+}

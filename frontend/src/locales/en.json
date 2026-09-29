@@ -3,6 +3,29 @@
     "name": "TradeRock",
     "tagline": "Pokémon trading with FireRed and LeafGreen on Switch"
   },
+  "nav": {
+    "home": "Home",
+    "trade": "Trade",
+    "pokemon": "Pokémon",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong. Please try again.",
+    "back": "Back",
+    "next": "Continue",
+    "save": "Save",
+    "saved": "Saved!",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "optional": "optional",
+    "learnMore": "Learn more"
+  },
+  "demo": {
+    "badge": "Demo mode",
+    "explain": "Nothing is really traded: TradeRock simulates the Switch so you can learn the steps."
+  },
   "status": {
     "title": "App status",
     "checking": "Checking the internal server…",
@@ -12,15 +35,205 @@
     "system": "System",
     "environment": "Environment"
   },
+  "home": {
+    "title": "Welcome to TradeRock",
+    "intro": "TradeRock pretends to be a second Switch in the FireRed and LeafGreen trade room. That way you send Pokémon from your PC to your game and keep the ones you receive.",
+    "startTrade": "Make a trade",
+    "seePokemon": "See my Pokémon",
+    "running": "A trade is in progress.",
+    "follow": "Follow it"
+  },
+  "pokemon": {
+    "title": "My Pokémon",
+    "subtitle": "Everything you imported or received is stored here. (The full vault comes in a later stage.)",
+    "level": "Lv. {{level}}",
+    "shiny": "Shiny",
+    "egg": "Egg",
+    "ot": "Original trainer: {{name}}",
+    "origin": {
+      "imported": "Imported",
+      "received": "Received",
+      "demo": "Demo"
+    },
+    "import": "Import .pk3/.ek3",
+    "dropHint": "or drag files onto this area",
+    "empty": "No Pokémon yet. Import a .pk3 or .ek3 file.",
+    "uploadCreated": "{{file}}: imported.",
+    "uploadDuplicate": "{{file}}: already stored.",
+    "uploadFailed": "{{file}}: {{reason}}",
+    "download": "Download .pk3",
+    "evolvesWarning": "Evolves when traded. Right now the Switch may freeze while saving after a trade evolution (known engine issue). Consider holding an Everstone.",
+    "fileErrors": {
+      "size": "not a Gen 3 Pokémon (80 or 100 bytes)",
+      "checksum": "corrupted file",
+      "species": "invalid species"
+    }
+  },
+  "trade": {
+    "title": "Trade with the Switch",
+    "wizard": {
+      "party": "Party",
+      "trainer": "Game and trainer",
+      "reminder": "Get the Switch ready",
+      "live": "Trade"
+    },
+    "party": {
+      "title": "Build the PC party",
+      "count": "{{count}} of 6 in the party",
+      "send": "Goes to the Switch",
+      "stays": "Stays on the PC",
+      "add": "Add to party",
+      "remove": "Remove from party",
+      "tradeOrder": "Trade {{n}}",
+      "available": "Your Pokémon",
+      "full": "The party already has 6 Pokémon.",
+      "needTwo": "Put at least 2 Pokémon in the party.",
+      "needOffered": "Mark at least 1 Pokémon to go to the Switch.",
+      "summary": "{{count}} trade(s) in this session."
+    },
+    "trainer": {
+      "title": "Game and simulated trainer",
+      "game": "Your Switch's game",
+      "fire_red": "FireRed",
+      "leaf_green": "LeafGreen",
+      "name": "Trainer name",
+      "nameHelp": "Up to 7 characters, no accents. It's the name you'll approve on the Switch.",
+      "tid": "Trainer ID",
+      "sid": "Secret ID",
+      "presets": "Saved trainers",
+      "noPresets": "No saved trainers.",
+      "use": "Use",
+      "presetLabel": "Name to save as",
+      "savePreset": "Save this trainer"
+    },
+    "simulation": {
+      "title": "Simulation",
+      "help": "Choose what the simulated Switch will do, to see each situation.",
+      "failures": "Failures before connecting",
+      "scenario": {
+        "success": "Everything works",
+        "connect_failures_then_success": "Fails a few times, then connects",
+        "no_network_found": "Room not found",
+        "wrong_keys": "Wrong keys",
+        "approval_never_given": "Nobody approves the request on the Switch",
+        "join_rejected": "The Switch rejects the request",
+        "host_cancels": "The Switch cancels the trade",
+        "connection_lost_mid_trade": "Connection drops mid-trade"
+      }
+    },
+    "reminder": {
+      "title": "Get the Switch ready",
+      "start": "Start trade",
+      "illustration": {
+        "center": "Pokémon Center · upstairs",
+        "counter": "Direct Corner",
+        "leader": "Be the Leader"
+      }
+    },
+    "live": {
+      "attempt": "Attempt {{attempt}} of {{max}}",
+      "nowWhat": "What to do now",
+      "cancel": "Cancel trade",
+      "cancelConfirm": "Cancel the trade now? TradeRock closes the connection safely.",
+      "cancelYes": "Yes, cancel",
+      "cancelNo": "Keep going",
+      "cancelling": "Cancelling…",
+      "log": "Technical details",
+      "received": "Received",
+      "sseLost": "Reconnecting to progress…",
+      "retryIn": "Next attempt in {{seconds}} s.",
+      "leftChair": "Your chair (left)"
+    },
+    "steps": {
+      "search": "Find the room",
+      "approve": "Approve the join",
+      "sit": "Sit at the table",
+      "menu": "Open the trade menu",
+      "trade": "Trade {{n}}",
+      "leave": "Leave the room"
+    },
+    "result": {
+      "completed": "Trade complete!",
+      "partially_completed": "Some trades were completed.",
+      "failed": "The trade was not completed.",
+      "cancelled": "Trade cancelled.",
+      "running": "In progress",
+      "receivedTitle": "You received",
+      "newTrade": "New trade",
+      "history": "See history"
+    },
+    "startError": "Could not start the trade:"
+  },
+  "errors": {
+    "party_size": "the party needs 2 to 6 Pokémon",
+    "trades_count": "choose 1 to 6 trades",
+    "trades_exceed_party": "there are more trades than Pokémon in the party",
+    "offered_slots_repeated": "the same Pokémon was marked twice",
+    "offered_slot_out_of_range": "a marked Pokémon is not in the party",
+    "party_data_size": "a party file is not a valid Pokémon",
+    "trainer_name_empty": "type the trainer name",
+    "trainer_name_too_long": "the name has more than 7 characters",
+    "trainer_name_invalid_chars": "the name has characters the game doesn't support (accents, _ …)",
+    "unknown_pokemon": "a party Pokémon was not found",
+    "missing_fields": "some information is missing",
+    "preset_label_invalid": "give the saved trainer a short name",
+    "busy": "a trade is already in progress"
+  },
+  "failures": {
+    "no_network_found": "The Switch's room was not found. Check that the Direct Corner is open as Leader and the Switch is close by.",
+    "beacon_not_decrypted": "The room was found, but the keys (prod.keys) don't match.",
+    "join_failed": "The connection to the Switch didn't complete.",
+    "join_rejected": "The Switch rejected the join request.",
+    "approval_timeout": "The join request wasn't approved on the Switch in time.",
+    "connect_timeout": "Connecting to the room took too long.",
+    "phase_timeout": "The trade was stuck for too long.",
+    "total_timeout": "The trade exceeded the maximum time.",
+    "host_cancelled": "The trade was cancelled on the Switch.",
+    "connection_lost": "The connection dropped during the trade.",
+    "engine_crashed": "The trade engine stopped with an error.",
+    "cancelled": "You cancelled the trade.",
+    "internal_error": "TradeRock internal error.",
+    "unknown": "Unknown failure."
+  },
+  "history": {
+    "title": "Trade history",
+    "empty": "No trades yet.",
+    "trades": "{{done}} of {{planned}} trade(s)",
+    "attempts": "{{count}} attempt(s)",
+    "simulation": "simulation",
+    "sent": "Sent",
+    "received": "Received",
+    "nothing": "nothing",
+    "details": "Show events",
+    "hide": "Hide events"
+  },
   "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
     "theme": "Theme",
     "themeSystem": "Automatic",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "language": "Language"
+    "language": "Language",
+    "engineTitle": "Trade engine",
+    "engineHelp": "The engine is what talks to the Switch. The real engines (Wi-Fi card and ESP32) come in the next stages.",
+    "engines": {
+      "fake": "Simulation (demo mode)",
+      "python-ldn": "PC Wi-Fi card",
+      "esp32": "ESP32 over USB"
+    },
+    "tradeTitle": "Trade",
+    "maxAttempts": "Connection attempts",
+    "maxAttemptsHelp": "How many times TradeRock tries to connect before giving up. Connecting to the Switch sometimes takes a few attempts.",
+    "retryDelaySeconds": "Wait between attempts (seconds)",
+    "approvalTimeoutSeconds": "Time to approve the join (seconds)",
+    "phaseTimeoutSeconds": "Maximum idle time inside the room (seconds)",
+    "totalTimeoutMinutes": "Maximum trade time (minutes)"
   },
-  "next": {
-    "title": "Under construction",
-    "body": "This is the app's foundation. Next come the trade assistant, the Pokémon builder, the vault and the first-run assistant."
+  "close": {
+    "title": "Close during a trade?",
+    "body": "A trade is in progress. If you close now, TradeRock cancels it safely before quitting. Pokémon already received stay stored.",
+    "confirm": "Cancel trade and close",
+    "keep": "Keep trading"
   }
 }

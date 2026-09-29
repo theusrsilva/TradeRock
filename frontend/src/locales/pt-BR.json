@@ -3,6 +3,29 @@
     "name": "TradeRock",
     "tagline": "Trocas de Pokémon com FireRed e LeafGreen do Switch"
   },
+  "nav": {
+    "home": "Início",
+    "trade": "Trocar",
+    "pokemon": "Pokémon",
+    "history": "Histórico",
+    "settings": "Configurações"
+  },
+  "common": {
+    "loading": "Carregando…",
+    "error": "Algo deu errado. Tente de novo.",
+    "back": "Voltar",
+    "next": "Continuar",
+    "save": "Salvar",
+    "saved": "Salvo!",
+    "delete": "Apagar",
+    "cancel": "Cancelar",
+    "optional": "opcional",
+    "learnMore": "Saiba mais"
+  },
+  "demo": {
+    "badge": "Modo demonstração",
+    "explain": "Nada é trocado de verdade: o TradeRock simula o Switch para você conhecer o passo a passo."
+  },
   "status": {
     "title": "Status do aplicativo",
     "checking": "Verificando o servidor interno…",
@@ -12,15 +35,205 @@
     "system": "Sistema",
     "environment": "Ambiente"
   },
+  "home": {
+    "title": "Bem-vindo ao TradeRock",
+    "intro": "O TradeRock finge ser um segundo Switch na sala de troca do FireRed e LeafGreen. Assim você manda Pokémon do PC para o seu jogo e guarda os que recebe.",
+    "startTrade": "Fazer uma troca",
+    "seePokemon": "Ver meus Pokémon",
+    "running": "Há uma troca em andamento.",
+    "follow": "Acompanhar"
+  },
+  "pokemon": {
+    "title": "Meus Pokémon",
+    "subtitle": "Tudo o que você importou ou recebeu fica guardado aqui. (O cofre completo chega numa próxima etapa.)",
+    "level": "Nv. {{level}}",
+    "shiny": "Shiny",
+    "egg": "Ovo",
+    "ot": "Treinador original: {{name}}",
+    "origin": {
+      "imported": "Importado",
+      "received": "Recebido",
+      "demo": "Demonstração"
+    },
+    "import": "Importar .pk3/.ek3",
+    "dropHint": "ou arraste os arquivos para esta área",
+    "empty": "Nenhum Pokémon ainda. Importe um arquivo .pk3 ou .ek3.",
+    "uploadCreated": "{{file}}: importado.",
+    "uploadDuplicate": "{{file}}: já estava guardado.",
+    "uploadFailed": "{{file}}: {{reason}}",
+    "download": "Baixar .pk3",
+    "evolvesWarning": "Evolui ao ser trocado. Hoje o Switch pode travar ao salvar depois de uma evolução por troca (problema conhecido do motor). Prefira segurar uma Everstone.",
+    "fileErrors": {
+      "size": "não é um Pokémon da Gen 3 (80 ou 100 bytes)",
+      "checksum": "arquivo corrompido",
+      "species": "espécie inválida"
+    }
+  },
+  "trade": {
+    "title": "Trocar com o Switch",
+    "wizard": {
+      "party": "Time",
+      "trainer": "Jogo e treinador",
+      "reminder": "Preparar o Switch",
+      "live": "Troca"
+    },
+    "party": {
+      "title": "Monte o time do PC",
+      "count": "{{count}} de 6 no time",
+      "send": "Vai para o Switch",
+      "stays": "Fica no PC",
+      "add": "Adicionar ao time",
+      "remove": "Tirar do time",
+      "tradeOrder": "Troca {{n}}",
+      "available": "Seus Pokémon",
+      "full": "O time já tem 6 Pokémon.",
+      "needTwo": "Coloque pelo menos 2 Pokémon no time.",
+      "needOffered": "Marque pelo menos 1 Pokémon para ir ao Switch.",
+      "summary": "{{count}} troca(s) nesta sessão."
+    },
+    "trainer": {
+      "title": "Jogo e treinador simulado",
+      "game": "Jogo do seu Switch",
+      "fire_red": "FireRed",
+      "leaf_green": "LeafGreen",
+      "name": "Nome do treinador",
+      "nameHelp": "Até 7 caracteres, sem acento. É o nome que você vai aprovar no Switch.",
+      "tid": "ID do treinador",
+      "sid": "ID secreto",
+      "presets": "Treinadores salvos",
+      "noPresets": "Nenhum treinador salvo.",
+      "use": "Usar",
+      "presetLabel": "Nome para salvar",
+      "savePreset": "Salvar este treinador"
+    },
+    "simulation": {
+      "title": "Simulação",
+      "help": "Escolha o que o Switch simulado vai fazer, para conhecer cada situação.",
+      "failures": "Falhas antes de conectar",
+      "scenario": {
+        "success": "Tudo dá certo",
+        "connect_failures_then_success": "Falha algumas vezes e depois conecta",
+        "no_network_found": "Não encontra a sala",
+        "wrong_keys": "Chaves erradas",
+        "approval_never_given": "Ninguém aprova o pedido no Switch",
+        "join_rejected": "O Switch recusa o pedido",
+        "host_cancels": "O Switch cancela a troca",
+        "connection_lost_mid_trade": "A conexão cai no meio da troca"
+      }
+    },
+    "reminder": {
+      "title": "Prepare o Switch",
+      "start": "Começar troca",
+      "illustration": {
+        "center": "Centro Pokémon · 2º andar",
+        "counter": "Direct Corner",
+        "leader": "Ser o Leader"
+      }
+    },
+    "live": {
+      "attempt": "Tentativa {{attempt}} de {{max}}",
+      "nowWhat": "O que fazer agora",
+      "cancel": "Cancelar troca",
+      "cancelConfirm": "Cancelar a troca agora? O TradeRock encerra a conexão com segurança.",
+      "cancelYes": "Sim, cancelar",
+      "cancelNo": "Continuar",
+      "cancelling": "Cancelando…",
+      "log": "Detalhes técnicos",
+      "received": "Recebidos",
+      "sseLost": "Reconectando ao progresso…",
+      "retryIn": "Nova tentativa em {{seconds}} s.",
+      "leftChair": "Sua cadeira (esquerda)"
+    },
+    "steps": {
+      "search": "Encontrar a sala",
+      "approve": "Aprovar a entrada",
+      "sit": "Sentar à mesa",
+      "menu": "Abrir o menu de troca",
+      "trade": "Troca {{n}}",
+      "leave": "Sair da sala"
+    },
+    "result": {
+      "completed": "Troca concluída!",
+      "partially_completed": "Algumas trocas foram concluídas.",
+      "failed": "A troca não foi concluída.",
+      "cancelled": "Troca cancelada.",
+      "running": "Em andamento",
+      "receivedTitle": "Você recebeu",
+      "newTrade": "Nova troca",
+      "history": "Ver histórico"
+    },
+    "startError": "Não foi possível começar a troca:"
+  },
+  "errors": {
+    "party_size": "o time precisa ter de 2 a 6 Pokémon",
+    "trades_count": "escolha de 1 a 6 trocas",
+    "trades_exceed_party": "há mais trocas do que Pokémon no time",
+    "offered_slots_repeated": "o mesmo Pokémon foi marcado duas vezes",
+    "offered_slot_out_of_range": "um Pokémon marcado não está no time",
+    "party_data_size": "um arquivo do time não é um Pokémon válido",
+    "trainer_name_empty": "digite o nome do treinador",
+    "trainer_name_too_long": "o nome tem mais de 7 caracteres",
+    "trainer_name_invalid_chars": "o nome tem letras que o jogo não aceita (acentos, ç, _ …)",
+    "unknown_pokemon": "um Pokémon do time não foi encontrado",
+    "missing_fields": "faltam informações",
+    "preset_label_invalid": "dê um nome curto para o treinador salvo",
+    "busy": "já existe uma troca em andamento"
+  },
+  "failures": {
+    "no_network_found": "A sala do Switch não foi encontrada. Confira se o Direct Corner está aberto como Leader e se o Switch está perto.",
+    "beacon_not_decrypted": "A sala foi encontrada, mas as chaves (prod.keys) não conferem.",
+    "join_failed": "A conexão com o Switch não completou.",
+    "join_rejected": "O Switch recusou o pedido de entrada.",
+    "approval_timeout": "O pedido de entrada não foi aprovado no Switch a tempo.",
+    "connect_timeout": "Demorou demais para conectar à sala.",
+    "phase_timeout": "A troca ficou parada tempo demais.",
+    "total_timeout": "A troca passou do tempo máximo.",
+    "host_cancelled": "A troca foi cancelada no Switch.",
+    "connection_lost": "A conexão caiu durante a troca.",
+    "engine_crashed": "O motor de troca parou com um erro.",
+    "cancelled": "Você cancelou a troca.",
+    "internal_error": "Erro interno do TradeRock.",
+    "unknown": "Falha desconhecida."
+  },
+  "history": {
+    "title": "Histórico de trocas",
+    "empty": "Nenhuma troca ainda.",
+    "trades": "{{done}} de {{planned}} troca(s)",
+    "attempts": "{{count}} tentativa(s)",
+    "simulation": "simulação",
+    "sent": "Enviado",
+    "received": "Recebido",
+    "nothing": "nada",
+    "details": "Ver eventos",
+    "hide": "Esconder eventos"
+  },
   "settings": {
+    "title": "Configurações",
+    "appearance": "Aparência",
     "theme": "Tema",
     "themeSystem": "Automático",
     "themeLight": "Claro",
     "themeDark": "Escuro",
-    "language": "Idioma"
+    "language": "Idioma",
+    "engineTitle": "Motor de troca",
+    "engineHelp": "O motor é quem conversa com o Switch. Os motores reais (placa Wi-Fi e ESP32) chegam nas próximas etapas.",
+    "engines": {
+      "fake": "Simulação (modo demonstração)",
+      "python-ldn": "Placa Wi-Fi do PC",
+      "esp32": "ESP32 via USB"
+    },
+    "tradeTitle": "Troca",
+    "maxAttempts": "Tentativas de conexão",
+    "maxAttemptsHelp": "Quantas vezes o TradeRock tenta conectar antes de desistir. A conexão com o Switch às vezes precisa de algumas tentativas.",
+    "retryDelaySeconds": "Espera entre tentativas (segundos)",
+    "approvalTimeoutSeconds": "Tempo para aprovar a entrada (segundos)",
+    "phaseTimeoutSeconds": "Tempo máximo parado dentro da sala (segundos)",
+    "totalTimeoutMinutes": "Tempo máximo da troca (minutos)"
   },
-  "next": {
-    "title": "Em construção",
-    "body": "Esta é a base do aplicativo. Nas próximas etapas chegam o assistente de troca, o construtor de Pokémon, o cofre e o assistente de primeira execução."
+  "close": {
+    "title": "Fechar durante uma troca?",
+    "body": "Há uma troca em andamento. Se fechar agora, o TradeRock cancela a troca com segurança antes de sair. Pokémon já recebidos continuam guardados.",
+    "confirm": "Cancelar troca e fechar",
+    "keep": "Continuar trocando"
   }
 }

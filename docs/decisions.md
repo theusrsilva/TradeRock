@@ -80,3 +80,20 @@ dados `~/.local/share/traderock` e `%APPDATA%\TradeRock`.
   fica restrito a avisos.
 - O Photino roda com `LogVerbosity = 0`, porque senão imprime a URL no stdout.
 - Com `--no-window`, a URL sai só no stdout, de propósito.
+
+## D11. Troca (Entrega 2)
+
+- **PKHeX.Core** entra já na Entrega 2, só para ler e exibir `.pk3`/`.ek3`. O `new PK3(bytes)`
+  decripta sozinho (`PokeCrypto.DecryptIfEncrypted3`); os bytes saem por
+  `WriteDecryptedDataParty/Stored`. O PKHeX não tem nomes de espécie em português; usamos os em
+  inglês, que são os mesmos no Brasil.
+- **Cofre mínimo**: tabela `Pokemon` + arquivos por SHA-256. O hash é dos bytes **decriptados**, então
+  o `.pk3` e o `.ek3` do mesmo Pokémon são um só. A Entrega 4 amplia.
+- **Nome do treinador**: no máximo 7 caracteres da tabela Gen III de `frlgsim/charmap.py`
+  (sem acentos). O nome é o que aparece no pedido de entrada, então as instruções usam o nome
+  escolhido, não "EMU".
+- **Time**: de 2 a 6 Pokémon e de 1 a 6 trocas (`--trades`/`--slots` do motor). O mínimo de 2 existe
+  porque o motor recusa trocar o último Pokémon vivo.
+- **Sprites** do PokeAPI (via easyworld): aceitos pelo dono do projeto para distribuição entre
+  amigos. Rever antes de uma distribuição pública.
+- **Enums na API** em `snake_case` (`join_requested`, `fire_red`).
