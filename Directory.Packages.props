@@ -3,6 +3,10 @@
     <PackageVersion Include="Photino.NET" Version="4.0.16" />
     <!-- Mesma versão usada pelo core do easyworld e pelo PKHeX.Core.AutoMod (tag 26.08.26). -->
     <PackageVersion Include="PKHeX.Core" Version="26.8.26" />
+    <!-- Núcleo do easyworld (motor ESP32): mesmas versões do packages.lock.json dele. -->
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
+    <PackageVersion Include="ZstdSharp.Port" Version="0.8.8" />
+    <PackageVersion Include="System.IO.Ports" Version="10.0.7" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.12" />

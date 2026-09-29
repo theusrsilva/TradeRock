@@ -386,3 +386,59 @@ em memória. **Falta testar com um `.sav` real.**
   `THIRD-PARTY-NOTICES.md`, lida no build.
 - **Não verificado:** o AppImage montado por FUSE, o diálogo do pkexec e a janela nativa. O teste
   deste ambiente usou "extrair e rodar" e rodou o script de instalação como root, sem pkexec.
+
+## D18. ESP32: motor, firmware e teste com o Switch (Entrega 9)
+
+- **Núcleo do easyworld com patch.** O motor usa o `host/core` do easyworld (AGPL), sem fork e sem
+  copiar código. `app/Frlg.Trade.Core.Patched` copia as fontes para `obj/` a cada build e aplica
+  `engines/patches/frlg-ldn-trade-esp32` (`patch -p1`), como o motor Python (D15). O patch:
+  - torna o treinador simulado configurável (nome, TID/SID, FireRed/LeafGreen). O padrão reproduz os
+    bytes originais; os campos seguem `frlgsim/linkplayer.py` e `ni.py`;
+  - faz `Rfu.Name` codificar a pontuação Gen III;
+  - acrescenta o limite de trocas (`tradeLimit`): depois de N trocas, o motor sai da sala pelo mesmo
+    caminho de quando o Switch cancela (decisão do autor, opção a);
+  - faz `TradeSession.Run` receber o `KeyFile`, o limite e o treinador;
+  - aceita os dois comm ids do FRLG já vistos (`KnownIds`). O easyworld só aceitava
+    `0x01006fa0233f8000`; o motor Wi-Fi e os vetores de teste do easyworld usam `0x0100610011000000`.
+- **Eventos.** Os marcos do `TradeSession` (fases em chinês, logs e eventos) viram os eventos do
+  TradeRock (`Esp32EventMapper`). As frases reconhecidas ficam em `Esp32Messages`, e um teste confere
+  que cada uma ainda existe no submódulo. O log detalhado fica em `logs/esp32/<sessão>/native.log`,
+  com as 10 últimas sessões guardadas.
+- **Cancelar** para a sessão pelo `LDN_STOP` do firmware. Diferente do motor Wi-Fi, não há a saída
+  educada da sala (o núcleo não tem): o Switch vê a conexão cair.
+- **Firmware.** Os quatro binários completos de `firmware/release` do easyworld vão embutidos no app
+  (3,7 MB) e são conferidos pelo `SHA256SUMS.txt` a cada uso. Não compilamos nada com o ESP-IDF.
+  - **`LDN_HELLO`** sempre (é rápido e não reinicia a placa), na hora de escolher a porta: diz se há
+    firmware compatível e de qual chip. Ele também é o teste de comunicação (`HELLO` + `BEGIN` +
+    `STOP`), que substitui o antigo item `esp32_serial_test`.
+  - **esptool** só a pedido (decisão do autor): identificar (chip, revisão e flash), conferir a
+    versão (`verify_flash` com o binário embutido) e gravar.
+  - A gravação primeiro identifica o chip e só grava o binário dele, numa flash do tamanho certo.
+    Depois confere e faz o `LDN_HELLO`.
+  - ESP32 clássico com revisão < 3 recebe um aviso: o WROOM-32E usa o D0WD-V3, então uma revisão
+    menor indica o WROOM-32 antigo. A confirmação manual do módulo continua.
+- **esptool 5.4.0** no Python embutido do worker, com hash fixo (`worker/requirements.lock`, +44 MB).
+  - Roda como o usuário, sem pkexec: `run.py --esp32`. O launcher do polkit ignora argumentos, então
+    esse modo nunca roda como root.
+  - Usa a API pública (`esptool.cmds` + logger próprio para o progresso), não a leitura de texto.
+  - O Python vem do `worker-payload` do AppImage, do worker instalado ou, em desenvolvimento, de
+    `build/worker/stage`.
+  - O `cryptography` exige glibc ≥ 2.34 (Ubuntu 22.04 tem 2.35).
+- **Teste com o Switch pelo ESP32.** `LDN_SCAN` nos canais 1, 6, 11 e 2–10 (a mesma ordem e os
+  mesmos 500 ms da troca), decifrando os anúncios `LDN_ADV` com o prod.keys (`LdnKeys.Decode`),
+  sem entrar na sala.
+  - Resultados e regra de parada iguais aos da D16.
+  - O resultado vale para a porta, o chip do firmware e o prod.keys.
+  - O teste passa a ser essencial também com o ESP32.
+  - O ESP32 não enxerga salas em 5 GHz; o assistente explica isso.
+- **Uma operação por vez na porta.** Firmware, esptool e teste recusam com `esp32_busy` ou `busy` se
+  houver outra operação ou uma troca em andamento.
+- **Testes sem hardware:**
+  - um ESP32 falso em Python (`app/TradeRock.Tests/fake_esp32.py`) fala o protocolo serial de
+    verdade (COBS + CRC32) num pseudo-terminal, e o `SerialDevice` real conversa com ele;
+  - os anúncios cifrados vêm dos vetores sintéticos do próprio easyworld (`host/tests/fixtures`);
+  - o esptool é testado com um falso que tem a mesma API, e um teste confere essa API no esptool real
+    quando ele está instalado.
+- **Não verificado:** placa real (gravação, troca e teste com o Switch). Os binários do S3, C6 e C3
+  publicados pelo easyworld também não foram regravados numa placa para uma troca real, segundo as
+  notas de versão deles.

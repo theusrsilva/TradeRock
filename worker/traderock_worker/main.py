@@ -1,4 +1,5 @@
-"""Ponto de entrada: o servidor (padrão) ou um dos processos filhos (--child trade|card|beacon)."""
+"""Ponto de entrada: o servidor (padrão), um dos processos filhos (--child trade|card|beacon) ou a
+gravação do ESP32 (--esp32, roda como o usuário: o app chama o Python embutido direto, sem pkexec)."""
 
 import json
 import os
@@ -17,6 +18,9 @@ def run(argv, root):
             from . import beacon_child
             return beacon_child.main(engine_dir)
         return 2
+    if argv == ["--esp32"]:
+        from . import esp32_flash
+        return esp32_flash.main()
     from . import server
     return server.main(install_info(root))
 

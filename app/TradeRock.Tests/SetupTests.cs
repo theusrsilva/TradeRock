@@ -419,9 +419,16 @@ public sealed class SetupChecksTests
         Assert.Equal("missing_master_key_12", failed.Args!["hint"]);
         Assert.False(Get(Checks("linux-compatible", State(bad), keys with { Protocols = [1, 3] }), "switch_test").Args!.ContainsKey("hint"));
 
-        // ESP32: o teste chega com o motor, na Entrega 9.
-        var esp = Get(Checks("linux-esp32", new SetupState { Radio = "esp32" }, keys), "switch_test");
-        Assert.Equal(("switch_test_pending", "entrega-9"), (esp.Code, esp.AvailableIn));
+        // ESP32: o teste precisa do firmware respondendo na porta escolhida.
+        var esp = Get(Checks("linux-esp32", new SetupState { Radio = "esp32", SerialPort = "/dev/ttyUSB0" }, keys), "switch_test");
+        Assert.Equal("switch_test_needs_radio", esp.Code);
+        var probe = new Esp32ProbeResult("/dev/ttyUSB0", true, "hello_ok", "esp32s3", DateTimeOffset.UtcNow);
+        var espState = new SetupState { Radio = "esp32", SerialPort = "/dev/ttyUSB0", Esp32Probe = probe };
+        Assert.Equal("switch_test_not_run", Get(Checks("linux-esp32", espState, keys), "switch_test").Code);
+        var espOk = ok with { Phy = "/dev/ttyUSB0", Driver = "esp32s3", Radio = "esp32" };
+        Assert.Equal("switch_test_ok", Get(Checks("linux-esp32", espState with { SwitchTest = espOk }, keys), "switch_test").Code);
+        // Outro chip na mesma porta (ESP32 trocado) pede um teste novo.
+        Assert.Equal("switch_test_not_run", Get(Checks("linux-esp32", espState with { SwitchTest = espOk with { Driver = "esp32c3" } }, keys), "switch_test").Code);
     }
 
     [Fact]
@@ -471,7 +478,35 @@ public sealed class SetupChecksTests
         Assert.Equal("sudo usermod -aG uucp $USER", group.Fix);
         Assert.Equal(CheckStatus.Warning, Get(checks, "brltty").Status);
         Assert.Contains("ATTRS{idVendor}==\"1a86\"", Get(checks, "udev_rule").Fix);
-        Assert.Equal("entrega-9", Get(checks, "esp32_firmware").AvailableIn);
+        Assert.Equal("esp32_firmware_not_checked", Get(checks, "esp32_firmware").Code);
+    }
+
+    [Fact]
+    public void Firmware_e_chip_do_esp32()
+    {
+        var now = DateTimeOffset.UtcNow;
+        const string port = "/dev/ttyUSB0";
+        SetupState State(Esp32ProbeResult? probe = null, Esp32ChipResult? chip = null, Esp32FirmwareResult? fw = null) =>
+            new() { Radio = "esp32", Esp32Board = "esp32-s3", SerialPort = port, Esp32Probe = probe, Esp32Chip = chip, Esp32Firmware = fw };
+        string Code(SetupState s, string id) => Get(Checks("linux-esp32", s, GoodKeys), id).Code;
+
+        Assert.Equal("esp32_probe_esp32_firmware_missing", Code(State(new(port, false, "esp32_firmware_missing", null, now)), "esp32_firmware"));
+        Assert.Equal("esp32_firmware_ok", Code(State(new(port, true, "hello_ok", "esp32s3", now)), "esp32_firmware"));
+        Assert.Equal("esp32_firmware_other_chip", Code(State(new(port, true, "hello_ok", "esp32c3", now)), "esp32_firmware"));
+        // Resultado de outra porta não vale.
+        Assert.Equal("esp32_firmware_not_checked", Code(State(new("/dev/ttyUSB1", true, "hello_ok", "esp32s3", now)), "esp32_firmware"));
+
+        Assert.Equal("esp32_chip_ok", Code(State(chip: new(port, "esp32s3", "ESP32-S3 (revision v0.2)", 2, "16MB", now)), "esp32_chip"));
+        Assert.Equal("esp32_board_mismatch", Code(State(chip: new(port, "esp32c6", "ESP32-C6", 1, "16MB", now)), "esp32_chip"));
+        Assert.Equal("esp32_flash_too_small", Code(State(chip: new(port, "esp32s3", "ESP32-S3", 2, "8MB", now)), "esp32_flash_size"));
+
+        var classic = new SetupState { Radio = "esp32", Esp32Board = "esp32-wroom-32e", Esp32ModuleConfirmed = true, SerialPort = port,
+            Esp32Chip = new(port, "esp32", "ESP32-D0WDQ6 (revision v1.0)", 100, "4MB", now) };
+        var revision = Get(Checks("linux-esp32", classic, GoodKeys), "esp32_revision");
+        Assert.Equal(("esp32_old_revision", CheckStatus.Warning), (revision.Code, revision.Status));
+
+        Assert.Equal("esp32_firmware_verified", Code(State(fw: new(port, "esp32s3", true, false, now)), "esp32_firmware_version"));
+        Assert.Equal("esp32_firmware_other_version", Code(State(fw: new(port, "esp32s3", false, false, now)), "esp32_firmware_version"));
     }
 
     [Fact]

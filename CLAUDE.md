@@ -59,22 +59,22 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 7 | Teste do beacon com a placa Wi-Fi (etapa 6 do assistente) | feita, **sem teste com hardware real** |
 | 8 | Empacotamento Linux (AppImage e .deb) e CI | feita; AppImage com FUSE, pkexec e janela **não testados** |
 | 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | **próxima** |
-| 10 | Modo servidor na rede | — |
+| 10 | Modo servidor na rede | **próxima** |
 | 11 | Build e instalador Windows (só ESP32) | — |
 
-A branch mais recente é `entrega-8-pacotes`. O `main` do GitHub ainda tem só o commit inicial.
+A branch mais recente é `entrega-9-esp32`. O `main` do GitHub ainda tem só o commit inicial.
 
 ## Pendências já combinadas
 
-- **Entrega 9:** passo do firmware do ESP32 em Configurações. Primeiro detectar se o firmware já está
-  gravado (`LDN_HELLO` → `LDN_HELLO 1 <modelo> <caps> <mtu>`, ou `esptool verify-flash`); só depois
-  oferecer gravar. O firmware do easyworld usa o ESP-IDF v6.1 fixo, no commit fff9895c. O GB-Link
-  agora tem um host desktop em C# (Windows e Linux), que vale avaliar.
+- **GB-Link** (outro firmware ESP32 com host em C# para Windows e Linux): fora da Entrega 9 por decisão
+  do autor. Avaliar depois, se o firmware do easyworld der problema em placa real.
 - **Nunca verificado de verdade:**
   - janela nativa e diálogos do Photino (o ambiente de desenvolvimento era WSL, sem WebKitGTK);
   - `.sav` real e o formato de save NSO do Switch;
   - troca com Switch real;
   - teste com o Switch (Entrega 7, D16);
+  - ESP32 real: gravação do firmware, troca e teste com o Switch (Entrega 9, D18; o autor ainda não
+    tem placa);
   - teste da placa com root;
   - AppImage montado por FUSE, instalação do worker pelo pkexec (diálogo) e a janela a partir dos pacotes.
 
@@ -85,9 +85,10 @@ A branch mais recente é `entrega-8-pacotes`. O `main` do GitHub ainda tem só o
 | Pasta | Conteúdo |
 | --- | --- |
 | `app/TradeRock.App` | ASP.NET Core + Photino (API em `Api/`, DI em `ServiceSetup.cs`) |
-| `app/TradeRock.Core` | Domínio: `Trading/`, `Engines/` (Fake, PythonLdn, `Worker/`), `Pokemon/`, `Builder/`, `Storage/` (EF Core + SQLite), `Saves/`, `Setup/` (catálogo, probe do Linux, verificações, prod.keys) |
-| `app/TradeRock.Tests` | xUnit v3; worker falso em `FakeWorker.cs` |
-| `worker/` | Worker Python: `traderock_worker/` (server, radio, trade_child, card_child, beacon_child, events, protocol) e `tests/` (dublês de trio/ldn em `fake_ldn`) |
+| `app/Frlg.Trade.Core.Patched` | Núcleo C# do easyworld compilado com `engines/patches/frlg-ldn-trade-esp32` |
+| `app/TradeRock.Core` | Domínio: `Trading/`, `Engines/` (Fake, PythonLdn, Esp32Serial, `Worker/`), `Esp32/` (firmware, serial, esptool), `Pokemon/`, `Builder/`, `Storage/` (EF Core + SQLite), `Saves/`, `Setup/` (catálogo, probe do Linux, verificações, prod.keys) |
+| `app/TradeRock.Tests` | xUnit v3; worker falso em `FakeWorker.cs`, ESP32 falso em `fake_esp32.py` (pseudo-terminal) |
+| `worker/` | Worker Python: `traderock_worker/` (server, radio, trade_child, card_child, beacon_child, esp32_flash, events, protocol) e `tests/` (dublês de trio/ldn em `fake_ldn`) |
 | `frontend/` | React + Vite + TS + Tailwind; o build vai para `app/TradeRock.App/wwwroot` |
 | `catalog/hardware-catalog.json` | Catálogo de placas |
 | `engines/` | Submódulos (frlg-ldn-trade, frlg-ldn-trade-esp32, PKHeX-Plugins) e `patches/` |

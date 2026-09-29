@@ -38,6 +38,29 @@ public sealed class SetupTranslationTests
             }
         }
 
+        // ESP32: respostas do firmware (LDN_HELLO), chip lido pelo esptool e firmware conferido.
+        var esp = SetupScenarios.All["linux-esp32"];
+        const string espPort = "/dev/ttyUSB0";
+        var probes = Esp32ProbeCodes.Select(c => new Esp32ProbeResult(espPort, c == "hello_ok", c, "esp32s3", default))
+            .Append(new Esp32ProbeResult(espPort, true, "hello_ok", "esp32c3", default)).Cast<Esp32ProbeResult?>().Append(null);
+        var chips = new Esp32ChipResult?[]
+        {
+            null,
+            new(espPort, "esp32s3", "ESP32-S3", 2, "16MB", default),
+            new(espPort, "esp32c6", "ESP32-C6", 1, "4MB", default),
+            new(espPort, "esp32h2", "ESP32-H2", 1, "4MB", default),
+            new(espPort, "esp32", "ESP32-D0WDQ6 (revision v1.0)", 100, "4MB", default),
+        };
+        foreach (var probe in probes)
+        foreach (var chip in chips)
+        foreach (var fw in new Esp32FirmwareResult?[] { null, new(espPort, "esp32s3", true, true, default), new(espPort, "esp32s3", false, false, default) })
+        foreach (var serialPort in new[] { espPort, null })
+        {
+            var state = new SetupState { Radio = "esp32", Esp32Board = "esp32-s3", SerialPort = serialPort, Esp32Probe = probe, Esp32Chip = chip, Esp32Firmware = fw };
+            foreach (var check in SetupChecks.Evaluate(esp, RadioAdvisor.Advise(esp, catalog), state, keysOptions[1], catalog))
+                yield return check;
+        }
+
         // Placa Wi-Fi: variações do worker, do teste da placa, das ferramentas e da rede.
         var linux = SetupScenarios.All["linux-compatible"];
         var workers = new WorkerInstall?[]
@@ -91,6 +114,22 @@ public sealed class SetupTranslationTests
     /// Códigos que o worker e o motor da placa Wi-Fi podem devolver (worker/traderock_worker:
     /// events.py JOIN_FAILURES, trade_child.py, server.py; WorkerHost e PythonLdnEngine).
     /// </summary>
+    /// <summary>Resultados do LDN_HELLO (Esp32Setup.ProbeCoreAsync / SerialEsp32Link).</summary>
+    public static readonly string[] Esp32ProbeCodes =
+        ["hello_ok", "esp32_firmware_missing", "esp32_firmware_incompatible", "esp32_no_response", "serial_permission", "serial_busy", "serial_port_missing", "esp32_error"];
+
+    /// <summary>
+    /// Códigos que o motor ESP32 e as rotas /api/setup/esp32 podem devolver (Esp32SerialEngine.Failure,
+    /// Esp32Setup, SerialEsp32Link e worker/traderock_worker/esp32_flash.py).
+    /// </summary>
+    public static readonly string[] Esp32FailureCodes =
+    [
+        "esp32_not_configured", "esp32_firmware_missing", "esp32_firmware_incompatible", "esp32_no_response", "esp32_error",
+        "serial_permission", "serial_busy", "serial_port_missing", "serial_not_chosen", "room_changed", "esp32_busy",
+        "esp32_chip_unsupported", "esp32_flash_too_small", "verify_mismatch", "esptool_missing", "esptool_error",
+        "boot_mode_required", "esp32_firmware_not_checked", "keys_invalid",
+    ];
+
     public static readonly string[] WorkerFailureCodes =
     [
         "no_network_found", "beacon_not_decrypted", "join_not_approved", "radio_rx_failed", "engine_broken",
@@ -123,11 +162,11 @@ public sealed class SetupTranslationTests
         var sw = root.GetProperty("wizard").GetProperty("switchTest").GetProperty("codes");
         var hints = root.GetProperty("wizard").GetProperty("switchTest").GetProperty("hints");
         var reasons = root.GetProperty("settings").GetProperty("engineReasons");
-        var missing = WorkerFailureCodes.Where(c => !failures.TryGetProperty(c, out _))
+        var missing = WorkerFailureCodes.Concat(Esp32FailureCodes).Where(c => !failures.TryGetProperty(c, out _))
             .Concat(CardTestCodes.Where(c => !card.TryGetProperty(c, out _)))
             .Concat(SwitchTestCodes.Append("found_decrypted").Where(c => !sw.TryGetProperty(c, out _)).Select(c => "switchTest." + c))
             .Concat(new[] { "missing_master_key_12" }.Where(c => !hints.TryGetProperty(c, out _)))
-            .Concat(new[] { "not_linux", "worker_missing", "wifi_not_configured" }.Where(c => !reasons.TryGetProperty(c, out _)))
+            .Concat(new[] { "not_linux", "worker_missing", "wifi_not_configured", "esp32_not_configured" }.Where(c => !reasons.TryGetProperty(c, out _)))
             .ToList();
         Assert.Empty(missing);
     }

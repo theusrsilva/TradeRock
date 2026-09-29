@@ -244,7 +244,26 @@
     "busy": "The network component is still finishing the previous operation. Try again in a few seconds.",
     "beacon_test_crashed": "The Switch test stopped with an error. Try again; if it keeps happening, export the report in the summary.",
     "worker_install_failed": "Installing the network component failed. Try again; if it keeps happening, export the report in the summary.",
-    "worker_not_bundled": "This TradeRock version does not ship the network component to install."
+    "worker_not_bundled": "This TradeRock version does not ship the network component to install.",
+    "esp32_not_configured": "Set up the ESP32 in the setup wizard (board and port).",
+    "esp32_firmware_missing": "No TradeRock firmware answered on the ESP32. Flash the firmware in the setup wizard.",
+    "esp32_firmware_incompatible": "The ESP32 firmware is old or different. Flash the firmware in the setup wizard.",
+    "esp32_no_response": "The ESP32 stopped answering.",
+    "esp32_error": "Error talking to the ESP32.",
+    "serial_permission": "No permission to use the serial port. See the group item in the setup wizard.",
+    "serial_busy": "The serial port is in use by another program.",
+    "serial_port_missing": "The ESP32 port is gone. Was it unplugged?",
+    "serial_not_chosen": "Pick the ESP32 port.",
+    "room_changed": "The Switch room changed mid-connection. Open the room again and retry.",
+    "esp32_busy": "The ESP32 is busy with another operation. Wait for it to finish.",
+    "esp32_chip_unsupported": "This chip has no TradeRock firmware.",
+    "esp32_flash_too_small": "This board's flash is too small for the firmware.",
+    "verify_mismatch": "Flashing finished, but the check didn't match. Flash again.",
+    "esptool_missing": "The firmware flasher (esptool) wasn't found in this install.",
+    "esptool_error": "The firmware flasher stopped with an error.",
+    "boot_mode_required": "The board didn't enter flashing mode by itself. Follow the BOOT button steps and try again.",
+    "esp32_firmware_not_checked": "Check the ESP32 firmware before the test.",
+    "keys_invalid": "prod.keys isn't valid."
   },
   "history": {
     "title": "Trade history",
@@ -267,7 +286,7 @@
     "themeDark": "Dark",
     "language": "Language",
     "engineTitle": "Trade engine",
-    "engineHelp": "The engine is what talks to the Switch. The Wi-Fi card becomes available once set up in the wizard; the ESP32 comes in a later version.",
+    "engineHelp": "The engine is what talks to the Switch. The Wi-Fi card and the ESP32 become available once set up in the wizard.",
     "engines": {
       "fake": "Simulation (demo mode)",
       "python-ldn": "PC Wi-Fi card",
@@ -292,7 +311,8 @@
     "engineReasons": {
       "not_linux": "Linux only",
       "worker_missing": "network component not installed",
-      "wifi_not_configured": "set up the card in the wizard"
+      "wifi_not_configured": "set up the card in the wizard",
+      "esp32_not_configured": "set up the ESP32 in the wizard"
     }
   },
   "close": {
@@ -706,8 +726,6 @@
       "serial_group_ok": "User is in the {{group}} group.",
       "brltty_running": "brltty is running and often \"hijacks\" CH340/CP210x converters. If you don’t use a braille display, disable it.",
       "udev_rule_optional": "Optional: udev rule so the port is always named {{path}}.",
-      "esp32_firmware_pending": "Check and flash the ESP32 firmware.",
-      "esp32_serial_test_pending": "ESP32 communication test.",
       "switch_test_ok": "Switch test passed: the room was found on channel {{channel}} and decrypted. Radio and prod.keys confirmed.",
       "switch_test_pending": "Switch test (room found and decrypted).",
       "worker_missing": "Network component not installed. It ships with the TradeRock package (.deb); with the AppImage, the wizard offers to install it. If you built the app yourself, run scripts/dev-host.sh.",
@@ -728,7 +746,26 @@
       "switch_test_not_run": "Run the Switch test below: it is what confirms the radio and the prod.keys.",
       "switch_test_failed": "The Switch test did not pass. See the result below.",
       "worker_appimage_missing": "The network component has not been installed from the AppImage yet. Use the button below.",
-      "worker_appimage_outdated": "The installed network component is from another TradeRock version. Use the button below to update it."
+      "worker_appimage_outdated": "The installed network component is from another TradeRock version. Use the button below to update it.",
+      "esp32_firmware_needs_port": "Pick the ESP32 port to check the firmware.",
+      "esp32_firmware_not_checked": "Check the ESP32 firmware (\"Check the firmware\" button).",
+      "esp32_firmware_ok": "The TradeRock firmware answered on the port ({{target}}): communication OK.",
+      "esp32_firmware_other_chip": "This board's firmware is for another chip ({{target}}), but you picked {{model}}. Check which ESP32 you have.",
+      "esp32_firmware_verified": "The flashed firmware is exactly the one TradeRock ships.",
+      "esp32_firmware_other_version": "The firmware answers, but it isn't exactly the one TradeRock ships. If trading fails, flash the firmware again.",
+      "esp32_probe_hello_ok": "The firmware answered.",
+      "esp32_probe_esp32_firmware_missing": "No TradeRock firmware answered on this port. Flash the firmware (\"Flash the firmware\" button).",
+      "esp32_probe_esp32_firmware_incompatible": "This board's firmware is old or different. Flash the TradeRock firmware (\"Flash the firmware\" button).",
+      "esp32_probe_esp32_no_response": "The ESP32 stopped answering. Unplug it, plug it back and check again.",
+      "esp32_probe_serial_permission": "No permission to use the serial port (see the group item above).",
+      "esp32_probe_serial_busy": "The serial port is in use by another program (serial monitor, Arduino IDE…). Close it and check again.",
+      "esp32_probe_serial_port_missing": "The port is gone. Was the ESP32 unplugged?",
+      "esp32_probe_esp32_error": "Error talking to the ESP32. Check again; if it keeps happening, export the report.",
+      "esp32_chip_ok": "Chip identified: {{chip}}, {{flash}} flash.",
+      "esp32_chip_unsupported": "The {{chip}} chip has no TradeRock firmware.",
+      "esp32_board_mismatch": "You picked {{model}}, but the chip is {{chip}}. Fix the board in the list above.",
+      "esp32_flash_too_small": "This board's flash is {{size}}; the firmware needs {{needed}}.",
+      "esp32_old_revision": "{{chip}} chip: old revision, typical of the ESP32-WROOM-32 module (not the 32E), which doesn't trade reliably. Check the name on the metal shield."
     },
     "deliveries": {
       "entrega-6": "network component and card test",
@@ -827,7 +864,38 @@
       },
       "hints": {
         "missing_master_key_12": "Your prod.keys does not have the key for the newer LDN protocol (master_key_12). Updated consoles use that protocol: dump the keys again with the system up to date."
-      }
+      },
+      "esp32Band": "The ESP32 only sees rooms on 2.4 GHz (channels 1 to 11). If the Switch is connected to a 5 GHz network, the room may not show up: disconnect the Switch from the internet and open the room again.",
+      "needsFirmware": "First check the ESP32 firmware in step 4."
+    },
+    "esp32fw": {
+      "title": "ESP32 firmware",
+      "help": "The ESP32 needs the TradeRock firmware (from the easyworld project) to talk to the Switch. TradeRock ships the right firmware for each chip and flashes it by itself, over USB.",
+      "probe": "Check the firmware",
+      "identify": "Identify the board",
+      "verify": "Check the version",
+      "flash": "Flash the firmware",
+      "working": "Please wait…",
+      "identifyHelp": "Identifying and checking restart the board for a moment; it goes back to normal by itself.",
+      "flashConfirmTitle": "Flash the TradeRock firmware?",
+      "flashConfirmText": "Everything on the ESP32 will be replaced. It takes 30 seconds to 2 minutes. Don't unplug the board until it's done.",
+      "flashConfirm": "Flash now",
+      "stages": {
+        "identify": "Identifying the board…",
+        "write": "Flashing…",
+        "verify": "Checking…",
+        "probe": "Testing communication…",
+        "done": "Firmware flashed and checked.",
+        "error": "Flashing didn't finish."
+      },
+      "bootTitle": "If the board doesn't enter flashing mode",
+      "bootSteps": [
+        "Hold the BOOT button (sometimes labeled IO0 or B).",
+        "While holding it, press and release RESET (EN or RST).",
+        "Release BOOT and click \"Flash the firmware\" again.",
+        "After flashing, press RESET once so the board goes back to normal."
+      ],
+      "simulated": "simulated"
     }
   },
   "workerInstall": {

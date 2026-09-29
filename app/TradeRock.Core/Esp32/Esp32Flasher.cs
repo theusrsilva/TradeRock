@@ -1,0 +1,140 @@
+using System.Diagnostics;
+using System.Text.Json.Nodes;
+using TradeRock.Core.Engines.Worker;
+
+namespace TradeRock.Core.Esp32;
+
+/// <summary>Chip lido pelo esptool (sem gravar nada).</summary>
+public sealed record Esp32ChipReading(string Target, string Description, int Revision, string? FlashSize);
+
+/// <summary>Resultado de conferir ou gravar o firmware.</summary>
+public sealed record Esp32FlashOutcome(Esp32ChipReading Chip, bool Matches, bool Written);
+
+public sealed record Esp32Progress(string Stage, int Done, int Total);
+
+/// <summary>esptool: identificar o chip, conferir e gravar o firmware. Os testes usam um falso.</summary>
+public interface IEsp32Flasher
+{
+    bool Available { get; }
+
+    Task<Esp32ChipReading> IdentifyAsync(string port, CancellationToken ct);
+
+    Task<Esp32FlashOutcome> VerifyAsync(string port, FirmwareImage image, CancellationToken ct);
+
+    Task<Esp32FlashOutcome> FlashAsync(string port, FirmwareImage image, Action<Esp32Progress> progress, CancellationToken ct);
+}
+
+/// <summary>
+/// Roda worker/traderock_worker/esp32_flash.py (API do esptool 5) com o Python embutido, como o
+/// usuário comum (sem pkexec): a porta serial só precisa do grupo dialout/uucp.
+/// </summary>
+public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir) : IEsp32Flasher
+{
+    /// <summary>
+    /// Onde está o runtime (pasta com python/ e worker/): o worker embutido no AppImage (legível pelo
+    /// usuário), o worker instalado (.deb, AppImage, dev) ou, em desenvolvimento, build/worker/stage.
+    /// </summary>
+    public static string? FindRuntime(string? appImagePayload, bool preferDev, string? devStage)
+    {
+        var candidates = new List<string?> { appImagePayload };
+        var installs = WorkerLocator.Candidates.Select(c => c.Prefix).ToList();
+        if (preferDev)
+            installs = [.. installs.OrderBy(p => p == WorkerLocator.Dev.Prefix ? 0 : 1)];
+        candidates.AddRange(installs);
+        candidates.Add(devStage);
+        return candidates.FirstOrDefault(root => root is not null
+            && File.Exists(Path.Combine(root, "python", "bin", "python3"))
+            && File.Exists(Path.Combine(root, "worker", "run.py")));
+    }
+
+    public bool Available => runtimeRoot() is not null;
+
+    public async Task<Esp32ChipReading> IdentifyAsync(string port, CancellationToken ct)
+    {
+        var result = await RunAsync(new JsonObject { ["op"] = "identify", ["port"] = port }, null, ct);
+        return ReadChip(result);
+    }
+
+    public Task<Esp32FlashOutcome> VerifyAsync(string port, FirmwareImage image, CancellationToken ct) =>
+        WithImageAsync(image, path => RunAsync(ImageRequest("verify", port, image, path), null, ct));
+
+    public Task<Esp32FlashOutcome> FlashAsync(string port, FirmwareImage image, Action<Esp32Progress> progress, CancellationToken ct) =>
+        WithImageAsync(image, path => RunAsync(ImageRequest("flash", port, image, path), progress, ct));
+
+    private static JsonObject ImageRequest(string op, string port, FirmwareImage image, string path) => new()
+    {
+        ["op"] = op,
+        ["port"] = port,
+        ["image"] = path,
+        ["flashSize"] = image.FlashSize,
+        ["flashMode"] = FirmwareImage.FlashMode,
+        ["flashFreq"] = FirmwareImage.FlashFreq,
+    };
+
+    private async Task<Esp32FlashOutcome> WithImageAsync(FirmwareImage image, Func<string, Task<JsonObject>> run)
+    {
+        // Pasta própria por operação: o binário conferido existe só enquanto o esptool roda.
+        var dir = Path.Combine(tempDir, "esp32-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var path = Esp32Firmware.ExtractTo(image, dir);
+            var result = await run(path);
+            return new Esp32FlashOutcome(ReadChip(result), result["matches"]?.GetValue<bool>() ?? false, result["written"]?.GetValue<bool>() ?? false);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, true); } catch (IOException) { }
+        }
+    }
+
+    private static Esp32ChipReading ReadChip(JsonObject r) => new(
+        r["target"]?.GetValue<string>() ?? "?",
+        r["description"]?.GetValue<string>() ?? "",
+        r["revision"]?.GetValue<int>() ?? 0,
+        r["flashSize"]?.GetValue<string>());
+
+    private async Task<JsonObject> RunAsync(JsonObject request, Action<Esp32Progress>? progress, CancellationToken ct)
+    {
+        var root = runtimeRoot() ?? throw new Esp32Exception("esptool_missing", "O esptool embutido não foi encontrado.");
+        var start = new ProcessStartInfo(Path.Combine(root, "python", "bin", "python3"))
+        {
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (var arg in new[] { "-I", "-B", Path.Combine(root, "worker", "run.py"), "--esp32" })
+            start.ArgumentList.Add(arg);
+        start.Environment.Clear();
+        start.Environment["PATH"] = "/usr/bin:/bin";
+        start.Environment["LANG"] = "C.UTF-8";
+
+        using var process = Process.Start(start) ?? throw new Esp32Exception("esptool_missing", "Não foi possível iniciar o esptool.");
+        using var kill = ct.Register(() => { try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } });
+        var stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);
+        await process.StandardInput.WriteLineAsync(request.ToJsonString());
+        process.StandardInput.Close();
+
+        JsonObject? result = null;
+        while (await process.StandardOutput.ReadLineAsync(CancellationToken.None) is { } line)
+        {
+            if (JsonNode.Parse(line) is not JsonObject msg)
+                continue;
+            switch (msg["type"]?.GetValue<string>())
+            {
+                case "progress":
+                    progress?.Invoke(new Esp32Progress(msg["stage"]?.GetValue<string>() ?? "", msg["done"]?.GetValue<int>() ?? 0, msg["total"]?.GetValue<int>() ?? 0));
+                    break;
+                case "result":
+                    result = msg;
+                    break;
+                case "error":
+                    throw new Esp32Exception(msg["code"]?.GetValue<string>() ?? "esptool_error", msg["message"]?.GetValue<string>() ?? "");
+            }
+        }
+        await process.WaitForExitAsync(CancellationToken.None);
+        ct.ThrowIfCancellationRequested();
+        var log = await stderr;
+        return result ?? throw new Esp32Exception("esptool_error", log.Length > 500 ? log[^500..] : log);
+    }
+}

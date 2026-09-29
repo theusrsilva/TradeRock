@@ -15,8 +15,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # - python3 (3.12 no Ubuntu 24.04) + venv: motor Python e esptool
 # - webkit2gtk/gtk/libnotify: janela Photino (quando houver display repassado)
 # - dpkg-dev, fakeroot, file, libfuse2, desktop-file-utils: empacotamento .deb/AppImage (Entrega 8)
+# - patch: aplica os patches de engines/patches (motor Python no build do worker, núcleo C# do ESP32 no dotnet build)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl xz-utils git sudo \
+        ca-certificates curl xz-utils git sudo patch \
         python3 python3-venv python3-pip \
         libwebkit2gtk-4.1-dev libgtk-3-dev libnotify-dev \
         dpkg-dev fakeroot file libfuse2t64 desktop-file-utils squashfs-tools \

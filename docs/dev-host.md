@@ -123,3 +123,21 @@ app (usuário) ──pkexec──▶ /usr/local/lib/traderock-dev/traderock-work
   - um teste que confere se cada frase do motor usada no mapeamento ainda existe no submódulo.
 - `WorkerTests.cs` cobre a API de ponta a ponta com um worker falso: assistente, teste da placa,
   teste com o Switch (resultados, validade e cancelamento), troca, cancelamento e retry.
+
+## Roteiro de teste com um ESP32 de verdade
+
+Não precisa de root nem do worker instalado: o ESP32 conversa com o app pela serial. Basta o grupo
+`dialout` (no Arch, `uucp`) e o runtime Python com o esptool (`scripts/build-worker.sh`).
+
+1. Ligue a placa com um **cabo USB de dados**. No S3, use a porta do conversor USB-serial (UART); no
+   C3, a USB nativa.
+2. **Etapa 3:** escolha "ESP32 via USB". **Etapa 4:** marque o modelo da placa e a porta
+   (`/dev/ttyUSB0` ou `/dev/ttyACM0`). O app faz o `LDN_HELLO` sozinho.
+3. **Identificar a placa:** confira se o chip e a flash batem com o que você comprou.
+4. **Gravar o firmware:** leva de 30 s a 2 min. Se a placa não entrar no modo de gravação, siga as
+   instruções do botão BOOT. No fim, "O firmware do TradeRock respondeu" deve aparecer como OK.
+5. **Etapa 6:** com o Switch no Direct Corner como Leader, faça o teste com o Switch.
+6. Troque, com o motor "ESP32 via USB" selecionado em Configurações.
+7. Se algo falhar, mande:
+   - o relatório (Resumo → Exportar relatório);
+   - o `native.log` da sessão, em `~/.local/share/traderock/logs/esp32/<sessão>/`, que não tem chaves.

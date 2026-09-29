@@ -1,4 +1,5 @@
 using System.Text;
+using TradeRock.Core.Esp32;
 
 namespace TradeRock.Core.Setup;
 
@@ -23,7 +24,29 @@ public sealed record SetupState
 
     /// <summary>Último teste com o Switch (beacon da sala encontrado e decifrado).</summary>
     public SwitchTestResult? SwitchTest { get; init; }
+
+    /// <summary>ESP32: última resposta do firmware (LDN_HELLO) na porta escolhida.</summary>
+    public Esp32ProbeResult? Esp32Probe { get; init; }
+
+    /// <summary>ESP32: chip lido pelo esptool (tipo, revisão, flash).</summary>
+    public Esp32ChipResult? Esp32Chip { get; init; }
+
+    /// <summary>ESP32: última conferência (ou gravação) do firmware embutido.</summary>
+    public Esp32FirmwareResult? Esp32Firmware { get; init; }
 }
+
+/// <summary>
+/// LDN_HELLO + LDN_BEGIN + LDN_STOP na porta. <see cref="Code"/>: hello_ok, esp32_firmware_missing,
+/// esp32_firmware_incompatible, esp32_no_response, serial_permission, serial_busy, serial_port_missing, esp32_error.
+/// <see cref="Target"/> é o chip que o firmware informa (esp32, esp32c3, esp32c6, esp32s3).
+/// </summary>
+public sealed record Esp32ProbeResult(string Port, bool Ok, string Code, string? Target, DateTimeOffset At, bool Simulated = false);
+
+/// <summary>Chip lido pelo esptool. <see cref="Revision"/> = maior × 100 + menor (v3.1 → 301).</summary>
+public sealed record Esp32ChipResult(string Port, string Target, string Description, int Revision, string? FlashSize, DateTimeOffset At, bool Simulated = false);
+
+/// <summary>Firmware embutido comparado com a flash (verify-flash), depois de gravar ou a pedido.</summary>
+public sealed record Esp32FirmwareResult(string Port, string Target, bool Matches, bool Written, DateTimeOffset At, bool Simulated = false);
 
 public sealed record CardTestChannel(int Channel, bool Set, int Sent, int Received, string? Error);
 
@@ -64,12 +87,17 @@ public sealed record SwitchTestResult(
     string? Error = null,
     bool Simulated = false,
     string? Driver = null,
-    DateTimeOffset? KeysSavedAt = null) // o prod.keys testado (data de gravação, nunca o conteúdo)
+    DateTimeOffset? KeysSavedAt = null, // o prod.keys testado (data de gravação, nunca o conteúdo)
+    string Radio = "wifi") // com o ESP32, Phy é a porta serial e Driver é o chip do firmware
 {
     /// <summary>Vale para esta placa e este prod.keys: trocar qualquer um dos dois pede um teste novo.</summary>
     public bool IsFor(WifiCard card, KeysValidation? keys) =>
-        Phy == card.Phy && (Driver is null || Driver == (card.Module ?? card.Driver))
+        Radio == "wifi" && Phy == card.Phy && (Driver is null || Driver == (card.Module ?? card.Driver))
         && keys is not null && KeysSavedAt == keys.SavedAt;
+
+    /// <summary>ESP32: vale para esta porta, este chip e este prod.keys.</summary>
+    public bool IsForEsp32(string port, string? target, KeysValidation? keys) =>
+        Radio == "esp32" && Phy == port && Driver == target && keys is not null && KeysSavedAt == keys.SavedAt;
 }
 
 public enum CheckStatus
@@ -208,16 +236,26 @@ public static class SetupChecks
 
     private static SetupCheck SwitchTestCheck(RadioAdvice advice, SetupState state, KeysValidation? keys)
     {
-        // Com o ESP32, o motor inteiro chega na Entrega 9.
+        SwitchTestResult? test;
         if (state.Radio == RadioAdvisor.Esp32)
-            return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_pending", AvailableIn: "entrega-9");
-        var card = advice.Cards.FirstOrDefault(c => c.Card.Phy == state.Phy)?.Card;
-        if (state.Radio != RadioAdvisor.Wifi || card is null)
-            return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_radio");
-        if (keys is not { Valid: true })
-            return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_keys");
-
-        var test = state.SwitchTest is { } t && t.IsFor(card, keys) ? t : null;
+        {
+            // O teste usa o firmware: primeiro ele precisa responder na porta escolhida.
+            var probe = state.Esp32Probe is { Ok: true } p && p.Port == state.SerialPort ? p : null;
+            if (probe is null)
+                return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_radio");
+            if (keys is not { Valid: true })
+                return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_keys");
+            test = state.SwitchTest is { } e && e.IsForEsp32(probe.Port, probe.Target, keys) ? e : null;
+        }
+        else
+        {
+            var card = advice.Cards.FirstOrDefault(c => c.Card.Phy == state.Phy)?.Card;
+            if (state.Radio != RadioAdvisor.Wifi || card is null)
+                return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_radio");
+            if (keys is not { Valid: true })
+                return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_keys");
+            test = state.SwitchTest is { } t && t.IsFor(card, keys) ? t : null;
+        }
         if (test is null)
             return new SetupCheck("switch_test", 6, CheckStatus.Error, true, "switch_test_not_run");
         if (test.Passed)
@@ -273,7 +311,7 @@ public static class SetupChecks
 
     private static IEnumerable<SetupCheck> Esp32Checks(SystemSnapshot system, SetupState state, HardwareCatalog catalog)
     {
-        // Placa informada pela pessoa (a leitura do chip via esptool chega na Entrega 9).
+        // Placa informada pela pessoa; o chip lido pelo esptool e pelo LDN_HELLO é conferido abaixo.
         var board = catalog.Esp32.FirstOrDefault(b => b.Id == state.Esp32Board);
         if (board is null)
             yield return new SetupCheck("esp32_board", 4, CheckStatus.Error, true, "esp32_board_not_chosen");
@@ -333,9 +371,64 @@ public static class SetupChecks
                     Fix: $"echo 'SUBSYSTEM==\"tty\", ATTRS{{idVendor}}==\"{vid}\", ATTRS{{idProduct}}==\"{pid}\", SYMLINK+=\"frlg-esp32\", GROUP=\"{group}\", MODE=\"0660\"' | sudo tee /etc/udev/rules.d/99-frlg-esp32.rules && sudo udevadm control --reload-rules && sudo udevadm trigger");
         }
 
-        yield return new SetupCheck("esp32_firmware", 4, CheckStatus.Pending, true, "esp32_firmware_pending", AvailableIn: "entrega-9");
-        yield return new SetupCheck("esp32_serial_test", 4, CheckStatus.Pending, true, "esp32_serial_test_pending", AvailableIn: "entrega-9");
+        foreach (var check in Esp32FirmwareChecks(state, board, port?.Path))
+            yield return check;
     }
+
+    /// <summary>
+    /// Firmware e chip. O LDN_HELLO (rápido, sem reiniciar a placa) diz se há firmware compatível e de qual
+    /// chip; o esptool (sob pedido) diz o chip, a revisão e a flash, e se o firmware é o que o app traz.
+    /// </summary>
+    private static IEnumerable<SetupCheck> Esp32FirmwareChecks(SetupState state, Esp32Entry? board, string? port)
+    {
+        if (port is null)
+        {
+            yield return new SetupCheck("esp32_firmware", 4, CheckStatus.Pending, true, "esp32_firmware_needs_port");
+            yield break;
+        }
+
+        var chip = state.Esp32Chip is { } c && c.Port == port ? c : null;
+        if (chip is not null)
+        {
+            var image = Esp32Firmware.For(chip.Target);
+            if (image is null)
+                yield return new SetupCheck("esp32_chip", 4, CheckStatus.Error, true, "esp32_chip_unsupported", Args(("chip", chip.Description)));
+            else if (board is not null && board.Chip != chip.Target)
+                yield return new SetupCheck("esp32_chip", 4, CheckStatus.Error, true, "esp32_board_mismatch",
+                    Args(("model", board.Model), ("chip", chip.Description)));
+            else
+                yield return new SetupCheck("esp32_chip", 4, CheckStatus.Ok, false, "esp32_chip_ok", Args(("chip", chip.Description), ("flash", chip.FlashSize ?? "?")));
+
+            if (image is not null && FlashMb(chip.FlashSize) is { } mb && mb < image.FlashSizeMb)
+                yield return new SetupCheck("esp32_flash_size", 4, CheckStatus.Error, true, "esp32_flash_too_small",
+                    Args(("size", chip.FlashSize!), ("needed", image.FlashSize)));
+
+            // ESP32 clássico: o WROOM-32E usa o chip D0WD-V3 (revisão 3); revisão menor indica o WROOM-32 antigo.
+            if (chip.Target == "esp32" && chip.Revision < 300)
+                yield return new SetupCheck("esp32_revision", 4, CheckStatus.Warning, false, "esp32_old_revision", Args(("chip", chip.Description)));
+        }
+
+        var probe = state.Esp32Probe is { } p && p.Port == port ? p : null;
+        yield return probe switch
+        {
+            null => new SetupCheck("esp32_firmware", 4, CheckStatus.Error, true, "esp32_firmware_not_checked"),
+            // Sem leitura do esptool, o LDN_HELLO é quem denuncia a placa marcada errada (com a leitura, o
+            // item do chip acima já avisa).
+            { Ok: true } when board is not null && probe.Target != board.Chip && chip is null =>
+                new SetupCheck("esp32_firmware", 4, CheckStatus.Error, true, "esp32_firmware_other_chip",
+                    Args(("model", board.Model), ("target", Esp32Firmware.DisplayName(probe.Target)))),
+            { Ok: true } => new SetupCheck("esp32_firmware", 4, CheckStatus.Ok, true, "esp32_firmware_ok", Args(("target", Esp32Firmware.DisplayName(probe.Target)))),
+            _ => new SetupCheck("esp32_firmware", 4, CheckStatus.Error, true, $"esp32_probe_{probe.Code}"),
+        };
+
+        if (state.Esp32Firmware is { } fw && fw.Port == port)
+            yield return fw.Matches
+                ? new SetupCheck("esp32_firmware_version", 4, CheckStatus.Ok, false, "esp32_firmware_verified")
+                : new SetupCheck("esp32_firmware_version", 4, CheckStatus.Warning, false, "esp32_firmware_other_version");
+    }
+
+    private static int? FlashMb(string? size) =>
+        size is not null && size.EndsWith("MB", StringComparison.Ordinal) && int.TryParse(size[..^2], out var mb) ? mb : null;
 
     private static string Name(CompatStatus status) => status.ToString().ToLowerInvariant();
 
@@ -379,6 +472,12 @@ public static class SetupReport
         sb.AppendLine();
         sb.AppendLine("### Configuração");
         sb.AppendLine($"- Rádio escolhido: {status.State.Radio ?? "nenhum"}{(status.State.Phy is { } phy ? $" ({phy})" : "")}{(status.State.Esp32Board is { } b ? $" ({b})" : "")}");
+        if (status.State.Esp32Probe is { } probe)
+            sb.AppendLine($"- ESP32: firmware {probe.Code}{(probe.Target is { } target ? $" ({target})" : "")}{(probe.Simulated ? " (simulado)" : "")}");
+        if (status.State.Esp32Chip is { } chip)
+            sb.AppendLine($"- ESP32: chip {chip.Description}, flash {chip.FlashSize ?? "?"}");
+        if (status.State.Esp32Firmware is { } fw)
+            sb.AppendLine($"- ESP32: firmware {(fw.Matches ? "igual ao embutido" : "diferente do embutido")}{(fw.Written ? " (gravado pelo app)" : "")}");
         sb.AppendLine($"- prod.keys: {(status.Keys is null ? "não enviado" : status.Keys.Valid ? "formato válido" : "formato inválido")}");
         sb.AppendLine($"- Componente de rede: {(s.Worker is { } w ? $"instalado ({w.Flavor}{(w.Safe ? "" : ", inseguro")}{(w.PolicyInstalled ? "" : ", sem política polkit")}{(w.PkexecFound ? "" : ", sem pkexec")})" : "não instalado")}");
         if (s.MissingTools is { Count: > 0 } tools)

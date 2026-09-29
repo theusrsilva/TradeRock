@@ -510,6 +510,46 @@ export interface SwitchTestResult {
   simulated: boolean
   driver: string | null
   keysSavedAt: string | null
+  radio: 'wifi' | 'esp32'
+}
+
+export interface Esp32ProbeResult {
+  port: string
+  ok: boolean
+  code: string
+  target: string | null
+  at: string
+  simulated: boolean
+}
+
+export interface Esp32ChipResult {
+  port: string
+  target: string
+  description: string
+  revision: number
+  flashSize: string | null
+  at: string
+  simulated: boolean
+}
+
+export interface Esp32FirmwareResult {
+  port: string
+  target: string
+  matches: boolean
+  written: boolean
+  at: string
+  simulated: boolean
+}
+
+export interface Esp32FlashJob {
+  id: string
+  port: string
+  stage: 'identify' | 'write' | 'verify' | 'probe' | 'done' | 'error'
+  done: number
+  total: number
+  errorCode: string | null
+  errorMessage: string | null
+  finished: boolean
 }
 
 export interface WorkerInstallInfo {
@@ -559,6 +599,9 @@ export interface SetupStatus {
     esp32ModuleConfirmed: boolean
     keysSkipped: boolean
     cardTest: CardTestResult | null
+    esp32Probe: Esp32ProbeResult | null
+    esp32Chip: Esp32ChipResult | null
+    esp32Firmware: Esp32FirmwareResult | null
     switchTest: SwitchTestResult | null
   }
   keys: {

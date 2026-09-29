@@ -1,4 +1,6 @@
 using TradeRock.Core.Engines.Worker;
+using TradeRock.Core.Esp32;
+using TradeRock.Core.Trading;
 using TradeRock.Core.Setup;
 
 namespace TradeRock.App.Api;
@@ -8,6 +10,7 @@ public static class SetupEndpoints
     public sealed record SimulationDto(string? Scenario);
     public sealed record CardTestDto(string Phy);
     public sealed record SwitchTestDto(string Phy, string? SimulatedOutcome = null);
+    public sealed record Esp32SwitchTestDto(string? SimulatedOutcome = null);
 
     public static void MapSetup(this IEndpointRouteBuilder api)
     {
@@ -93,6 +96,8 @@ public static class SetupEndpoints
             }
         });
 
+        MapEsp32(setup);
+
         // Configuração do NetworkManager/udev para as interfaces do LDN (feita pelo worker, como root).
         setup.MapPost("/network-config", async (SetupService service, CancellationToken ct) =>
         {
@@ -133,6 +138,66 @@ public static class SetupEndpoints
             }
             return Results.Ok(ToDto(await service.StatusAsync(ct)));
         });
+    }
+
+    /// <summary>
+    /// ESP32: firmware (LDN_HELLO sem reiniciar a placa; esptool para identificar, conferir e gravar) e
+    /// teste com o Switch. Nada disso roda com uma troca em andamento: a porta serial seria disputada.
+    /// </summary>
+    private static void MapEsp32(RouteGroupBuilder setup)
+    {
+        var esp32 = setup.MapGroup("/esp32");
+
+        async Task<IResult> Run<T>(Func<Task<T>> action, SetupService service, TradeCoordinator coordinator, CancellationToken ct)
+        {
+            if (coordinator.IsBusy)
+                return Results.Conflict(new { error = "busy", message = "Há uma troca em andamento." });
+            try
+            {
+                var result = await action();
+                return Results.Ok(new { result, status = ToDto(await service.StatusAsync(ct)) });
+            }
+            catch (Esp32Exception e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+            catch (ArgumentException)
+            {
+                return Results.BadRequest(new { error = "outcome_invalid" });
+            }
+            catch (ProdKeysException e)
+            {
+                return Results.BadRequest(new { error = e.Code });
+            }
+        }
+
+        esp32.MapPost("/probe", (Esp32Setup esp, SetupService service, TradeCoordinator coordinator, CancellationToken ct) =>
+            Run(() => esp.ProbeAsync(ct), service, coordinator, ct));
+        esp32.MapPost("/identify", (Esp32Setup esp, SetupService service, TradeCoordinator coordinator, CancellationToken ct) =>
+            Run(() => esp.IdentifyAsync(ct), service, coordinator, ct));
+        esp32.MapPost("/verify", (Esp32Setup esp, SetupService service, TradeCoordinator coordinator, CancellationToken ct) =>
+            Run(() => esp.VerifyAsync(ct), service, coordinator, ct));
+        esp32.MapPost("/switch-test", (Esp32SwitchTestDto body, Esp32Setup esp, SetupService service, TradeCoordinator coordinator, CancellationToken ct) =>
+            Run(() => esp.SwitchTestAsync(body.SimulatedOutcome, ct), service, coordinator, ct));
+
+        // Gravar leva de 30 s a 2 min: começa em segundo plano e o app acompanha pelo GET.
+        esp32.MapPost("/flash", async (Esp32Setup esp, TradeCoordinator coordinator, CancellationToken ct) =>
+        {
+            if (coordinator.IsBusy)
+                return Results.Conflict(new { error = "busy", message = "Há uma troca em andamento." });
+            try
+            {
+                return Results.Accepted("/api/setup/esp32/flash", await esp.StartFlashAsync(ct));
+            }
+            catch (Esp32Exception e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+        });
+        esp32.MapGet("/flash", async (Esp32Setup esp, SetupService service, CancellationToken ct) =>
+            esp.CurrentJob is { } job
+                ? Results.Ok(new { job, status = job.Finished ? ToDto(await service.StatusAsync(ct)) : null })
+                : Results.NotFound());
     }
 
     /// <summary>Resposta do assistente. Nome de usuário fica de fora (não é necessário na interface).</summary>

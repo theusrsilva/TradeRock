@@ -244,7 +244,26 @@
     "busy": "O componente de rede ainda está terminando a operação anterior. Tente de novo em alguns segundos.",
     "beacon_test_crashed": "O teste com o Switch parou com um erro. Tente de novo; se continuar, exporte o relatório no resumo.",
     "worker_install_failed": "A instalação do componente de rede falhou. Tente de novo; se continuar, exporte o relatório no resumo.",
-    "worker_not_bundled": "Esta versão do TradeRock não traz o componente de rede para instalar."
+    "worker_not_bundled": "Esta versão do TradeRock não traz o componente de rede para instalar.",
+    "esp32_not_configured": "Configure o ESP32 no assistente (placa e porta).",
+    "esp32_firmware_missing": "Nenhum firmware do TradeRock respondeu no ESP32. Grave o firmware no assistente.",
+    "esp32_firmware_incompatible": "O firmware do ESP32 é antigo ou diferente. Grave o firmware no assistente.",
+    "esp32_no_response": "O ESP32 parou de responder.",
+    "esp32_error": "Erro ao falar com o ESP32.",
+    "serial_permission": "Sem permissão para usar a porta serial. Veja o item do grupo no assistente.",
+    "serial_busy": "A porta serial está em uso por outro programa.",
+    "serial_port_missing": "A porta do ESP32 não existe mais. Ele foi desconectado?",
+    "serial_not_chosen": "Escolha a porta do ESP32.",
+    "room_changed": "A sala do Switch mudou no meio da conexão. Abra a sala de novo e tente outra vez.",
+    "esp32_busy": "O ESP32 está ocupado com outra operação. Espere terminar.",
+    "esp32_chip_unsupported": "Este chip não tem firmware do TradeRock.",
+    "esp32_flash_too_small": "A flash desta placa é pequena demais para o firmware.",
+    "verify_mismatch": "A gravação terminou, mas a conferência não bateu. Grave de novo.",
+    "esptool_missing": "O gravador de firmware (esptool) não foi encontrado nesta instalação.",
+    "esptool_error": "O gravador de firmware parou com um erro.",
+    "boot_mode_required": "A placa não entrou no modo de gravação sozinha. Siga as instruções do botão BOOT e tente de novo.",
+    "esp32_firmware_not_checked": "Confira o firmware do ESP32 antes do teste.",
+    "keys_invalid": "O prod.keys não é válido."
   },
   "history": {
     "title": "Histórico de trocas",
@@ -267,7 +286,7 @@
     "themeDark": "Escuro",
     "language": "Idioma",
     "engineTitle": "Motor de troca",
-    "engineHelp": "O motor é quem conversa com o Switch. A placa Wi-Fi fica disponível depois de configurada no assistente; o ESP32 chega numa próxima versão.",
+    "engineHelp": "O motor é quem conversa com o Switch. A placa Wi-Fi e o ESP32 ficam disponíveis depois de configurados no assistente.",
     "engines": {
       "fake": "Simulação (modo demonstração)",
       "python-ldn": "Placa Wi-Fi do PC",
@@ -292,7 +311,8 @@
     "engineReasons": {
       "not_linux": "só no Linux",
       "worker_missing": "falta instalar o componente de rede",
-      "wifi_not_configured": "configure a placa no assistente"
+      "wifi_not_configured": "configure a placa no assistente",
+      "esp32_not_configured": "configure o ESP32 no assistente"
     }
   },
   "close": {
@@ -706,8 +726,6 @@
       "serial_group_ok": "Usuário no grupo {{group}}.",
       "brltty_running": "O brltty está rodando e costuma \"sequestrar\" conversores CH340/CP210x. Se você não usa display braile, desative.",
       "udev_rule_optional": "Opcional: regra udev para a porta ter sempre o nome {{path}}.",
-      "esp32_firmware_pending": "Conferir e gravar o firmware do ESP32.",
-      "esp32_serial_test_pending": "Teste de comunicação com o ESP32.",
       "switch_test_ok": "Teste com o Switch aprovado: a sala foi encontrada no canal {{channel}} e decifrada. Rádio e prod.keys confirmados.",
       "switch_test_pending": "Teste com o Switch (sala encontrada e decifrada).",
       "worker_missing": "Componente de rede não instalado. Ele vem com o pacote do TradeRock (.deb); no AppImage, o assistente oferece instalar. Se você compilou o app, rode scripts/dev-host.sh.",
@@ -728,7 +746,26 @@
       "switch_test_not_run": "Faça o teste com o Switch abaixo: é ele que confirma o rádio e o prod.keys.",
       "switch_test_failed": "O teste com o Switch não passou. Veja o resultado abaixo.",
       "worker_appimage_missing": "O componente de rede ainda não foi instalado a partir do AppImage. Use o botão abaixo.",
-      "worker_appimage_outdated": "O componente de rede instalado é de outra versão do TradeRock. Use o botão abaixo para atualizar."
+      "worker_appimage_outdated": "O componente de rede instalado é de outra versão do TradeRock. Use o botão abaixo para atualizar.",
+      "esp32_firmware_needs_port": "Escolha a porta do ESP32 para conferir o firmware.",
+      "esp32_firmware_not_checked": "Confira o firmware do ESP32 (botão \"Verificar o firmware\").",
+      "esp32_firmware_ok": "O firmware do TradeRock respondeu pela porta ({{target}}): comunicação OK.",
+      "esp32_firmware_other_chip": "O firmware desta placa é de outro chip ({{target}}), mas você marcou {{model}}. Confira qual ESP32 você tem.",
+      "esp32_firmware_verified": "O firmware gravado é exatamente o que o TradeRock traz.",
+      "esp32_firmware_other_version": "O firmware responde, mas não é exatamente o que o TradeRock traz. Se a troca falhar, grave o firmware de novo.",
+      "esp32_probe_hello_ok": "O firmware respondeu.",
+      "esp32_probe_esp32_firmware_missing": "Nenhum firmware do TradeRock respondeu nesta porta. Grave o firmware (botão \"Gravar o firmware\").",
+      "esp32_probe_esp32_firmware_incompatible": "O firmware desta placa é antigo ou diferente. Grave o firmware do TradeRock (botão \"Gravar o firmware\").",
+      "esp32_probe_esp32_no_response": "O ESP32 parou de responder. Desconecte, conecte de novo e confira outra vez.",
+      "esp32_probe_serial_permission": "Sem permissão para usar a porta serial (veja o item do grupo acima).",
+      "esp32_probe_serial_busy": "A porta serial está em uso por outro programa (monitor serial, Arduino IDE…). Feche-o e confira de novo.",
+      "esp32_probe_serial_port_missing": "A porta não existe mais. O ESP32 foi desconectado?",
+      "esp32_probe_esp32_error": "Erro ao falar com o ESP32. Confira de novo; se continuar, exporte o relatório.",
+      "esp32_chip_ok": "Chip identificado: {{chip}}, flash de {{flash}}.",
+      "esp32_chip_unsupported": "O chip {{chip}} não tem firmware do TradeRock.",
+      "esp32_board_mismatch": "Você marcou {{model}}, mas o chip é {{chip}}. Corrija a placa na lista acima.",
+      "esp32_flash_too_small": "A flash desta placa tem {{size}}; o firmware precisa de {{needed}}.",
+      "esp32_old_revision": "Chip {{chip}}: revisão antiga, típica do módulo ESP32-WROOM-32 (não o 32E), que não troca de forma confiável. Confira o nome na blindagem."
     },
     "deliveries": {
       "entrega-6": "componente de rede e teste da placa",
@@ -827,7 +864,38 @@
       },
       "hints": {
         "missing_master_key_12": "O seu prod.keys não tem a chave do protocolo mais novo do LDN (master_key_12). Consoles atualizados usam esse protocolo: extraia as chaves de novo com o sistema atualizado."
-      }
+      },
+      "esp32Band": "O ESP32 só enxerga salas em 2,4 GHz (canais 1 a 11). Se o Switch estiver ligado a uma rede de 5 GHz, a sala pode não aparecer: desconecte o Switch da internet e abra a sala de novo.",
+      "needsFirmware": "Primeiro confira o firmware do ESP32 na etapa 4."
+    },
+    "esp32fw": {
+      "title": "Firmware do ESP32",
+      "help": "O ESP32 precisa do firmware do TradeRock (do projeto easyworld) para conversar com o Switch. O TradeRock traz o firmware certo para cada chip e grava sozinho, pelo USB.",
+      "probe": "Verificar o firmware",
+      "identify": "Identificar a placa",
+      "verify": "Conferir a versão",
+      "flash": "Gravar o firmware",
+      "working": "Aguarde…",
+      "identifyHelp": "Identificar e conferir reiniciam a placa por um instante; ela volta a funcionar sozinha.",
+      "flashConfirmTitle": "Gravar o firmware do TradeRock?",
+      "flashConfirmText": "Tudo o que estiver gravado no ESP32 será substituído. Leva de 30 segundos a 2 minutos. Não desconecte a placa até terminar.",
+      "flashConfirm": "Gravar agora",
+      "stages": {
+        "identify": "Identificando a placa…",
+        "write": "Gravando…",
+        "verify": "Conferindo…",
+        "probe": "Testando a comunicação…",
+        "done": "Firmware gravado e conferido.",
+        "error": "A gravação não terminou."
+      },
+      "bootTitle": "Se a placa não entrar no modo de gravação",
+      "bootSteps": [
+        "Segure o botão BOOT (às vezes escrito IO0 ou B).",
+        "Com ele apertado, aperte e solte o botão RESET (EN ou RST).",
+        "Solte o BOOT e clique em \"Gravar o firmware\" de novo.",
+        "Depois de gravar, aperte RESET uma vez para a placa voltar ao normal."
+      ],
+      "simulated": "simulado"
     }
   },
   "workerInstall": {

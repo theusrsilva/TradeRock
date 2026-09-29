@@ -5,9 +5,9 @@ import { api, ApiError } from '../../lib/api'
 import type { SetupStatus, SwitchTestCode, SwitchTestResult } from '../../lib/types'
 
 /**
- * Etapa 6 com a placa Wi-Fi: o teste com o Switch. O worker escuta os anúncios da sala (aberta como
- * Leader) e tenta decifrá-los com o prod.keys, sem entrar nela. Cancelar aborta o pedido; o app avisa
- * o worker, que para e devolve o rádio.
+ * Etapa 6: o teste com o Switch. O rádio (placa Wi-Fi pelo worker, ou o ESP32 pela serial) escuta os
+ * anúncios da sala (aberta como Leader) e tenta decifrá-los com o prod.keys, sem entrar nela. Cancelar
+ * aborta o pedido; com a placa Wi-Fi, o app avisa o worker, que para e devolve o rádio.
  */
 export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus: (s: SetupStatus) => void }) {
   const { t } = useTranslation()
@@ -27,16 +27,20 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
     return () => clearInterval(timer)
   }, [running])
 
+  const esp32 = state.radio === 'esp32'
   const card = advice.cards.find((c) => c.card.phy === state.phy)
   const cardDriver = card ? (card.card.module ?? card.card.driver) : null
-  // O resultado vale para esta placa e este prod.keys (o backend confere o mesmo).
+  const probe = esp32 && state.esp32Probe?.ok && state.esp32Probe.port === state.serialPort ? state.esp32Probe : null
+  // O resultado vale para este rádio (placa ou porta + chip) e este prod.keys (o backend confere o mesmo).
   const sw = state.switchTest
-  const test =
-    sw && sw.phy === state.phy && (!sw.driver || sw.driver === cardDriver) && keys?.valid && sw.keysSavedAt === keys.savedAt ? sw : null
+  const sameKeys = !!sw && keys?.valid === true && sw.keysSavedAt === keys.savedAt
+  const test = !sw || !sameKeys ? null
+    : esp32 ? (sw.radio === 'esp32' && sw.phy === state.serialPort && sw.driver === probe?.target ? sw : null)
+    : (sw.radio !== 'esp32' && sw.phy === state.phy && (!sw.driver || sw.driver === cardDriver) ? sw : null)
   const check = checks.find((c) => c.id === 'switch_test')
-  const cardOk = checks.find((c) => c.id === 'card_test')?.status === 'ok'
+  const radioOk = esp32 ? !!probe : checks.find((c) => c.id === 'card_test')?.status === 'ok'
   const keysOk = keys?.valid === true
-  const canRun = !!card && cardOk && keysOk && !running
+  const canRun = (esp32 ? !!state.serialPort : !!card) && radioOk && keysOk && !running
 
   async function run() {
     const controller = new AbortController()
@@ -46,8 +50,10 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
     setError(null)
     setCancelled(false)
     try {
-      const body = { phy: state.phy, simulatedOutcome: status.simulatedSwitchOutcomes ? simulated : null }
-      const res = await api.post<{ result: SwitchTestResult; status: SetupStatus }>('/api/setup/switch-test', body, controller.signal)
+      const simulatedOutcome = status.simulatedSwitchOutcomes ? simulated : null
+      const res = esp32
+        ? await api.post<{ result: SwitchTestResult; status: SetupStatus }>('/api/setup/esp32/switch-test', { simulatedOutcome }, controller.signal)
+        : await api.post<{ result: SwitchTestResult; status: SetupStatus }>('/api/setup/switch-test', { phy: state.phy, simulatedOutcome }, controller.signal)
       onStatus(res.status)
     } catch (e) {
       if (controller.signal.aborted) setCancelled(true)
@@ -58,7 +64,7 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
     }
   }
 
-  if (!card) return null
+  if (esp32 ? !state.serialPort : !card) return null
 
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
@@ -71,11 +77,13 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
       </ol>
       <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
         <li>{t('wizard.switchTest.noJoin')}</li>
-        <li>{t('wizard.switchTest.offline', { seconds: status.switchTestSeconds })}</li>
+        {esp32 ? <li>{t('wizard.switchTest.esp32Band')}</li> : <li>{t('wizard.switchTest.offline', { seconds: status.switchTestSeconds })}</li>}
       </ul>
 
       {!keysOk && <p className="text-sm text-amber-700 dark:text-amber-300">{t('wizard.switchTest.needsKeys')}</p>}
-      {keysOk && !cardOk && <p className="text-sm text-amber-700 dark:text-amber-300">{t('wizard.switchTest.needsCard')}</p>}
+      {keysOk && !radioOk && (
+        <p className="text-sm text-amber-700 dark:text-amber-300">{t(esp32 ? 'wizard.switchTest.needsFirmware' : 'wizard.switchTest.needsCard')}</p>
+      )}
 
       {status.simulatedSwitchOutcomes && (
         <label className="flex flex-wrap items-center gap-2 text-xs">
@@ -104,7 +112,7 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
             {test ? t('wizard.switchTest.again') : t('wizard.switchTest.run')}
           </Button>
         )}
-        {running && <span className="text-sm text-slate-500">{t('wizard.switchTest.waitPassword')}</span>}
+        {running && !esp32 && <span className="text-sm text-slate-500">{t('wizard.switchTest.waitPassword')}</span>}
       </div>
       {running && (
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" aria-hidden>

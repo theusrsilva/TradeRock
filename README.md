@@ -4,14 +4,15 @@ Troque Pokémon com **Pokémon FireRed e LeafGreen do Nintendo Switch / Switch 2
 wireless local do jogo (LDN). O seu PC, ou uma plaquinha ESP32, finge ser um segundo Switch na
 sala de troca do Direct Corner.
 
-> **Estado:** em desenvolvimento (Entrega 8 de 11). Já dá para **criar Pokémon legais** no app,
+> **Estado:** em desenvolvimento (Entrega 9 de 11). Já dá para **criar Pokémon legais** no app,
 > organizá-los no **cofre** (caixas, tags, busca, exportação, injeção em `.sav` de GBA), fazer o
 > assistente de troca de ponta a ponta em **modo demonstração** (motor simulado) e seguir o
 > **assistente de configuração**, que confere o sistema, a placa Wi-Fi ou o ESP32 e o `prod.keys`.
 > O motor com a **placa Wi-Fi** (worker + polkit + frlg-ldn-trade) e o **teste com o Switch** (a sala é
 > encontrada e decifrada, sem entrar nela) estão prontos, mas **ainda não foram testados com um Switch
-> de verdade**. Veja [docs/dev-host.md](docs/dev-host.md). Já há pacotes para Linux: **.deb** e
-> **AppImage**.
+> de verdade**. O motor com o **ESP32** (firmware gravado pelo próprio app, conferência do chip e teste
+> com o Switch pela serial) também está pronto, **testado só com um ESP32 simulado**. Veja
+> [docs/dev-host.md](docs/dev-host.md). Já há pacotes para Linux: **.deb** e **AppImage**.
 
 O TradeRock nunca baixa, sugere fontes nem distribui `prod.keys` ou ROMs. Use só as chaves
 extraídas do seu próprio console.
@@ -105,13 +106,14 @@ flowchart LR
 
 ```
 app/TradeRock.App/       executável: servidor + janela
-app/TradeRock.Core/      domínio: troca (coordenador, motores), Pokémon (PKHeX), armazenamento (SQLite)
+app/TradeRock.Core/      domínio: troca (coordenador, motores), Pokémon (PKHeX), armazenamento (SQLite), ESP32
+app/Frlg.Trade.Core.Patched/  núcleo C# do easyworld (motor ESP32) compilado com os patches do TradeRock
 app/TradeRock.Tests/     testes (xUnit v3)
 catalog/                 catálogo de placas Wi-Fi, ESP32 e conversores USB-serial (JSON)
 worker/                  worker privilegiado (Linux, Python): protocolo, rádio, wrapper do motor
 frontend/                React + Vite + TypeScript + Tailwind
+firmware/                notas sobre o firmware ESP32 embutido (os binários vêm do submódulo do easyworld)
 engines/                 submódulos (motores e AutoMod)
-firmware/                firmware ESP32 embutido (vem do submódulo do easyworld)
 content/                 textos explicativos em markdown, por idioma
 packaging/               atalho, ícone e script de instalação do worker (Linux); instalador Windows
 docs/                    decisões e guias de desenvolvimento
@@ -290,6 +292,14 @@ não fica acessível: use um ESP32 ou o Linux instalado de verdade.
 **O ESP32 não aparece / "permissão negada" na porta.** Use um cabo USB de dados e adicione o seu
 usuário ao grupo `dialout` (Arch: `uucp`), depois saia e entre de novo na sessão. Se o `brltty`
 estiver rodando e você não usa display braile, desative-o. O assistente mostra os comandos exatos.
+
+**ESP32: "nenhum firmware do TradeRock respondeu".** Use "Gravar o firmware" na etapa 4 do assistente:
+o app identifica o chip, escolhe o firmware certo e grava pelo USB. Se a placa não entrar no modo de
+gravação, segure o botão BOOT, aperte e solte RESET, solte o BOOT e tente de novo. Feche monitores
+seriais (Arduino IDE etc.) antes: a porta não pode estar em uso.
+
+**ESP32: a sala do Switch não aparece.** O ESP32 só enxerga salas em 2,4 GHz (canais 1 a 11). Se o
+Switch estiver ligado a uma rede de 5 GHz, desconecte-o da internet e abra a sala de novo.
 
 **AppImage: "o componente de rede não foi instalado".** Use o botão da etapa 4 do assistente. Se o
 diálogo de senha não aparecer, falta um agente do polkit na sessão (GNOME e KDE já trazem um).

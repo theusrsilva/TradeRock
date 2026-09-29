@@ -8,6 +8,7 @@ import { api } from '../../lib/api'
 import { downloadBlob } from '../../lib/appInfo'
 import type { HardwareCatalog, SetupStatus } from '../../lib/types'
 import { CatalogNotice, CheckList, CompatBadge, Esp32Illustration, Esp32Table, WifiTable } from './parts'
+import { Esp32Actions } from './Esp32Actions'
 import { SwitchTest } from './SwitchTest'
 import { WifiActions } from './WifiActions'
 
@@ -40,8 +41,9 @@ export default function SetupPage() {
   // Concluir com a placa Wi-Fi pronta: as próximas trocas já usam o motor da placa.
   async function finish() {
     await patch({ completed: true })
-    if (status?.readyToTrade && status.state.radio === 'wifi' && !status.system.simulatedScenario)
-      await api.put('/api/engines/selected', { id: 'python-ldn' }).catch(() => undefined)
+    // Concluir com o rádio pronto: as próximas trocas já usam o motor dele.
+    if (status?.readyToTrade && status.state.radio && !status.system.simulatedScenario)
+      await api.put('/api/engines/selected', { id: status.state.radio === 'wifi' ? 'python-ldn' : 'esp32' }).catch(() => undefined)
   }
 
   if (!status || !catalog) return <p className="text-slate-500">{t('wizard.detecting')}</p>
@@ -117,7 +119,7 @@ export default function SetupPage() {
         {step === 6 && (
           <>
             <ContentFile name="wizard/06-teste" />
-            {status.state.radio === 'wifi' && <SwitchTest status={status} onStatus={setStatus} />}
+            {status.state.radio && <SwitchTest status={status} onStatus={setStatus} />}
             <CheckList checks={stepChecks(6)} />
           </>
         )}
@@ -367,6 +369,7 @@ function PrepareStep({
               )
             })}
           </fieldset>
+          <Esp32Actions status={status} onStatus={onStatus} />
         </>
       )}
       <CheckList checks={checks} />
