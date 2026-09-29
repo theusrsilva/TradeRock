@@ -46,6 +46,46 @@ public sealed class StoredPokemon
     public PokemonOrigin Origin { get; set; }
     public string? SourceFileName { get; set; }
     public DateTimeOffset AddedAt { get; set; }
+
+    /// <summary>PID (para achar "possíveis duplicatas": mesmo Pokémon com dados diferentes). Null = ainda não lido.</summary>
+    public uint? Pid { get; set; }
+
+    /// <summary>Caixa do cofre; null = Caixa de entrada.</summary>
+    public Guid? BoxId { get; set; }
+
+    /// <summary>Posição na caixa (0–29); null na Caixa de entrada.</summary>
+    public int? Slot { get; set; }
+
+    /// <summary>Na lixeira desde; null = ativo.</summary>
+    public DateTimeOffset? DeletedAt { get; set; }
+
+    public List<PokemonTag> Tags { get; set; } = [];
+}
+
+/// <summary>Caixa do cofre (30 posições, como no jogo).</summary>
+public sealed class VaultBox
+{
+    public const int Slots = 30;
+
+    public Guid Id { get; set; }
+    public required string Name { get; set; }
+    public int Order { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class Tag
+{
+    public Guid Id { get; set; }
+    public required string Name { get; set; }
+
+    /// <summary>Nome de cor da paleta da interface (ex.: "sky", "amber").</summary>
+    public required string Color { get; set; }
+}
+
+public sealed class PokemonTag
+{
+    public Guid PokemonId { get; set; }
+    public Guid TagId { get; set; }
 }
 
 /// <summary>Histórico de uma sessão de troca (uma ou mais trocas com o mesmo Switch).</summary>

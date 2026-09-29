@@ -1,4 +1,5 @@
 using TradeRock.Core.Pokemon;
+using TradeRock.Core.Saves;
 using TradeRock.Core.Storage;
 
 namespace TradeRock.App.Api;
@@ -11,13 +12,15 @@ public static class PokemonEndpoints
         Guid Id, ushort Species, string SpeciesName, string Nickname, byte Level, bool IsShiny, bool IsEgg,
         byte Gender, string OtName, ushort Tid, ushort Sid, string OriginGame, PokemonOrigin Origin,
         string? SourceFileName, int Size, string Sha256, DateTimeOffset AddedAt, ushort HeldItem,
-        ushort? EvolvesOnTradeInto, bool Fateful, string? Legality, IReadOnlyList<TradeWarning> Warnings)
+        ushort? EvolvesOnTradeInto, bool Fateful, string? Legality, IReadOnlyList<TradeWarning> Warnings,
+        Guid? BoxId, int? Slot, DateTimeOffset? DeletedAt, IReadOnlyList<Guid> TagIds, bool PossibleDuplicate)
     {
-        public static PokemonDto From(StoredPokemon p, MyTrainer? me) => new(
+        public static PokemonDto From(StoredPokemon p, MyTrainer? me, bool possibleDuplicate = false) => new(
             p.Id, p.Species, p.SpeciesName, p.Nickname, p.Level, p.IsShiny, p.IsEgg, p.Gender, p.OtName,
             p.Tid, p.Sid, p.OriginGame, p.Origin, p.SourceFileName, p.Size, p.Sha256, p.AddedAt, p.HeldItem,
             TradeEvolution.EvolvesInto(p.Species, p.HeldItem), p.Fateful, p.Legality,
-            TradeRules.For(new TradeRuleInput(p.Species, p.IsEgg, p.Fateful, p.Level, p.OtName, p.Tid, p.Sid, p.HeldItem), me));
+            TradeRules.For(new TradeRuleInput(p.Species, p.IsEgg, p.Fateful, p.Level, p.OtName, p.Tid, p.Sid, p.HeldItem), me),
+            p.BoxId, p.Slot, p.DeletedAt, p.Tags.Select(t => t.TagId).ToList(), possibleDuplicate);
     }
 
     public sealed record UploadResult(string FileName, bool Ok, bool Created, PokemonDto? Pokemon, string? Error, string? ErrorMessage);
@@ -40,12 +43,17 @@ public static class PokemonEndpoints
                 ? Results.Ok(await store.GetLegalityReportAsync(p, lang is "en" ? "en" : "pt-BR", ct))
                 : Results.NotFound());
 
-        group.MapGet("/{id:guid}/file", async (Guid id, PokemonStore store, CancellationToken ct) =>
+        // Download (modo navegador). Na janela nativa, a exportação usa /api/vault/export/native.
+        group.MapGet("/{id:guid}/file", async (Guid id, string? format, int? size, PokemonStore store, CancellationToken ct) =>
         {
             if (await store.GetAsync(id, ct) is not { } p)
                 return Results.NotFound();
-            var data = await store.ReadDataAsync(p, ct);
-            var name = $"{p.Species:000}-{Sanitize(p.Nickname)}.pk3";
+            format ??= "pk3";
+            var bytes = size ?? Pk3Reader.PartySize;
+            if (!Pk3Export.Formats.Contains(format) || bytes is not (Pk3Reader.StoredSize or Pk3Reader.PartySize))
+                return Results.BadRequest(new { error = "export_invalid" });
+            var data = Pk3Export.ToFile(await store.ReadDataAsync(p, ct), format, bytes);
+            var name = Pk3Export.FileName(p.Species, string.IsNullOrWhiteSpace(p.Nickname) ? p.SpeciesName : p.Nickname, format);
             return Results.File(data, "application/octet-stream", name);
         });
 
@@ -88,10 +96,4 @@ public static class PokemonEndpoints
 
     private static Task<MyTrainer?> MyTrainerAsync(SettingsStore settings, CancellationToken ct) =>
         settings.GetAsync<MyTrainer?>(BuilderEndpoints.MyTrainerKey, null, ct);
-
-    private static string Sanitize(string name)
-    {
-        var clean = new string(name.Where(c => char.IsLetterOrDigit(c) || c is '-' or '_').ToArray());
-        return clean.Length > 0 ? clean : "pokemon";
-    }
 }

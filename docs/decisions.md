@@ -153,3 +153,34 @@ espécies (`Builder/Data/unverifiable.json`) começa vazia.
 **`.sav`.** A leitura do arquivo é do PKHeX (`SaveUtil.GetSaveFile`). O PKHeX não grava um save em
 branco que ele mesmo reconheça depois, então o teste cobre a extração a partir de um `SAV3FRLG`
 em memória. **Falta testar com um `.sav` real.**
+
+## D13. Cofre e saves (Entrega 4)
+
+- **Caixas de 30 posições** e Caixa de entrada (`BoxId` null). Um índice único em `(BoxId, Slot)`
+  garante uma posição por Pokémon. Mover para uma posição ocupada troca os dois de lugar, numa
+  transação.
+- **Lixeira** com `DeletedAt`. Esvaziar não apaga Pokémon referenciados no histórico de trocas.
+  Importar de novo um arquivo que está na lixeira restaura esse Pokémon.
+- **Possível duplicata**: mesma espécie, PID e treinador (TID, SID e nome), com hash diferente.
+  Arquivos idênticos já não se repetem.
+- **Downloads na janela nativa.** O WebView (WebKitGTK/WebView2) do Photino não é confiável com
+  `<a download>`. Na janela, exportar e injetar usam os diálogos nativos do Photino
+  (`ShowSaveFileAsync`, `ShowOpenFileAsync`, `ShowOpenFolderAsync`, que já despacham para a thread
+  da interface), e o backend grava o arquivo. No navegador, download normal.
+- **Injeção.**
+  - Só em posições vazias.
+  - `EntityImportSettings(UpdateToSaveFile: Disable, UpdatePokeDex: Enable, UpdateRecord: Disable)`:
+    o Pokémon não muda e a Pokédex marca capturado.
+  - O resultado é relido pelo PKHeX e conferido (espécie, PID, checksum).
+  - Com a janela, se o arquivo mudou no disco desde que foi aberto (o emulador salvou), a injeção é
+    recusada.
+  - O PKHeX preserva o rodapé de RTC dos emuladores e o cabeçalho NSO ("SRAM", re-assinado com
+    SHA-1). Não foi testado com o save da versão de Switch de 2026, porque não temos um de exemplo.
+- **Save de teste** (`app/TradeRock.Tests/SaveFixture.cs`). O save em branco do PKHeX não tem os
+  rodapés dos setores e não é reconhecido depois de gravado. O fixture monta:
+  - os IDs 0..13 e a assinatura `0x08012025` nos 14 setores;
+  - `1` em 0xAC, a marca de FRLG;
+  - `0xFF` nos bytes 6 e 7, a marca de jogo internacional.
+
+  Com isso, leitura e injeção são testadas de ponta a ponta com um `.sav` real de 128 KB, sem
+  arquivo baixado da internet.

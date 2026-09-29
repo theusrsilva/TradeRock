@@ -4,9 +4,10 @@ Troque Pokémon com **Pokémon FireRed e LeafGreen do Nintendo Switch / Switch 2
 wireless local do jogo (LDN). O seu PC, ou uma plaquinha ESP32, finge ser um segundo Switch na
 sala de troca do Direct Corner.
 
-> **Estado:** em desenvolvimento (Entrega 3 de 11). Já dá para **criar Pokémon legais** no app
-> (sem abrir o PKHeX) e fazer o assistente de troca de ponta a ponta em **modo demonstração**
-> (motor simulado). Ainda não troca com um Switch de verdade.
+> **Estado:** em desenvolvimento (Entrega 4 de 11). Já dá para **criar Pokémon legais** no app,
+> organizá-los no **cofre** (caixas, tags, busca, exportação, injeção em `.sav` de GBA) e fazer o
+> assistente de troca de ponta a ponta em **modo demonstração** (motor simulado). Ainda não troca
+> com um Switch de verdade.
 
 O TradeRock nunca baixa, sugere fontes nem distribui `prod.keys` ou ROMs. Use só as chaves
 extraídas do seu próprio console.
@@ -144,6 +145,25 @@ a cada mudança. Quando algo não é possível, a tela mostra o que mudou ou o q
   obediência e de Pokédex Nacional.
 - Pokémon ilegal não vai para o Switch, a não ser no modo avançado de troca, com confirmação.
 
+### Cofre
+
+- **Caixas de 30 posições**, como no jogo. Pokémon novos chegam na **Caixa de entrada**.
+- Arraste para mudar de posição ou de caixa. Soltar numa posição ocupada troca os dois de lugar.
+- **Busca** (espécie, número, apelido, treinador) e **filtros**: legalidade, origem, nível, shiny,
+  avisos, possíveis duplicatas e tags.
+- **Tags** com cor, também aplicadas em lote.
+- **Lixeira** recuperável. Esvaziar a lixeira mantém os Pokémon que estão no histórico de trocas.
+- **Exportar** `.pk3`/`.ek3`, com 100 ou 80 bytes. Na janela do app, o sistema pergunta onde salvar.
+  No navegador, o arquivo é baixado (vários de uma vez viram `.zip`).
+- **Injetar num `.sav`** de GBA:
+  - só em posições vazias;
+  - a Pokédex do save é atualizada;
+  - um backup do original vai para `backups/` na pasta de dados;
+  - o resultado é relido e conferido pelo PKHeX.
+
+  Na janela do app, o arquivo é alterado no mesmo lugar. No navegador, você baixa o save novo.
+- Solte `.pk3`/`.ek3`/`.sav` em qualquer lugar da janela para importar.
+
 ### Modo demonstração
 
 Sem Switch, placa ou prod.keys, o TradeRock usa o **FakeEngine**, que simula a troca inteira no
@@ -161,8 +181,15 @@ do easyworld). Detalhes do fluxo em [docs/trade-flow.md](docs/trade-flow.md).
 | Linux | `$XDG_DATA_HOME/traderock` (padrão `~/.local/share/traderock`) |
 | Windows | `%APPDATA%\TradeRock` |
 
-Dentro dela: `traderock.db` (SQLite), `vault/` (arquivos .pk3, nomeados pelo SHA-256), `keys/`
-(prod.keys, permissão 700) e `logs/`.
+Dentro dela:
+
+| Pasta ou arquivo | Conteúdo |
+| --- | --- |
+| `traderock.db` | Banco SQLite |
+| `vault/` | Arquivos `.pk3`, nomeados pelo SHA-256 |
+| `backups/` | Cópias dos saves antes de qualquer injeção |
+| `keys/` | `prod.keys`, com permissão 700 |
+| `logs/` | Logs do app |
 
 Migrações do banco: `dotnet tool restore && dotnet ef migrations add <Nome> --project app/TradeRock.Core --output-dir Storage/Migrations`.
 

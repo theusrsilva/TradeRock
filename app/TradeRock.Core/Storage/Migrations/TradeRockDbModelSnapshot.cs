@@ -17,6 +17,21 @@ namespace TradeRock.Core.Storage.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("TradeRock.Core.Storage.PokemonTag", b =>
+                {
+                    b.Property<Guid>("PokemonId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("PokemonId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("PokemonTags");
+                });
+
             modelBuilder.Entity("TradeRock.Core.Storage.SettingEntry", b =>
                 {
                     b.Property<string>("Key")
@@ -38,6 +53,12 @@ namespace TradeRock.Core.Storage.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<long>("AddedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("BoxId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DeletedAt")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("Fateful")
@@ -80,6 +101,9 @@ namespace TradeRock.Core.Storage.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<uint?>("Pid")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Sha256")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -88,6 +112,9 @@ namespace TradeRock.Core.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Slot")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("SourceFileName")
@@ -105,12 +132,40 @@ namespace TradeRock.Core.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DeletedAt");
+
                     b.HasIndex("Sha256")
                         .IsUnique();
 
                     b.HasIndex("Species");
 
+                    b.HasIndex("BoxId", "Slot")
+                        .IsUnique()
+                        .HasFilter("\"BoxId\" IS NOT NULL AND \"Slot\" IS NOT NULL");
+
                     b.ToTable("Pokemon");
+                });
+
+            modelBuilder.Entity("TradeRock.Core.Storage.Tag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("TradeRock.Core.Storage.TradeRecord", b =>
@@ -234,6 +289,52 @@ namespace TradeRock.Core.Storage.Migrations
                     b.ToTable("TrainerPresets");
                 });
 
+            modelBuilder.Entity("TradeRock.Core.Storage.VaultBox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Order");
+
+                    b.ToTable("Boxes");
+                });
+
+            modelBuilder.Entity("TradeRock.Core.Storage.PokemonTag", b =>
+                {
+                    b.HasOne("TradeRock.Core.Storage.StoredPokemon", null)
+                        .WithMany("Tags")
+                        .HasForeignKey("PokemonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TradeRock.Core.Storage.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TradeRock.Core.Storage.StoredPokemon", b =>
+                {
+                    b.HasOne("TradeRock.Core.Storage.VaultBox", null)
+                        .WithMany()
+                        .HasForeignKey("BoxId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("TradeRock.Core.Storage.TradeRecordEntry", b =>
                 {
                     b.HasOne("TradeRock.Core.Storage.StoredPokemon", null)
@@ -252,6 +353,11 @@ namespace TradeRock.Core.Storage.Migrations
                         .HasForeignKey("TradeRecordId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("TradeRock.Core.Storage.StoredPokemon", b =>
+                {
+                    b.Navigation("Tags");
                 });
 
             modelBuilder.Entity("TradeRock.Core.Storage.TradeRecord", b =>

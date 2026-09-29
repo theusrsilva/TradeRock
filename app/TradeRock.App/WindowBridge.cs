@@ -41,6 +41,34 @@ public sealed class WindowBridge(TradeCoordinator coordinator, ILogger<WindowBri
         }
     }
 
+    /// <summary>Janela nativa "abrir arquivo". Null se cancelado ou sem janela.</summary>
+    public async Task<string?> PickOpenFileAsync(string title, (string Name, string[] Extensions)[] filters)
+    {
+        if (_window is not { } window)
+            return null;
+        var paths = await window.ShowOpenFileAsync(title, null, false, filters);
+        return paths is { Length: > 0 } ? paths[0] : null;
+    }
+
+    /// <summary>Janela nativa "salvar arquivo". Null se cancelado ou sem janela.</summary>
+    public async Task<string?> PickSaveFileAsync(string title, string suggestedName, (string Name, string[] Extensions)[] filters)
+    {
+        if (_window is not { } window)
+            return null;
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var path = await window.ShowSaveFileAsync(title, Path.Combine(documents, suggestedName), filters);
+        return string.IsNullOrEmpty(path) ? null : path;
+    }
+
+    /// <summary>Janela nativa "escolher pasta". Null se cancelado ou sem janela.</summary>
+    public async Task<string?> PickFolderAsync(string title)
+    {
+        if (_window is not { } window)
+            return null;
+        var paths = await window.ShowOpenFolderAsync(title);
+        return paths is { Length: > 0 } ? paths[0] : null;
+    }
+
     private void SendMessage(object message)
     {
         try

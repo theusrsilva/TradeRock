@@ -11,6 +11,9 @@ public sealed class TradeRockDb(DbContextOptions<TradeRockDb> options) : DbConte
     public DbSet<TradeRecordEntry> TradeEntries => Set<TradeRecordEntry>();
     public DbSet<TrainerPreset> TrainerPresets => Set<TrainerPreset>();
     public DbSet<SettingEntry> Settings => Set<SettingEntry>();
+    public DbSet<VaultBox> Boxes => Set<VaultBox>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<PokemonTag> PokemonTags => Set<PokemonTag>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -25,6 +28,21 @@ public sealed class TradeRockDb(DbContextOptions<TradeRockDb> options) : DbConte
             e.HasIndex(p => p.Sha256).IsUnique();
             e.HasIndex(p => p.Species);
             e.Property(p => p.Origin).HasConversion<string>();
+            // Uma posição de caixa só pode ter um Pokémon ativo (os da lixeira ficam sem caixa).
+            e.HasIndex(p => new { p.BoxId, p.Slot }).IsUnique().HasFilter("\"BoxId\" IS NOT NULL AND \"Slot\" IS NOT NULL");
+            e.HasIndex(p => p.DeletedAt);
+            e.HasOne<VaultBox>().WithMany().HasForeignKey(p => p.BoxId).OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(p => p.Tags).WithOne().HasForeignKey(t => t.PokemonId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        model.Entity<VaultBox>(e => e.HasIndex(b => b.Order));
+
+        model.Entity<Tag>(e => e.HasIndex(t => t.Name).IsUnique());
+
+        model.Entity<PokemonTag>(e =>
+        {
+            e.HasKey(t => new { t.PokemonId, t.TagId });
+            e.HasOne<Tag>().WithMany().HasForeignKey(t => t.TagId).OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<TradeRecord>(e =>

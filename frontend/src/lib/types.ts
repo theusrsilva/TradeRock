@@ -349,3 +349,50 @@ export interface SaveUpload {
   sid: number
   entries: { index: number; place: 'party' | 'box'; box: number; slot: number; summary: Pk3Summary; legality: LegalityStatus }[]
 }
+
+// ---- Cofre ----
+
+export interface VaultPokemon extends Pokemon {
+  boxId: string | null
+  slot: number | null
+  deletedAt: string | null
+  tagIds: string[]
+  possibleDuplicate: boolean
+}
+
+export interface BoxSummary {
+  id: string
+  name: string
+  order: number
+  count: number
+}
+
+export interface VaultOverview {
+  boxes: BoxSummary[]
+  inboxCount: number
+  trashCount: number
+}
+
+export interface Tag {
+  id: string
+  name: string
+  color: TagColor
+}
+
+export type TagColor = 'slate' | 'red' | 'amber' | 'emerald' | 'sky' | 'violet' | 'pink'
+
+export interface SaveLayoutInfo {
+  token: string
+  fileName: string
+  inPlace: boolean
+  layout: {
+    game: string
+    trainerName: string
+    tid: number
+    sid: number
+    boxCount: number
+    slotsPerBox: number
+    boxNames: string[]
+    occupied: { box: number; slot: number; species: number; speciesName: string; nickname: string; level: number; isEgg: boolean }[]
+  }
+}

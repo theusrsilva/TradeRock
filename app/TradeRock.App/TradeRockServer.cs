@@ -90,6 +90,8 @@ public static class TradeRockServer
         api.MapTrades();
         api.MapSettings();
         api.MapBuilder();
+        api.MapVault();
+        api.MapSaves();
     }
 
     /// <summary>Endereço real após o start (a porta 0 vira uma porta livre).</summary>

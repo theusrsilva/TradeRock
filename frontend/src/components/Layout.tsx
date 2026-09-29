@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router'
 import { api } from '../lib/api'
 import type { Engine, TradeSession } from '../lib/types'
+import { GlobalDrop } from './GlobalDrop'
 import { Badge, Button, Modal } from './ui'
 
 declare global {
@@ -67,7 +68,7 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-full flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <div className="flex items-center gap-2">
             <img src="/icon.svg" alt="" className="h-7 w-7" />
             <span className="text-lg font-semibold">{t('app.name')}</span>
@@ -98,7 +99,8 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
+      <GlobalDrop />
 
       {closeRequested && (
         <Modal

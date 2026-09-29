@@ -41,7 +41,7 @@ public static class TradeEndpoints
             var stored = new List<StoredPokemon>();
             foreach (var id in body.Party)
             {
-                if (await store.GetAsync(id, ct) is not { } p)
+                if (await store.GetAsync(id, ct) is not { DeletedAt: null } p)
                     return Results.BadRequest(new { error = "invalid", errors = new[] { "unknown_pokemon" } });
                 var name = string.IsNullOrWhiteSpace(p.Nickname) ? p.SpeciesName : p.Nickname;
                 party.Add(new PartyMember(p.Id, await store.ReadDataAsync(p, ct), name));

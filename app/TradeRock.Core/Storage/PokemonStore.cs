@@ -6,7 +6,7 @@ using TradeRock.Core.Pokemon;
 
 namespace TradeRock.Core.Storage;
 
-public sealed record ImportResult(StoredPokemon Pokemon, bool Created);
+public sealed record ImportResult(StoredPokemon Pokemon, bool Created, bool Restored = false);
 
 /// <summary>
 /// Guarda Pokémon: o .pk3 decriptado vai para vault/&lt;hh&gt;/&lt;sha256&gt;.pk3 e o resumo para o SQLite.
@@ -25,7 +25,13 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
         {
             // O arquivo pode ter sumido do disco; regrava a partir dos bytes recebidos.
             await WriteFileAsync(pk, ct);
-            return new ImportResult(existing, Created: false);
+            if (existing.DeletedAt is null)
+                return new ImportResult(existing, Created: false);
+
+            // Estava na lixeira: volta para a Caixa de entrada.
+            existing.DeletedAt = null;
+            await db.SaveChangesAsync(ct);
+            return new ImportResult(existing, Created: false, Restored: true);
         }
 
         await WriteFileAsync(pk, ct);
@@ -49,6 +55,7 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
             OriginGame = s.OriginGame,
             HeldItem = s.HeldItem,
             Fateful = s.Fateful,
+            Pid = new PK3(pk.Data.ToArray()).PID,
             Legality = AnalyzeLegality(pk.Data),
             LegalityPkhexVersion = LegalityReporter.PkhexVersion,
             Origin = origin,
@@ -76,13 +83,14 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
     public async Task<IReadOnlyList<StoredPokemon>> ListAsync(CancellationToken ct)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
-        return await db.Pokemon.AsNoTracking().OrderByDescending(p => p.AddedAt).ToListAsync(ct);
+        return await db.Pokemon.AsNoTracking().Include(p => p.Tags).Where(p => p.DeletedAt == null)
+            .OrderByDescending(p => p.AddedAt).ToListAsync(ct);
     }
 
     public async Task<StoredPokemon?> GetAsync(Guid id, CancellationToken ct)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
-        return await db.Pokemon.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id, ct);
+        return await db.Pokemon.AsNoTracking().Include(p => p.Tags).SingleOrDefaultAsync(p => p.Id == id, ct);
     }
 
     /// <summary>Lê o .pk3 do disco e confere o hash (arquivo adulterado ou corrompido = erro).</summary>
@@ -110,7 +118,7 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var version = LegalityReporter.PkhexVersion;
-        var stale = await db.Pokemon.Where(p => p.Legality == null || p.LegalityPkhexVersion != version).ToListAsync(ct);
+        var stale = await db.Pokemon.Where(p => p.Legality == null || p.LegalityPkhexVersion != version || p.Pid == null).ToListAsync(ct);
         foreach (var p in stale)
         {
             try
@@ -118,6 +126,7 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
                 var data = await ReadDataAsync(p, ct);
                 p.Legality = AnalyzeLegality(data);
                 p.Fateful = Pk3Reader.Read(data).Summary.Fateful;
+                p.Pid = new PK3(data.ToArray()).PID;
             }
             catch (Exception e) when (e is IOException or InvalidDataException)
             {
