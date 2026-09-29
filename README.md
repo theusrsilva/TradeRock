@@ -4,10 +4,11 @@ Troque Pokémon com **Pokémon FireRed e LeafGreen do Nintendo Switch / Switch 2
 wireless local do jogo (LDN). O seu PC, ou uma plaquinha ESP32, finge ser um segundo Switch na
 sala de troca do Direct Corner.
 
-> **Estado:** em desenvolvimento (Entrega 4 de 11). Já dá para **criar Pokémon legais** no app,
-> organizá-los no **cofre** (caixas, tags, busca, exportação, injeção em `.sav` de GBA) e fazer o
-> assistente de troca de ponta a ponta em **modo demonstração** (motor simulado). Ainda não troca
-> com um Switch de verdade.
+> **Estado:** em desenvolvimento (Entrega 5 de 11). Já dá para **criar Pokémon legais** no app,
+> organizá-los no **cofre** (caixas, tags, busca, exportação, injeção em `.sav` de GBA), fazer o
+> assistente de troca de ponta a ponta em **modo demonstração** (motor simulado) e seguir o
+> **assistente de configuração**, que confere o sistema, a placa Wi-Fi ou o ESP32 e o `prod.keys`.
+> Ainda não troca com um Switch de verdade.
 
 O TradeRock nunca baixa, sugere fontes nem distribui `prod.keys` ou ROMs. Use só as chaves
 extraídas do seu próprio console.
@@ -58,6 +59,7 @@ flowchart LR
 app/TradeRock.App/       executável: servidor + janela
 app/TradeRock.Core/      domínio: troca (coordenador, motores), Pokémon (PKHeX), armazenamento (SQLite)
 app/TradeRock.Tests/     testes (xUnit v3)
+catalog/                 catálogo de placas Wi-Fi, ESP32 e conversores USB-serial (JSON)
 worker/TradeRock.Worker/ worker privilegiado (Linux)
 frontend/                React + Vite + TypeScript + Tailwind
 engines/                 submódulos (motores e AutoMod)
@@ -164,6 +166,29 @@ a cada mudança. Quando algo não é possível, a tela mostra o que mudou ou o q
   Na janela do app, o arquivo é alterado no mesmo lugar. No navegador, você baixa o save novo.
 - Solte `.pk3`/`.ek3`/`.sav` em qualquer lugar da janela para importar.
 
+### Assistente de configuração
+
+Na primeira execução, a tela inicial leva ao assistente (`/configurar`, também em Configurações).
+São 7 etapas: boas-vindas, `prod.keys`, escolha do rádio, preparo do rádio, preparo do jogo,
+teste com o Switch e resumo. O app lê o sistema sem pedir senha:
+- distribuição, WSL ou máquina virtual;
+- placas Wi-Fi (`/sys/class/ieee80211`) e qual delas leva a internet;
+- portas seriais e o conversor USB de cada uma;
+- grupos do usuário (`dialout` ou `uucp`) e o `brltty`.
+
+Depois compara com o [catálogo](catalog/hardware-catalog.json). Cada item do catálogo cita a fonte
+(README, issue ou PR dos motores) e a data da conferência. As placas sem relato aparecem como
+"não testado". Quando falta algo, o app mostra o comando para resolver, mas nunca o executa com
+privilégios.
+
+O **relatório** exportado no resumo serve para pedir ajuda. Ele não inclui chaves, nome de
+usuário nem caminhos pessoais. O componente de rede e o teste real da placa chegam na Entrega 6,
+o teste com o Switch na 7 e o firmware do ESP32 na 9. Até lá, esses itens aparecem como "em breve".
+
+Em desenvolvimento (`ASPNETCORE_ENVIRONMENT=Development`), um seletor no topo do assistente simula
+9 cenários: Linux com placa compatível, instável, desconhecida ou problemática, sem Wi-Fi, WSL,
+máquina virtual, Linux com ESP32 e Windows com ESP32.
+
 ### Modo demonstração
 
 Sem Switch, placa ou prod.keys, o TradeRock usa o **FakeEngine**, que simula a troca inteira no
@@ -188,7 +213,7 @@ Dentro dela:
 | `traderock.db` | Banco SQLite |
 | `vault/` | Arquivos `.pk3`, nomeados pelo SHA-256 |
 | `backups/` | Cópias dos saves antes de qualquer injeção |
-| `keys/` | `prod.keys`, com permissão 700 |
+| `keys/` | `prod.keys` (pasta com permissão 700, arquivo 600) |
 | `logs/` | Logs do app |
 
 Migrações do banco: `dotnet tool restore && dotnet ef migrations add <Nome> --project app/TradeRock.Core --output-dir Storage/Migrations`.
@@ -198,7 +223,13 @@ Migrações do banco: `dotnet tool restore && dotnet ef migrations add <Nome> --
 **"Não foi possível abrir a janela do TradeRock: faltam bibliotecas do sistema"**
 Instale o WebKitGTK 4.1 e o libnotify (o comando aparece na mensagem) ou rode com `--no-window`.
 
-A seção de placas Wi-Fi e ESP32 chega com o catálogo de hardware (Entrega 5).
+**Minha placa Wi-Fi serve?** Abra o assistente em Configurações. A etapa "Escolher o rádio"
+mostra a sua placa e a tabela de placas conhecidas. No WSL ou numa máquina virtual, a placa Wi-Fi
+não fica acessível: use um ESP32 ou o Linux instalado de verdade.
+
+**O ESP32 não aparece / "permissão negada" na porta.** Use um cabo USB de dados e adicione o seu
+usuário ao grupo `dialout` (Arch: `uucp`), depois saia e entre de novo na sessão. Se o `brltty`
+estiver rodando e você não usa display braile, desative-o. O assistente mostra os comandos exatos.
 
 ## Licença e créditos
 

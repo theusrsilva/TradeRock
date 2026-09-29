@@ -27,6 +27,9 @@ public static class ServiceSetup
         services.AddDbContextFactory<TradeRockDb>(o => o.UseSqlite($"Data Source={paths.DatabasePath}"));
         services.AddSingleton<PokemonStore>();
         services.AddSingleton<VaultStore>();
+        services.AddSingleton<TradeRock.Core.Setup.ProdKeys>();
+        services.AddSingleton<TradeRock.Core.Setup.ISystemProbe, TradeRock.Core.Setup.RealSystemProbe>();
+        services.AddSingleton<TradeRock.Core.Setup.SetupService>();
         services.AddSingleton<TradeRock.Core.Saves.SaveBackups>();
         services.AddSingleton<SettingsStore>();
         services.AddSingleton<TradeRecorder>();

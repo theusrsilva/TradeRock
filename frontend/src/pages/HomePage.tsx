@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Card } from '../components/ui'
 import { api } from '../lib/api'
-import type { Health, TradeSession } from '../lib/types'
+import type { Health, SetupStatus, TradeSession } from '../lib/types'
 
 type HealthState = { kind: 'loading' } | { kind: 'ok'; data: Health } | { kind: 'error' }
 
@@ -13,12 +13,17 @@ export default function HomePage() {
   const { t } = useTranslation()
   const [health, setHealth] = useState<HealthState>({ kind: 'loading' })
   const [session, setSession] = useState<TradeSession | null>(null)
+  const [setupDone, setSetupDone] = useState(true)
 
   useEffect(() => {
     api
       .get<Health>('/api/health')
       .then((data) => setHealth({ kind: 'ok', data }))
       .catch(() => setHealth({ kind: 'error' }))
+    api
+      .get<SetupStatus>('/api/setup')
+      .then((s) => setSetupDone(s.state.completed))
+      .catch(() => undefined)
     api
       .get<TradeSession | undefined>('/api/trades/current')
       .then((s) => setSession(s ?? null))
@@ -30,6 +35,14 @@ export default function HomePage() {
       <Card className="space-y-4">
         <h1 className="text-xl font-semibold">{t('home.title')}</h1>
         <p className="text-slate-600 dark:text-slate-300">{t('home.intro')}</p>
+        {!setupDone && (
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            {t('wizard.banner')}{' '}
+            <Link to="/configurar" className="font-semibold underline">
+              {t('wizard.bannerAction')}
+            </Link>
+          </p>
+        )}
         {session?.status === 'running' && (
           <p className="rounded-lg bg-sky-50 p-3 text-sm text-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
             {t('home.running')}{' '}

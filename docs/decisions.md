@@ -184,3 +184,36 @@ em memória. **Falta testar com um `.sav` real.**
 
   Com isso, leitura e injeção são testadas de ponta a ponta com um `.sav` real de 128 KB, sem
   arquivo baixado da internet.
+
+## D14. Assistente de configuração e catálogo (Entrega 5)
+
+- **Catálogo** em `catalog/hardware-catalog.json`, embutido no `TradeRock.Core`. Cada placa tem
+  status (`recommended`, `works`, `untested`, `unstable`, `problematic`, `unsupported`), a fonte
+  (README, issue ou PR do motor) e a data da conferência. As placas sem relato ficam como
+  `untested`, com aviso. O RTL8821CE também é `recommended`, porque o README do frlg-ldn-trade o
+  lista com confiabilidade alta. A atualização do catálogo pelo GitHub Releases fica para a
+  Entrega 8.
+- **Placa ↔ catálogo.** A comparação é pelo nome do módulo ou do driver em
+  `/sys/class/ieee80211/*/device/driver`, porque o módulo (`rtw88_8821ce`) e o driver
+  (`rtw_8821ce`) podem ter nomes diferentes. Os conversores USB-serial são identificados por
+  VID:PID.
+- **Leitura do sistema** (`LinuxProbe`). Só leitura de `/sys`, `/proc` e `/etc`, sem root. A raiz é
+  configurável, e os testes montam uma árvore falsa. Os links do sysfs são relativos, por isso o
+  caminho é resolvido componente a componente, como o `realpath`.
+- **Verificações** (`SetupChecks.Evaluate`). Cada uma tem código, argumentos, etapa, status e se é
+  essencial. Quando algo falta, o app mostra o comando de correção (`usermod`, `brltty`, regra
+  udev) para o usuário copiar e nunca o executa. As verificações que dependem de entregas futuras
+  (worker, teste da placa, teste com o Switch, firmware do ESP32) aparecem como "em breve". A troca
+  real só fica liberada (`ReadyToTrade`) quando todas as essenciais estão OK. O motor simulado
+  continua livre.
+- **prod.keys.** A validação imita `ldn.load_keys`:
+  - `aes_kek_generation_source`, `aes_key_generation_source` e `master_key_00` ou `master_key_12`;
+  - 16 bytes em hex.
+
+  O arquivo é gravado já com o modo 600 (`UnixCreateMode`), sem janela de tempo com outra
+  permissão. A API e o relatório informam só se o arquivo é válido e o que falta. Nunca aparecem
+  valores nem os nomes das chaves presentes.
+- **Relatório** em markdown para pedir ajuda: sistema, placas, portas e verificações, sem nome de
+  usuário, caminhos pessoais ou chaves.
+- **Simulação** só com `ASPNETCORE_ENVIRONMENT=Development`. Nos outros ambientes, as rotas
+  `/api/setup/scenarios` e `/api/setup/simulation` respondem 404.

@@ -5,6 +5,7 @@ import HistoryPage from './pages/HistoryPage'
 import HomePage from './pages/HomePage'
 import VaultPage from './pages/vault/VaultPage'
 import SettingsPage from './pages/SettingsPage'
+import SetupPage from './pages/setup/SetupPage'
 import TradePage from './pages/trade/TradePage'
 import { useTheme } from './theme'
 
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/criar/:id" element={<BuilderPage />} />
           <Route path="/historico" element={<HistoryPage />} />
           <Route path="/configuracoes" element={<SettingsPage />} />
+          <Route path="/configurar" element={<SetupPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>
       </Layout>

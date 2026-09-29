@@ -396,3 +396,114 @@ export interface SaveLayoutInfo {
     occupied: { box: number; slot: number; species: number; speciesName: string; nickname: string; level: number; isEgg: boolean }[]
   }
 }
+
+// ---- Assistente de primeira execução ----
+
+export type CompatStatus = 'recommended' | 'works' | 'untested' | 'unstable' | 'problematic' | 'unsupported'
+export type CheckStatus = 'ok' | 'warning' | 'error' | 'pending' | 'info'
+
+export interface LocalizedText {
+  'pt-BR': string
+  en: string
+}
+
+export interface WifiEntry {
+  id: string
+  model: string
+  type: 'usb' | 'internal'
+  chip: string
+  drivers: string[]
+  status: CompatStatus
+  notes: LocalizedText
+  source: string
+  verifiedAt: string
+}
+
+export interface Esp32Entry {
+  id: string
+  model: string
+  chip: string
+  module: string | null
+  connection: 'uart' | 'native_usb'
+  flash: string
+  status: CompatStatus
+  notes: LocalizedText
+  source: string
+  verifiedAt: string
+}
+
+export interface HardwareCatalog {
+  schema: number
+  updatedAt: string
+  notice: LocalizedText
+  wifi: WifiEntry[]
+  esp32: Esp32Entry[]
+  usbSerial: { vid: string; pid: string; name: string; driverUrl: string | null }[]
+}
+
+export interface WifiCardInfo {
+  phy: string
+  interfaces: string[]
+  driver: string | null
+  module: string | null
+  bus: string
+  vendorId: string | null
+  productId: string | null
+  productName: string | null
+  isInternetConnection: boolean
+}
+
+export interface SerialPortInfo {
+  path: string
+  vendorId: string | null
+  productId: string | null
+  productName: string | null
+  driverMissing: boolean
+}
+
+export interface SetupCheck {
+  id: string
+  step: number
+  status: CheckStatus
+  essential: boolean
+  code: string
+  args: Record<string, string> | null
+  fix: string | null
+  availableIn: string | null
+}
+
+export interface SetupStatus {
+  system: {
+    os: 'linux' | 'windows' | 'other'
+    isWsl: boolean
+    virtualMachine: string | null
+    distro: { id: string; idLike: string; name: string } | null
+    wifiCards: WifiCardInfo[]
+    serialPorts: SerialPortInfo[]
+    brlttyRunning: boolean
+    networkManagerRunning: boolean
+    simulatedScenario: string | null
+  }
+  serialGroup: string
+  advice: {
+    situation: 'windows' | 'wsl' | 'vm' | 'no_wifi' | 'wifi_compatible' | 'wifi_test_first' | 'wifi_problematic'
+    options: { engine: 'wifi' | 'esp32'; available: boolean; recommended: boolean; reasonCode: string | null }[]
+    cards: { card: WifiCardInfo; status: CompatStatus; matches: WifiEntry[] }[]
+    bestCard: { card: WifiCardInfo; status: CompatStatus; matches: WifiEntry[] } | null
+    suggestedUsbAdapters: WifiEntry[]
+  }
+  state: {
+    completed: boolean
+    radio: 'wifi' | 'esp32' | null
+    phy: string | null
+    serialPort: string | null
+    esp32Board: string | null
+    esp32ModuleConfirmed: boolean
+    keysSkipped: boolean
+    switchTestPassed: boolean
+  }
+  keys: { valid: boolean; invalidLines: number[]; presentRequired: string[]; missingRequired: string[]; protocols: number[]; keyCount: number } | null
+  checks: SetupCheck[]
+  readyToTrade: boolean
+  catalogUpdatedAt: string
+}

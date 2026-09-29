@@ -31,7 +31,7 @@ public static class TradeEndpoints
         var group = api.MapGroup("/trades");
 
         group.MapPost("/", async (StartTradeDto body, EngineRegistry engines, TradeCoordinator coordinator,
-            PokemonStore store, SettingsStore settings, CancellationToken ct) =>
+            PokemonStore store, SettingsStore settings, TradeRock.Core.Setup.SetupService setup, CancellationToken ct) =>
         {
             if (body.Party is null || body.OfferedSlots is null || body.Trainer is null)
                 return Results.BadRequest(new { error = "invalid", errors = new[] { "missing_fields" } });
@@ -61,6 +61,11 @@ public static class TradeEndpoints
             }
 
             var engine = await engines.GetSelectedAsync(ct);
+
+            // Motor real só com o assistente concluído no essencial (chaves, rádio, teste com o Switch).
+            // O modo demonstração continua liberado.
+            if (!engine.IsSimulation && !(await setup.StatusAsync(ct)).ReadyToTrade)
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "setup_incomplete" } });
             var request = new TradeRequest(
                 party, body.OfferedSlots, body.Game,
                 new TrainerProfile(body.Trainer.Name, body.Trainer.Tid, body.Trainer.Sid),

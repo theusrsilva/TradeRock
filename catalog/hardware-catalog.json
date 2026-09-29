@@ -1,0 +1,217 @@
+{
+  "schema": 1,
+  "updatedAt": "2026-09-29",
+  "notice": {
+    "pt-BR": "A compatibilidade muda rápido: drivers, firmwares e o próprio motor de troca são atualizados com frequência. Estes dados foram conferidos nas fontes indicadas na data de cada item.",
+    "en": "Compatibility changes quickly: drivers, firmware and the trade engine itself are updated often. This data was checked against the listed sources on each item's date."
+  },
+  "wifi": [
+    {
+      "id": "alfa-awus036achm",
+      "model": "ALFA AWUS036ACHM",
+      "type": "usb",
+      "chip": "MediaTek MT7610U",
+      "drivers": ["mt76x0u"],
+      "status": "recommended",
+      "notes": {
+        "pt-BR": "Confiabilidade alta segundo o autor do motor; é a placa usada na demonstração. Por ser USB, deixa a placa interna livre para a internet.",
+        "en": "High reliability according to the engine author; it is the adapter used in the demo. Being USB, it leaves the internal card free for internet."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade#tested-wifi-cards",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "realtek-rtl8821ce",
+      "model": "Realtek RTL8821CE",
+      "type": "internal",
+      "chip": "Realtek RTL8821CE",
+      "drivers": ["rtw88_8821ce", "rtw_8821ce"],
+      "status": "recommended",
+      "notes": {
+        "pt-BR": "Placa interna (PCIe) com confiabilidade alta segundo o autor do motor.",
+        "en": "Internal card (PCIe) with high reliability according to the engine author."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade#tested-wifi-cards",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "comfast-mt7612u",
+      "model": "COMFAST (MediaTek MT7612U)",
+      "type": "usb",
+      "chip": "MediaTek MT7612U",
+      "drivers": ["mt76x2u"],
+      "status": "works",
+      "notes": {
+        "pt-BR": "Relato de um usuário: funcionou com o driver padrão do Linux, mas com alcance ruim. Não testado pelo autor do motor.",
+        "en": "One user report: worked with the stock Linux driver, but with poor range. Not tested by the engine author."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade/issues/5",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "ralink-rt5370",
+      "model": "Ralink RT5370",
+      "type": "usb",
+      "chip": "Ralink RT5370",
+      "drivers": ["rt2800usb"],
+      "status": "works",
+      "notes": {
+        "pt-BR": "Relato num pull request ainda aberto: duas trocas completas, com a opção nohwcrypt=1 do driver e o NetworkManager configurado para ignorar as interfaces da troca. Não testado pelo autor do motor.",
+        "en": "Reported in a still-open pull request: two complete trades, with the driver's nohwcrypt=1 option and NetworkManager set to ignore the trade interfaces. Not tested by the engine author."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade/pull/9",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "realtek-rtl8822ce",
+      "model": "Realtek RTL8822CE",
+      "type": "internal",
+      "chip": "Realtek RTL8822CE",
+      "drivers": ["rtw88_8822ce", "rtw_8822ce"],
+      "status": "untested",
+      "notes": {
+        "pt-BR": "Não encontramos relato público de teste desta placa. Você pode testar: o TradeRock mostra se ela funciona.",
+        "en": "We found no public test report for this card. You can test it: TradeRock shows whether it works."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade#tested-wifi-cards",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "amd-rz616",
+      "model": "AMD RZ616",
+      "type": "internal",
+      "chip": "MediaTek MT7922",
+      "drivers": ["mt7921e"],
+      "status": "unstable",
+      "notes": {
+        "pt-BR": "Confiabilidade baixa segundo o autor do motor: cerca de metade da velocidade e às vezes trava antes de encerrar.",
+        "en": "Low reliability according to the engine author: about half the speed and sometimes deadlocks before exiting."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade#tested-wifi-cards",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "intel-ax200",
+      "model": "Intel Wi-Fi 6 AX200",
+      "type": "internal",
+      "chip": "Intel AX200",
+      "drivers": ["iwlwifi"],
+      "status": "problematic",
+      "notes": {
+        "pt-BR": "Não consegue receber endereço IP na rede da troca.",
+        "en": "Unable to be assigned an IP address on the trade network."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade#known-problematic-wifi-cards",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "intel-ax211",
+      "model": "Intel Wi-Fi 6E AX211",
+      "type": "internal",
+      "chip": "Intel AX211",
+      "drivers": ["iwlwifi"],
+      "status": "problematic",
+      "notes": {
+        "pt-BR": "Relato de usuário: sem suporte ao modo monitor. A família Intel AX2xx é considerada incompatível.",
+        "en": "User report: no monitor mode support. The Intel AX2xx family is considered incompatible."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade/issues/5",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "atheros-ar9271",
+      "model": "Atheros AR9271",
+      "type": "usb",
+      "chip": "Qualcomm Atheros AR9271",
+      "drivers": ["ath9k_htc"],
+      "status": "problematic",
+      "notes": {
+        "pt-BR": "Na maioria das vezes não consegue receber endereço IP na rede da troca.",
+        "en": "Most of the time unable to be assigned an IP address on the trade network."
+      },
+      "source": "https://github.com/tornadus/frlg-ldn-trade#known-problematic-wifi-cards",
+      "verifiedAt": "2026-09-29"
+    }
+  ],
+  "esp32": [
+    {
+      "id": "esp32-s3",
+      "model": "ESP32-S3",
+      "chip": "esp32s3",
+      "connection": "uart",
+      "flash": "16 MB",
+      "status": "recommended",
+      "notes": {
+        "pt-BR": "O mais testado: o autor da adaptação fez uma troca completa. Use a porta USB ligada ao conversor USB-serial da placa (ex.: CH340), não a USB nativa, em placas com duas portas. O firmware publicado ainda não foi retestado numa troca real.",
+        "en": "The most tested: the port author completed a full trade. Use the USB port wired to the board's USB-serial converter (e.g. CH340), not the native USB, on boards with two ports. The published firmware hasn't been re-tested in a real trade yet."
+      },
+      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32/blob/main/firmware/esp32-s3/README.md",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "esp32-c3",
+      "model": "ESP32-C3",
+      "chip": "esp32c3",
+      "connection": "native_usb",
+      "flash": "4 MB",
+      "status": "works",
+      "notes": {
+        "pt-BR": "Uma troca completa relatada; a estabilidade em uso longo ainda precisa de teste. Usa a USB nativa do chip, não um conversor USB-serial.",
+        "en": "One complete trade reported; long-run stability still needs testing. Uses the chip's native USB, not a USB-serial converter."
+      },
+      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32/blob/main/firmware/esp32-c3/README.md",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "esp32-c6",
+      "model": "ESP32-C6",
+      "chip": "esp32c6",
+      "connection": "uart",
+      "flash": "16 MB",
+      "status": "works",
+      "notes": {
+        "pt-BR": "Duas trocas reais relatadas. Usa a porta do conversor USB-serial da placa. O firmware publicado não foi retestado numa troca real.",
+        "en": "Two real trades reported. Uses the board's USB-serial converter port. The published firmware hasn't been re-tested in a real trade."
+      },
+      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32#readme",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "esp32-wroom-32e",
+      "model": "ESP32 clássico (módulo ESP32-WROOM-32E)",
+      "chip": "esp32",
+      "module": "ESP32-WROOM-32E",
+      "connection": "uart",
+      "flash": "4 MB",
+      "status": "untested",
+      "notes": {
+        "pt-BR": "É o único módulo clássico aceito pelo firmware. O firmware foi gravado e conferido numa placa real, mas não há troca completa relatada com ele. Confira o nome completo na blindagem metálica do módulo.",
+        "en": "The only classic module the firmware accepts. The firmware was flashed and verified on a real board, but no complete trade has been reported with it. Check the full name on the module's metal shield."
+      },
+      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32/blob/main/firmware/esp32/README.md",
+      "verifiedAt": "2026-09-29"
+    },
+    {
+      "id": "esp32-wroom-32",
+      "model": "ESP32 clássico (módulo ESP32-WROOM-32, antigo)",
+      "chip": "esp32",
+      "module": "ESP32-WROOM-32",
+      "connection": "uart",
+      "flash": "4 MB",
+      "status": "unsupported",
+      "notes": {
+        "pt-BR": "Problemas conhecidos: não completa trocas de forma confiável. O nome é quase igual ao do WROOM-32E; confira a letra E na blindagem do módulo.",
+        "en": "Known problems: doesn't complete trades reliably. The name is almost the same as WROOM-32E; check for the letter E on the module shield."
+      },
+      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32/blob/main/firmware/esp32/README.md",
+      "verifiedAt": "2026-09-29"
+    }
+  ],
+  "usbSerial": [
+    { "vid": "1a86", "pid": "7523", "name": "WCH CH340", "driverUrl": "https://www.wch-ic.com/downloads/CH341SER_EXE.html" },
+    { "vid": "1a86", "pid": "55d4", "name": "WCH CH9102", "driverUrl": "https://www.wch-ic.com/downloads/CH343SER_EXE.html" },
+    { "vid": "10c4", "pid": "ea60", "name": "Silicon Labs CP210x", "driverUrl": "https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" },
+    { "vid": "0403", "pid": "6001", "name": "FTDI FT232", "driverUrl": "https://ftdichip.com/drivers/vcp-drivers/" },
+    { "vid": "303a", "pid": "1001", "name": "Espressif USB (nativa)", "driverUrl": null }
+  ]
+}

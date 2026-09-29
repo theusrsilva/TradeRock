@@ -6,6 +6,7 @@ import { languages } from '../i18n'
 import { ContentFile } from '../components/Markdown'
 import { trainerNameErrors } from '../lib/trainer'
 import type { Engine, MyTrainer, Pokemon, TradeSettings } from '../lib/types'
+import { Link } from 'react-router'
 import { useTheme, type ThemeChoice } from '../theme'
 
 type NumberSetting = Exclude<keyof TradeSettings, 'allowIllegal'>
@@ -63,6 +64,13 @@ export default function SettingsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">{t('settings.title')}</h1>
+
+      <Card className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-semibold">{t('wizard.title')}</span>
+        <Link to="/configurar" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
+          {t('wizard.bannerAction')}
+        </Link>
+      </Card>
 
       <Card className="space-y-3">
         <h2 className="font-semibold">{t('settings.appearance')}</h2>
