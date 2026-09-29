@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>TradeRock.App</RootNamespace>
+    <AssemblyName>traderock</AssemblyName>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- O frontend compilado (vite build → wwwroot/) vai embutido no executável. -->
+    <!-- Ligado no alvo EmbedFrontend só quando existe wwwroot/. -->
+    <GenerateEmbeddedFilesManifest>false</GenerateEmbeddedFilesManifest>
+    <!-- Sem wwwroot como conteúdo solto: tudo sai do assembly. -->
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <FrontendDir>$(MSBuildThisFileDirectory)..\..\frontend\</FrontendDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TradeRock.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Photino.NET" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TradeRock.Core\TradeRock.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="appsettings*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    dotnet build -p:BuildFrontend=true  → roda "npm ci && npm run build" antes de compilar.
+    Usado no CI e no empacotamento. No dia a dia, o Vite em modo dev serve o frontend.
+  -->
+  <Target Name="BuildFrontend" BeforeTargets="PrepareForBuild" Condition="'$(BuildFrontend)' == 'true'">
+    <Exec Command="npm ci" WorkingDirectory="$(FrontendDir)" />
+    <Exec Command="npm run build" WorkingDirectory="$(FrontendDir)" />
+  </Target>
+
+  <!-- Avaliado depois do BuildFrontend, para pegar os arquivos recém-gerados. -->
+  <Target Name="EmbedFrontend" AfterTargets="BuildFrontend" BeforeTargets="PrepareForBuild">
+    <ItemGroup>
+      <EmbeddedResource Include="wwwroot\**" />
+    </ItemGroup>
+    <PropertyGroup Condition="Exists('wwwroot\index.html')">
+      <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    </PropertyGroup>
+  </Target>
+
+</Project>

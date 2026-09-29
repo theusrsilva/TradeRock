@@ -1,0 +1,54 @@
+# Desenvolvimento com hot reload: backend (dotnet watch) + frontend (Vite).
+#   docker compose -f docker-compose.dev.yml up --build
+#   abra http://localhost:5173
+# Só a porta do Vite é publicada; o backend fica na rede interna do compose.
+# O motor com a placa Wi-Fi real NÃO roda em container (veja docs/dev-host.md).
+
+x-dev-image: &dev-image
+  build:
+    context: .devcontainer
+    args:
+      USER_UID: ${UID:-1000}
+      USER_GID: ${GID:-1000}
+  image: traderock-dev
+  volumes:
+    - .:/workspace
+    - nuget:/home/dev/.nuget
+  working_dir: /workspace
+
+services:
+  backend:
+    <<: *dev-image
+    command: >
+      dotnet watch run --project app/TradeRock.App --non-interactive --
+      --no-window --port 5080 --bind 0.0.0.0
+      --allowed-hosts "localhost;127.0.0.1;backend"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+      Server__DevToken: dev-token-traderock-0000000000000000
+      Server__DataDir: /workspace/.dev-data
+    # ESP32: descomente e ajuste a porta.
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
+
+  frontend:
+    <<: *dev-image
+    command: sh -c "npm ci && npm run dev"
+    working_dir: /workspace/frontend
+    environment:
+      VITE_HOST: 0.0.0.0
+      TRADEROCK_BACKEND: http://backend:5080
+      TRADEROCK_DEV_TOKEN: dev-token-traderock-0000000000000000
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - .:/workspace
+      - node-modules:/workspace/frontend/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  nuget:
+  node-modules:

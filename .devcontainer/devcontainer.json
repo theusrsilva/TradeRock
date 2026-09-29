@@ -1,0 +1,32 @@
+{
+  "name": "TradeRock",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "remoteUser": "dev",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": { "label": "Frontend (Vite)" }
+  },
+  "containerEnv": {
+    "ASPNETCORE_ENVIRONMENT": "Development"
+  },
+  "mounts": [
+    "source=traderock-nuget,target=/home/dev/.nuget,type=volume"
+  ],
+  // ESP32 dentro do container: descomente e ajuste a porta (veja o README).
+  // "runArgs": ["--device=/dev/ttyUSB0"],
+  "postCreateCommand": "git submodule update --init && cd frontend && npm ci",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  }
+}

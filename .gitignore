@@ -1,0 +1,21 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+node_modules/
+frontend/dist/
+publish/
+artifacts/
+*.AppImage
+*.deb
+# Nunca versionar chaves nem ROMs
+prod.keys
+*.keys
+*.nsp
+*.xci
+*.gba
+app/TradeRock.App/wwwroot/
+.dev-data/
+obj-container/
+bin-container/

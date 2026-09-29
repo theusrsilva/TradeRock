@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Mesma imagem do .devcontainer, para o CI e o dev usarem o mesmo ambiente.
+      - name: Imagem de build
+        run: docker build -t traderock-dev --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) .devcontainer
+
+      - name: Build e testes
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace traderock-dev scripts/ci.sh

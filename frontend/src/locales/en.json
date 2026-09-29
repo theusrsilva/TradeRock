@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "TradeRock",
+    "tagline": "Pokémon trading with FireRed and LeafGreen on Switch"
+  },
+  "status": {
+    "title": "App status",
+    "checking": "Checking the internal server…",
+    "ok": "Internal server is running",
+    "error": "Could not reach the internal server",
+    "version": "Version",
+    "system": "System",
+    "environment": "Environment"
+  },
+  "settings": {
+    "theme": "Theme",
+    "themeSystem": "Automatic",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "language": "Language"
+  },
+  "next": {
+    "title": "Under construction",
+    "body": "This is the app's foundation. Next come the trade assistant, the Pokémon builder, the vault and the first-run assistant."
+  }
+}

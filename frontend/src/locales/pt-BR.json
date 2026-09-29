@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "TradeRock",
+    "tagline": "Trocas de Pokémon com FireRed e LeafGreen do Switch"
+  },
+  "status": {
+    "title": "Status do aplicativo",
+    "checking": "Verificando o servidor interno…",
+    "ok": "Servidor interno funcionando",
+    "error": "Não foi possível falar com o servidor interno",
+    "version": "Versão",
+    "system": "Sistema",
+    "environment": "Ambiente"
+  },
+  "settings": {
+    "theme": "Tema",
+    "themeSystem": "Automático",
+    "themeLight": "Claro",
+    "themeDark": "Escuro",
+    "language": "Idioma"
+  },
+  "next": {
+    "title": "Em construção",
+    "body": "Esta é a base do aplicativo. Nas próximas etapas chegam o assistente de troca, o construtor de Pokémon, o cofre e o assistente de primeira execução."
+  }
+}

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/app/">
+    <Project Path="app/TradeRock.App/TradeRock.App.csproj" />
+    <Project Path="app/TradeRock.Core/TradeRock.Core.csproj" />
+    <Project Path="app/TradeRock.Tests/TradeRock.Tests.csproj" />
+  </Folder>
+  <Folder Name="/worker/">
+    <Project Path="worker/TradeRock.Worker/TradeRock.Worker.csproj" />
+  </Folder>
+</Solution>
