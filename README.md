@@ -361,7 +361,19 @@ pwsh scripts/smoke-windows.ps1 dist\TradeRock-Setup-<versão>.exe <versão>   # 
 O CI (`.github/workflows/ci.yml`) roda **só nas tags `v*`** (ou à mão, pela aba Actions). Ele
 testa tudo, gera os pacotes, testa o .deb no Ubuntu 22.04 e 24.04 e no Debian 12 e 13, e testa o
 Windows num runner Windows (testes, instalador e fumaça: instala, confere e desinstala). Na tag, com
-tudo passando, publica o Release. Detalhes em
+tudo passando, publica o Release.
+
+Para lançar uma versão, crie uma **tag anotada**: a mensagem vira a seção "Novidades" do Release,
+seguida do "qual arquivo baixar" ([packaging/release-notes.md](packaging/release-notes.md)) e da
+lista automática de mudanças do GitHub.
+
+```bash
+git tag -a v0.12.0 -m "Resumo da versão.
+
+- Novidade 1.
+- Correção 2."
+git push origin v0.12.0
+``` Detalhes em
 [packaging/README.md](packaging/README.md) e na decisão D17.
 
 ## Licença e créditos

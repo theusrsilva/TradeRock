@@ -198,6 +198,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: traderock-linux
@@ -210,6 +211,24 @@ jobs:
         run: |
           cd dist && sha256sum -c SHA256SUMS
           sha256sum -- TradeRock-Setup-*.exe >> SHA256SUMS
+      # Texto do Release: as novidades (mensagem da tag anotada), o "qual arquivo baixar"
+      # (packaging/release-notes.md) e, no fim, a lista automática de mudanças do GitHub.
+      - name: Notas
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+          {
+            if [[ $(git cat-file -t "$GITHUB_REF_NAME") == tag ]]; then
+              echo "## Novidades"
+              echo
+              git tag -l --format='%(contents:subject)%0a%0a%(contents:body)' "$GITHUB_REF_NAME" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
+              echo
+            fi
+            # O .deb troca "-" por "~" na versão (1.0.0-rc.1 → 1.0.0~rc.1), como no package-linux.sh.
+            sed -e "s/{{VERSION}}/$version/g" -e "s/{{DEB_VERSION}}/${version/-/\~}/g" packaging/release-notes.md
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -219,4 +238,4 @@ jobs:
           [[ $version == *-* ]] && prerelease="--prerelease"
           (cd dist && sha256sum -c SHA256SUMS)
           gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" \
-            --title "TradeRock $version" --generate-notes $prerelease
+            --title "TradeRock $version" --notes-file release-notes.md --generate-notes $prerelease
