@@ -14,9 +14,10 @@ public enum PokemonOrigin
 /// Pokémon guardado. O arquivo (.pk3 decriptado) fica em disco, nomeado pelo SHA-256;
 /// aqui ficam o hash e o resumo para listar e buscar. A Entrega 4 (cofre) amplia esta tabela.
 /// </summary>
-public sealed class StoredPokemon
+public sealed class StoredPokemon : IOwned
 {
     public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
     public required string Sha256 { get; set; }
     public int Size { get; set; }
     public ushort Species { get; set; }
@@ -63,19 +64,21 @@ public sealed class StoredPokemon
 }
 
 /// <summary>Caixa do cofre (30 posições, como no jogo).</summary>
-public sealed class VaultBox
+public sealed class VaultBox : IOwned
 {
     public const int Slots = 30;
 
     public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
     public required string Name { get; set; }
     public int Order { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
 
-public sealed class Tag
+public sealed class Tag : IOwned
 {
     public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
     public required string Name { get; set; }
 
     /// <summary>Nome de cor da paleta da interface (ex.: "sky", "amber").</summary>
@@ -89,9 +92,10 @@ public sealed class PokemonTag
 }
 
 /// <summary>Histórico de uma sessão de troca (uma ou mais trocas com o mesmo Switch).</summary>
-public sealed class TradeRecord
+public sealed class TradeRecord : IOwned
 {
     public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? EndedAt { get; set; }
     public required string EngineId { get; set; }
@@ -123,9 +127,10 @@ public sealed class TradeRecordEntry
 }
 
 /// <summary>Treinador simulado salvo (preset).</summary>
-public sealed class TrainerPreset
+public sealed class TrainerPreset : IOwned
 {
     public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
     public required string Label { get; set; }
     public required string Name { get; set; }
     public ushort Tid { get; set; }
@@ -138,4 +143,30 @@ public sealed class SettingEntry
 {
     public required string Key { get; set; }
     public required string Json { get; set; }
+}
+
+public enum UserRole
+{
+    User,
+    Admin,
+}
+
+/// <summary>
+/// Conta do modo servidor. A conta com Id = <see cref="OwnerScope.LocalOwner"/> é o dono do PC (sempre
+/// administrador); ela só entra pela rede depois de ganhar nome e senha.
+/// </summary>
+public sealed class UserAccount
+{
+    public Guid Id { get; set; }
+
+    /// <summary>Nome de login, em minúsculas. Null só na conta do dono ainda sem acesso pela rede.</summary>
+    public string? Username { get; set; }
+
+    /// <summary>Argon2id no formato PHC ($argon2id$v=19$m=...,t=...,p=...$sal$hash). Null = não entra pela rede.</summary>
+    public string? PasswordHash { get; set; }
+
+    public UserRole Role { get; set; }
+    public bool Disabled { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? LastLoginAt { get; set; }
 }

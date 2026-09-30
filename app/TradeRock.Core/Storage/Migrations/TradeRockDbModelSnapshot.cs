@@ -101,6 +101,9 @@ namespace TradeRock.Core.Storage.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
                     b.Property<uint?>("Pid")
                         .HasColumnType("INTEGER");
 
@@ -134,14 +137,14 @@ namespace TradeRock.Core.Storage.Migrations
 
                     b.HasIndex("DeletedAt");
 
-                    b.HasIndex("Sha256")
-                        .IsUnique();
-
                     b.HasIndex("Species");
 
                     b.HasIndex("BoxId", "Slot")
                         .IsUnique()
                         .HasFilter("\"BoxId\" IS NOT NULL AND \"Slot\" IS NOT NULL");
+
+                    b.HasIndex("OwnerId", "Sha256")
+                        .IsUnique();
 
                     b.ToTable("Pokemon");
                 });
@@ -160,9 +163,12 @@ namespace TradeRock.Core.Storage.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("OwnerId", "Name")
                         .IsUnique();
 
                     b.ToTable("Tags");
@@ -201,6 +207,9 @@ namespace TradeRock.Core.Storage.Migrations
                     b.Property<bool>("IsSimulation")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
                     b.Property<ushort?>("Sid")
                         .HasColumnType("INTEGER");
 
@@ -226,7 +235,7 @@ namespace TradeRock.Core.Storage.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StartedAt");
+                    b.HasIndex("OwnerId", "StartedAt");
 
                     b.ToTable("Trades");
                 });
@@ -278,6 +287,9 @@ namespace TradeRock.Core.Storage.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
                     b.Property<ushort?>("Sid")
                         .HasColumnType("INTEGER");
 
@@ -286,7 +298,42 @@ namespace TradeRock.Core.Storage.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OwnerId");
+
                     b.ToTable("TrainerPresets");
+                });
+
+            modelBuilder.Entity("TradeRock.Core.Storage.UserAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Disabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("LastLoginAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("TradeRock.Core.Storage.VaultBox", b =>
@@ -305,9 +352,12 @@ namespace TradeRock.Core.Storage.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Order");
+                    b.HasIndex("OwnerId", "Order");
 
                     b.ToTable("Boxes");
                 });

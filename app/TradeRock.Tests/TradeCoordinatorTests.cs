@@ -317,13 +317,13 @@ internal sealed class MemoryRecorder : ITradeRecorder
     public List<byte[]> Stored { get; } = [];
     public List<TradeRecord> Records { get; } = [];
 
-    public Task<Guid> StoreReceivedAsync(byte[] data, CancellationToken ct)
+    public Task<Guid> StoreReceivedAsync(Guid owner, byte[] data, CancellationToken ct)
     {
         lock (Stored) Stored.Add(data);
         return Task.FromResult(Guid.NewGuid());
     }
 
-    public Task SaveAsync(TradeRecord record, CancellationToken ct)
+    public Task SaveAsync(Guid owner, TradeRecord record, CancellationToken ct)
     {
         lock (Records) Records.Add(record);
         return Task.CompletedTask;

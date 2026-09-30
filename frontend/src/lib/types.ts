@@ -100,6 +100,7 @@ export interface TradeEvent {
 
 export interface TradeSession {
   id: string
+  ownerId: string
   engineId: string
   isSimulation: boolean
   status: TradeSessionStatus
@@ -619,4 +620,66 @@ export interface SetupStatus {
   switchTestSeconds: number
   /** Só na simulação (desenvolvimento): resultados que o teste com o Switch pode devolver. */
   simulatedSwitchOutcomes: SwitchTestCode[] | null
+}
+
+// ---------- Modo servidor ----------
+
+export type UserRole = 'user' | 'admin'
+
+export interface Me {
+  authenticated: boolean
+  local: boolean
+  id: string | null
+  username: string | null
+  role: UserRole | null
+  csrf: string | null
+  serverMode: boolean
+}
+
+export interface Account {
+  id: string
+  username: string | null
+  role: UserRole
+  disabled: boolean
+  isOwner: boolean
+  canLogin: boolean
+  createdAt: string
+  lastLoginAt: string | null
+}
+
+export interface LanInterface {
+  name: string
+  address: string
+  wireless: boolean
+  blocked: boolean
+}
+
+export interface ServerModeStatus {
+  enabled: boolean
+  interface: string | null
+  port: number
+  url: string | null
+  radio: 'wifi' | 'esp32' | 'none'
+  interfaces: LanInterface[]
+  sessions: number
+}
+
+export interface QueueItem {
+  id: string
+  name: string | null
+  isHost: boolean
+  position: number
+  mine: boolean
+  enqueuedAt: string
+}
+
+export interface TradeQueue {
+  entries: QueueItem[]
+  serverMode: boolean
+}
+
+export interface QueuedTrade {
+  queued: true
+  entryId: string
+  position: number
 }

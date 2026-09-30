@@ -442,3 +442,64 @@ em memória. **Falta testar com um `.sav` real.**
 - **Não verificado:** placa real (gravação, troca e teste com o Switch). Os binários do S3, C6 e C3
   publicados pelo easyworld também não foram regravados numa placa para uma troca real, segundo as
   notas de versão deles.
+
+## D19. Modo servidor na rede (Entrega 10)
+
+Com o app aberto, a mesma interface é servida para a rede da casa (celular, outro PC), com contas.
+
+- **Liga e desliga sem reiniciar.** O endereço local (127.0.0.1, porta aleatória, token da D1) não
+  muda. O da rede entra como um endpoint da seção `Kestrel` da configuração, que o Kestrel já recarrega
+  sozinho (`reloadOnChange`), e o IP entra nos hosts aceitos (a filtragem de hosts também recarrega).
+  - Escuta **só no IPv4 da interface escolhida**, nunca em `0.0.0.0`. Porta padrão 8337 (1024–65535).
+  - Começa **desligado a cada abertura** do app; a interface e a porta ficam guardadas.
+  - Desligar derruba todos os logins da rede e tira o IP dos hosts aceitos.
+  - Porta ocupada ou endereço sumido: o app espera até 5 s pelo endpoint e avisa `bind_failed`.
+- **Nunca na placa Wi-Fi das trocas.** Com o rádio Wi-Fi (assistente), as interfaces do phy escolhido
+  ficam bloqueadas (sem phy escolhido, todas as sem fio). Sem outra interface, o app pede um cabo ou um
+  segundo adaptador. Com o ESP32, qualquer interface serve. Escolher o motor Wi-Fi com o modo servidor
+  numa interface dessa placa é recusado (`server_mode_on_radio`).
+- **HTTP, não HTTPS** (decisão do autor). Um certificado próprio assustaria no celular. A tela avisa
+  que é só para a rede de casa, que a porta nunca deve ser liberada no roteador e que a senha trafega
+  aberta na rede local.
+- **Quem é quem** (`SessionAuthMiddleware` + `AccessPolicy`). A requisição é "da rede" quando chega
+  pelo IP e pela porta do modo servidor.
+  - O token da janela **não vale pela rede**.
+  - A página abre sem login, mas a API pede o login de uma conta (cookie `traderock_lan`, HttpOnly,
+    SameSite=Strict, só na memória, 12 h sem uso).
+  - Toda alteração pela rede exige o cabeçalho anti-CSRF `X-TradeRock-CSRF` (token da sessão, recebido
+    em `/api/auth/me` e no login) e, se o navegador mandar `Origin`, ele precisa ser o próprio endereço.
+- **Só na janela local**, mesmo para administradores pela rede: assistente (inclui o `prod.keys`, que
+  nunca trafega pela rede), worker, liga/desliga do modo servidor, fechar o app, diálogos nativos
+  (abririam no PC), escolha do motor e configurações de troca. Pela rede, `/api/health` responde
+  `window: false`.
+- **Contas.** Argon2id (Konscious 1.3.1; o .NET não tem Argon2) com os parâmetros mínimos da OWASP
+  (m=19 MiB, t=2, p=1), sal aleatório, formato PHC.
+  - Papéis: administrador (gerencia contas, tira pessoas da fila, cancela a troca dos outros) e usuário.
+  - A conta do **dono do PC** (id fixo `…0001`) é a da janela local: sempre administradora, não pode
+    ser apagada nem desativada. Ela entra pela rede só se ganhar nome e senha.
+  - Apagar uma conta apaga o cofre dela. Trocar a senha, desativar ou mudar o papel derruba os logins.
+  - Login errado não diz se a conta existe (mesmo tempo, com um hash falso).
+- **Freios.**
+  - Login: 10 erros por endereço em 15 min bloqueiam o endereço, e 5 erros seguidos travam a conta por
+    5 min (HTTP 429).
+  - Limite geral de 600 requisições por minuto por endereço da rede (`RateLimiter` do ASP.NET Core). A
+    janela local não tem limite.
+- **Um cofre por conta.** Pokémon, caixas, tags, histórico e treinadores salvos ganharam `OwnerId`.
+  - O `TradeRockDb` filtra por dono (filtro global do EF Core, lido de `OwnerScope` na criação do
+    contexto) e carimba o dono no que é criado. O dado antigo ficou com o dono do PC (migração
+    `Accounts`).
+  - "Meu treinador" vira uma chave por conta (`trainer.me@<id>`).
+  - Os arquivos `.pk3` continuam endereçados pelo hash e são compartilhados entre cofres: só saem do
+    disco quando nenhum cofre os usa.
+  - Conta nova começa com os Pokémon de demonstração.
+- **Fila** (`TradeQueue`, na frente do `TradeCoordinator`). Um rádio, uma troca por vez, na ordem de
+  chegada, e **a troca começa sozinha quando chega a vez** (decisão do autor).
+  - Uma entrada por conta. A janela local também entra na fila. O modo demonstração também passa por
+    ela.
+  - Todos veem a fila (nome e posição).
+  - Cada conta só vê a própria troca: `/api/trades/current` e o SSE filtram pelo dono da sessão.
+  - O recebido e o histórico vão para o cofre de quem pediu.
+  - Sair da fila: quem pediu ou um administrador. A troca em andamento é cancelada por quem pediu ou por
+    um administrador.
+- **Não verificado:** celular de verdade na rede. Testado com o Kestrel real em `127.0.0.2` (liga,
+  desliga e porta ocupada) e, no WSL, por curl no IP da `eth0`.

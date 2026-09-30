@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using TradeRock.App.Server;
+using TradeRock.Core.Engines;
 using TradeRock.Core.Storage;
 using TradeRock.Core.Trading;
 
@@ -40,9 +42,9 @@ public static class SettingsEndpoints
         });
 
         api.MapPut("/engines/selected", async (SelectEngineDto body, EngineRegistry registry, TradeCoordinator coordinator,
-            CancellationToken ct) =>
+            TradeQueue queue, ServerMode server, CancellationToken ct) =>
         {
-            if (coordinator.IsBusy)
+            if (coordinator.IsBusy || queue.WaitingCount > 0)
                 return Results.Conflict(new { error = "busy" });
             var engine = registry.All.FirstOrDefault(e => e.Id == body.Id);
             if (engine is null)
@@ -50,6 +52,9 @@ public static class SettingsEndpoints
             var availability = await engine.CheckAvailabilityAsync(ct);
             if (!availability.Available)
                 return Results.Conflict(new { error = "engine_unavailable", reason = availability.ReasonCode });
+            // A placa Wi-Fi sai da rede durante a troca: não pode ser a interface do modo servidor.
+            if (body.Id == PythonLdnEngine.EngineId && await server.ConflictsWithWifiAsync(ct))
+                return Results.Conflict(new { error = "server_mode_on_radio" });
             await registry.SelectAsync(body.Id, ct);
             return Results.NoContent();
         });

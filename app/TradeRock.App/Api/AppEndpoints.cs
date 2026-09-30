@@ -1,3 +1,4 @@
+using TradeRock.App.Server;
 using TradeRock.Core.Pokemon;
 
 namespace TradeRock.App.Api;
@@ -8,13 +9,14 @@ public static class AppEndpoints
     {
         var version = AppVersion.Current;
 
-        api.MapGet("/health", (IHostEnvironment env, WindowBridge window) => Results.Ok(new
+        // Pela rede, "window" é false: os diálogos nativos abririam no PC, não no celular.
+        api.MapGet("/health", (HttpContext context, IHostEnvironment env, WindowBridge window) => Results.Ok(new
         {
             app = "TradeRock",
             version,
             os = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsLinux() ? "linux" : "other",
             environment = env.EnvironmentName,
-            window = window.HasWindow,
+            window = window.HasWindow && Caller.Find(context) is { IsLocal: true },
         }));
 
         // Chamado pelo frontend depois que o usuário confirma fechar durante uma troca.

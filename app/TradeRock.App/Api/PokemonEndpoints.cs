@@ -1,3 +1,4 @@
+using TradeRock.App.Server;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Saves;
 using TradeRock.Core.Storage;
@@ -95,5 +96,5 @@ public static class PokemonEndpoints
     }
 
     private static Task<MyTrainer?> MyTrainerAsync(SettingsStore settings, CancellationToken ct) =>
-        settings.GetAsync<MyTrainer?>(BuilderEndpoints.MyTrainerKey, null, ct);
+        settings.GetAsync<MyTrainer?>(UserSettings.Key(BuilderEndpoints.MyTrainerKey), null, ct);
 }

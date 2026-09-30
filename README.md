@@ -261,6 +261,21 @@ simulação em desenvolvimento, use `--Engines:Fake:SpeedFactor=0.2` (0 = instan
 Na primeira execução, o app já traz dois Pokémon de demonstração (MEWTWO e DEOXYS, do repositório
 do easyworld). Detalhes do fluxo em [docs/trade-flow.md](docs/trade-flow.md).
 
+### Modo servidor (celular e outros PCs)
+
+Em **Configurações → Modo servidor**, a janela do PC pode abrir o TradeRock para a rede da casa
+enquanto o app estiver aberto. Escolha a interface de rede (nunca a placa Wi-Fi das trocas) e a porta
+(padrão 8337), e crie as contas em **Contas**. No celular, abra o endereço mostrado (ou leia o QR code)
+e entre com a conta.
+
+- Cada conta tem o próprio cofre, histórico e "Meu treinador".
+- Assistente, prod.keys, motor e worker ficam só na janela do PC.
+- As trocas entram numa fila, com a posição visível para todos, e cada uma começa sozinha quando chega
+  a vez.
+- É **http, só para a rede de casa**: nunca libere a porta no roteador.
+
+Detalhes em [docs/decisions.md](docs/decisions.md) (D19).
+
 ## Pastas de dados
 
 | Sistema | Pasta |

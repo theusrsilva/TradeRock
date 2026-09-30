@@ -24,7 +24,9 @@ public sealed class PythonLdnEngineOptions
 /// </summary>
 public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdKeys keys, PythonLdnEngineOptions options) : ITradeEngine
 {
-    public string Id => "python-ldn";
+    public const string EngineId = "python-ldn";
+
+    public string Id => EngineId;
 
     public bool IsSimulation => false;
 

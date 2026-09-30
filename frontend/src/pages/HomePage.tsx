@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Card } from '../components/ui'
 import { api } from '../lib/api'
+import { useIsRemote } from '../lib/auth'
 import type { Health, SetupStatus, TradeSession } from '../lib/types'
 
 type HealthState = { kind: 'loading' } | { kind: 'ok'; data: Health } | { kind: 'error' }
@@ -14,21 +15,24 @@ export default function HomePage() {
   const [health, setHealth] = useState<HealthState>({ kind: 'loading' })
   const [session, setSession] = useState<TradeSession | null>(null)
   const [setupDone, setSetupDone] = useState(true)
+  const remote = useIsRemote()
 
   useEffect(() => {
     api
       .get<Health>('/api/health')
       .then((data) => setHealth({ kind: 'ok', data }))
       .catch(() => setHealth({ kind: 'error' }))
-    api
-      .get<SetupStatus>('/api/setup')
-      .then((s) => setSetupDone(s.state.completed))
-      .catch(() => undefined)
+    // O assistente é só da janela do PC.
+    if (!remote)
+      api
+        .get<SetupStatus>('/api/setup')
+        .then((s) => setSetupDone(s.state.completed))
+        .catch(() => undefined)
     api
       .get<TradeSession | undefined>('/api/trades/current')
       .then((s) => setSession(s ?? null))
       .catch(() => undefined)
-  }, [])
+  }, [remote])
 
   return (
     <div className="grid gap-4 md:grid-cols-[2fr_1fr]">

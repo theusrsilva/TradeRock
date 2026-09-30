@@ -8,8 +8,9 @@ namespace TradeRock.Core.Trading;
 /// <summary>Onde o coordenador guarda o que recebeu e o histórico.</summary>
 public interface ITradeRecorder
 {
-    Task<Guid> StoreReceivedAsync(byte[] data, CancellationToken ct);
-    Task SaveAsync(TradeRecord record, CancellationToken ct);
+    /// <summary>Guarda o recebido no cofre de <paramref name="owner"/>.</summary>
+    Task<Guid> StoreReceivedAsync(Guid owner, byte[] data, CancellationToken ct);
+    Task SaveAsync(Guid owner, TradeRecord record, CancellationToken ct);
 }
 
 public sealed class TradeBusyException() : InvalidOperationException("Já existe uma troca em andamento.");
@@ -22,6 +23,7 @@ public sealed class InvalidTradeRequestException(IReadOnlyList<string> errors)
 
 public sealed record TradeSessionSnapshot(
     Guid Id,
+    Guid OwnerId,
     string EngineId,
     bool IsSimulation,
     TradeSessionStatus Status,
@@ -53,6 +55,7 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
     private readonly Lock _lock = new();
     private readonly List<Channel<TradeEvent>> _subscribers = [];
     private Session? _session;
+    private readonly Dictionary<Guid, Guid> _owners = []; // sessão → dono, para filtrar os eventos por conta
     private long _lastSeq; // global: um cliente SSE que reconecta não perde eventos de uma sessão nova
 
     public bool IsBusy
@@ -72,7 +75,14 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
         get { lock (_lock) return _session?.Run ?? Task.CompletedTask; }
     }
 
-    public TradeSessionSnapshot Start(ITradeEngine engine, TradeRequest request, TradeSettings settings)
+    /// <summary>Dono da sessão (das desta execução), ou null se desconhecida.</summary>
+    public Guid? OwnerOf(Guid sessionId)
+    {
+        lock (_lock) return _owners.TryGetValue(sessionId, out var owner) ? owner : null;
+    }
+
+    /// <summary>Começa uma sessão. O que for recebido vai para o cofre de <paramref name="owner"/>.</summary>
+    public TradeSessionSnapshot Start(ITradeEngine engine, TradeRequest request, TradeSettings settings, Guid? owner = null)
     {
         var errors = request.Validate();
         if (errors.Count > 0)
@@ -85,8 +95,9 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
             if (_session is { Status: TradeSessionStatus.Running })
                 throw new TradeBusyException();
 
-            session = new Session(Guid.CreateVersion7(), engine, request, settings, time.GetUtcNow());
+            session = new Session(Guid.CreateVersion7(), owner ?? OwnerScope.LocalOwner, engine, request, settings, time.GetUtcNow());
             _session = session;
+            _owners[session.Id] = session.Owner;
         }
 
         session.Run = Task.Run(() => RunAsync(session));
@@ -251,7 +262,7 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
             if (e.Kind == TradeEventKind.TradeDone && e.ReceivedData is { } data)
             {
                 // Grava no momento da confirmação (como o motor real faz com o .pk3).
-                var id = await recorder.StoreReceivedAsync(data, CancellationToken.None);
+                var id = await recorder.StoreReceivedAsync(s.Owner, data, CancellationToken.None);
                 lock (_lock)
                 {
                     if (e.TradeIndex is { } index && index >= 0 && index < s.Received.Length)
@@ -353,7 +364,7 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
                     }).ToList(),
                 };
             }
-            await recorder.SaveAsync(record, CancellationToken.None);
+            await recorder.SaveAsync(s.Owner, record, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -361,9 +372,10 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
         }
     }
 
-    private sealed class Session(Guid id, ITradeEngine engine, TradeRequest request, TradeSettings settings, DateTimeOffset startedAt)
+    private sealed class Session(Guid id, Guid owner, ITradeEngine engine, TradeRequest request, TradeSettings settings, DateTimeOffset startedAt)
     {
         public Guid Id { get; } = id;
+        public Guid Owner { get; } = owner;
         public ITradeEngine Engine { get; } = engine;
         public TradeRequest Request { get; } = request;
         public TradeSettings Settings { get; } = settings;
@@ -382,7 +394,7 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
         public List<TradeEvent> Events { get; } = [];
 
         public TradeSessionSnapshot Snapshot() => new(
-            Id, Engine.Id, Engine.IsSimulation, Status, Attempt, Settings.MaxAttempts, Request.Trades,
+            Id, Owner, Engine.Id, Engine.IsSimulation, Status, Attempt, Settings.MaxAttempts, Request.Trades,
             TradesCompleted, StartedAt, EndedAt, Request.Trainer.Name, Request.Game,
             Failure?.Code, Failure?.Message, Received.ToArray());
     }

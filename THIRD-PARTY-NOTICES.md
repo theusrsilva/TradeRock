@@ -9,6 +9,8 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | [kinnay/LDN](https://github.com/kinnay/LDN) | Biblioteca LDN usada pelo motor Python | GPL-3.0 |
 | [easyworld/frlg-ldn-trade-esp32](https://github.com/easyworld/frlg-ldn-trade-esp32) | Núcleo C# (motor ESP32, compilado com o patch de `engines/patches/frlg-ldn-trade-esp32`) e os binários de firmware de `firmware/release`, embutidos no app e gravados na placa | AGPL-3.0 (componente LDN: GPL-3.0); o firmware inclui o ESP-IDF v6.1 (Apache-2.0) e bibliotecas binárias da Espressif |
 | BouncyCastle.Cryptography, ZstdSharp.Port, System.IO.Ports | Dependências do núcleo do easyworld (NuGet) | MIT; MIT; MIT |
+| [Konscious.Security.Cryptography.Argon2](https://github.com/kmaragon/Konscious.Security.Cryptography) 1.3.1 (com Konscious.Security.Cryptography.Blake2 1.1.1 e System.Memory) | Hash Argon2id das senhas do modo servidor (NuGet) | MIT |
+| [QRCoder](https://github.com/Shane32/QRCoder) 1.8.0 | QR code do endereço do modo servidor (NuGet) | MIT |
 | [esptool](https://github.com/espressif/esptool) 5.4.0 | Gravação do firmware do ESP32 (no Python embutido, roda como usuário) | GPL-2.0-or-later |
 | cryptography, cffi, pycparser, pyserial, PyYAML, intelhex, bitstring, bitarray, tibs, reedsolo, click, rich, rich-click, markdown-it-py, mdurl, pygments, esp-pylib, websockets | Dependências do esptool | Apache-2.0/BSD; MIT; BSD-3-Clause; BSD-3-Clause; MIT; BSD-3-Clause; MIT; PSF-2.0; MIT; Public Domain; BSD-3-Clause; MIT; MIT; MIT; MIT; BSD-2-Clause; Apache-2.0; BSD-3-Clause |
 | [PKHeX.Core](https://github.com/kwsch/PKHeX) | Leitura e legalidade de Pokémon (NuGet) | GPL-3.0 |

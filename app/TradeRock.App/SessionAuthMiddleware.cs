@@ -1,20 +1,38 @@
+using System.Security.Cryptography;
+using System.Text;
+using TradeRock.App.Server;
 using TradeRock.Core;
+using TradeRock.Core.Storage;
 
 namespace TradeRock.App;
 
 /// <summary>
-/// Só quem conhece o token de sessão fala com o servidor.
+/// Quem pode falar com o servidor.
+///
+/// Janela local (127.0.0.1): só quem conhece o token de sessão.
 /// 1. A janela abre "/?t=TOKEN"; o servidor troca o token por um cookie HttpOnly e redireciona sem ele na URL.
 /// 2. Toda requisição seguinte precisa do cookie (ou do cabeçalho X-TradeRock-Token, usado pelo proxy do Vite).
+///
+/// Rede (modo servidor): o token da janela não vale. A página abre sem login; a API pede o login de uma conta
+/// (cookie próprio), o cabeçalho anti-CSRF em toda alteração e respeita <see cref="AccessPolicy"/>.
 /// </summary>
-public sealed class SessionAuthMiddleware(RequestDelegate next, SessionToken token)
+public sealed class SessionAuthMiddleware(RequestDelegate next, SessionToken token, ServerMode serverMode, LanSessions sessions,
+    AccountStore accounts)
 {
     public const string CookieName = "traderock_session";
     public const string HeaderName = "X-TradeRock-Token";
     public const string QueryName = "t";
+    public const string LanCookieName = "traderock_lan";
+    public const string CsrfHeaderName = "X-TradeRock-CSRF";
 
     public async Task InvokeAsync(HttpContext context)
     {
+        if (serverMode.IsLanRequest(context))
+        {
+            await LanAsync(context);
+            return;
+        }
+
         var request = context.Request;
 
         if (request.Query.TryGetValue(QueryName, out var fromQuery))
@@ -46,7 +64,81 @@ public sealed class SessionAuthMiddleware(RequestDelegate next, SessionToken tok
             return;
         }
 
-        await next(context);
+        context.Items[typeof(Caller)] = Caller.LocalWindow;
+        using (OwnerScope.Use(OwnerScope.LocalOwner))
+            await next(context);
+    }
+
+    private async Task LanAsync(HttpContext context)
+    {
+        var request = context.Request;
+
+        // Alteração vinda de outra página (outro site aberto no celular): o navegador manda o Origin.
+        if (!AccessPolicy.IsSafeMethod(request.Method) && request.Headers.Origin.ToString() is { Length: > 0 } origin
+            && !string.Equals(origin, $"{request.Scheme}://{request.Host}", StringComparison.OrdinalIgnoreCase))
+        {
+            await DenyAsync(context, StatusCodes.Status403Forbidden, "csrf");
+            return;
+        }
+
+        var session = sessions.Get(request.Cookies[LanCookieName]);
+        UserAccount? user = null;
+        if (session is not null)
+        {
+            user = await accounts.FindAsync(session.UserId, context.RequestAborted);
+            if (user is null || user.Disabled || user.PasswordHash is null)
+            {
+                sessions.Remove(session.Id);
+                session = null;
+                user = null;
+            }
+        }
+
+        if (session is not null && user is not null)
+        {
+            context.Items[typeof(Caller)] = new Caller(user.Id, user.Username, user.Role, IsLocal: false, session);
+
+            if (!AccessPolicy.IsSafeMethod(request.Method) && !CsrfMatches(session, request.Headers[CsrfHeaderName].ToString()))
+            {
+                await DenyAsync(context, StatusCodes.Status403Forbidden, "csrf");
+                return;
+            }
+        }
+
+        if (AccessPolicy.IsPublic(request))
+        {
+            using (OwnerScope.Use(user?.Id ?? Guid.Empty))
+                await next(context);
+            return;
+        }
+
+        if (session is null || user is null)
+        {
+            await DenyAsync(context, StatusCodes.Status401Unauthorized, "login_required");
+            return;
+        }
+        if (AccessPolicy.IsLocalOnly(request))
+        {
+            await DenyAsync(context, StatusCodes.Status403Forbidden, "local_only");
+            return;
+        }
+        if (AccessPolicy.IsAdminOnly(request) && user.Role != UserRole.Admin)
+        {
+            await DenyAsync(context, StatusCodes.Status403Forbidden, "admin_only");
+            return;
+        }
+
+        using (OwnerScope.Use(user.Id))
+            await next(context);
+    }
+
+    private static bool CsrfMatches(LanSession session, string header) =>
+        header.Length > 0 && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(header), Encoding.UTF8.GetBytes(session.Csrf));
+
+    private static Task DenyAsync(HttpContext context, int status, string code)
+    {
+        context.Response.StatusCode = status;
+        return context.Response.WriteAsJsonAsync(new { error = code });
     }
 
     private static string WithoutTokenQuery(HttpRequest request)

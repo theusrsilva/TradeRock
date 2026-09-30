@@ -1,3 +1,4 @@
+using TradeRock.App.Server;
 using System.IO.Compression;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Saves;
@@ -41,7 +42,7 @@ public static class VaultEndpoints
                 MinLevel = byte.TryParse(q["minLevel"], out var min) ? min : null,
                 MaxLevel = byte.TryParse(q["maxLevel"], out var max) ? max : null,
             };
-            var me = await settings.GetAsync<MyTrainer?>(BuilderEndpoints.MyTrainerKey, null, ct);
+            var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(BuilderEndpoints.MyTrainerKey), null, ct);
             return await Run(async () =>
             {
                 var duplicates = await store.PossibleDuplicatesAsync(ct);

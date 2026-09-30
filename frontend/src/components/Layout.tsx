@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, NavLink } from 'react-router'
 import { api } from '../lib/api'
 import { useAppInfo } from '../lib/appInfo'
+import { useAuth } from '../lib/auth'
 import type { Engine, TradeSession } from '../lib/types'
 import { GlobalDrop } from './GlobalDrop'
 import { Badge, Button, Modal } from './ui'
@@ -30,6 +31,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const [closeRequested, setCloseRequested] = useState(false)
   const [closing, setClosing] = useState(false)
   const info = useAppInfo()
+  const { me, logout } = useAuth()
+  const remote = me?.local === false
 
   useEffect(() => {
     api
@@ -98,6 +101,22 @@ export function Layout({ children }: { children: ReactNode }) {
               </NavLink>
             ))}
           </nav>
+          <div className="ml-auto flex items-center gap-2 text-sm">
+            {remote ? (
+              <>
+                <span className="text-slate-600 dark:text-slate-300">{t('login.as', { name: me?.username })}</span>
+                <Button variant="ghost" className="px-2 py-1" onClick={() => void logout()}>
+                  {t('login.logout')}
+                </Button>
+              </>
+            ) : (
+              me?.serverMode && (
+                <Link to="/configuracoes#servidor" title={t('server.onHint')}>
+                  <Badge tone="sky">{t('server.onBadge')}</Badge>
+                </Link>
+              )
+            )}
+          </div>
         </div>
       </header>
 

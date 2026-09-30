@@ -10,7 +10,8 @@ public sealed record ImportResult(StoredPokemon Pokemon, bool Created, bool Rest
 
 /// <summary>
 /// Guarda Pokémon: o .pk3 decriptado vai para vault/&lt;hh&gt;/&lt;sha256&gt;.pk3 e o resumo para o SQLite.
-/// Arquivos idênticos (mesmo hash, inclusive .pk3 vs .ek3 do mesmo Pokémon) viram um só registro.
+/// Arquivos idênticos (mesmo hash, inclusive .pk3 vs .ek3 do mesmo Pokémon) viram um só registro por cofre;
+/// o arquivo em disco é um só, mesmo que esteja em vários cofres.
 /// </summary>
 public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPaths paths, TimeProvider time)
 {
@@ -118,7 +119,8 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var version = LegalityReporter.PkhexVersion;
-        var stale = await db.Pokemon.Where(p => p.Legality == null || p.LegalityPkhexVersion != version || p.Pid == null).ToListAsync(ct);
+        // Todos os cofres (roda na inicialização, fora de qualquer conta).
+        var stale = await db.Pokemon.IgnoreQueryFilters().Where(p => p.Legality == null || p.LegalityPkhexVersion != version || p.Pid == null).ToListAsync(ct);
         foreach (var p in stale)
         {
             try

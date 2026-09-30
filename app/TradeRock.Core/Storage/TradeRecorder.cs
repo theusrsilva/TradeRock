@@ -3,17 +3,20 @@ using TradeRock.Core.Trading;
 
 namespace TradeRock.Core.Storage;
 
-/// <summary>Grava os recebidos no cofre e o histórico no SQLite.</summary>
+/// <summary>Grava os recebidos no cofre de quem trocou e o histórico no SQLite.</summary>
 public sealed class TradeRecorder(PokemonStore pokemon, IDbContextFactory<TradeRockDb> dbFactory) : ITradeRecorder
 {
-    public async Task<Guid> StoreReceivedAsync(byte[] data, CancellationToken ct)
+    public async Task<Guid> StoreReceivedAsync(Guid owner, byte[] data, CancellationToken ct)
     {
+        using var _ = OwnerScope.Use(owner);
         var result = await pokemon.ImportAsync(data, PokemonOrigin.Received, sourceFileName: null, ct);
         return result.Pokemon.Id;
     }
 
-    public async Task SaveAsync(TradeRecord record, CancellationToken ct)
+    public async Task SaveAsync(Guid owner, TradeRecord record, CancellationToken ct)
     {
+        using var _ = OwnerScope.Use(owner);
+        record.OwnerId = owner;
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         db.Trades.Add(record);
         await db.SaveChangesAsync(ct);

@@ -94,7 +94,8 @@
       "party": "Party",
       "trainer": "Game and trainer",
       "reminder": "Get the Switch ready",
-      "live": "Trade"
+      "live": "Trade",
+      "queue": "Queue"
     },
     "party": {
       "title": "Build the PC party",
@@ -313,6 +314,10 @@
       "worker_missing": "network component not installed",
       "wifi_not_configured": "set up the card in the wizard",
       "esp32_not_configured": "set up the ESP32 in the wizard"
+    },
+    "engineErrors": {
+      "server_mode_on_radio": "Server mode is using the Wi-Fi card that does the trades. Turn server mode off or pick another interface first.",
+      "busy": "Wait for the trade and the queue to finish before changing the engine."
     }
   },
   "close": {
@@ -928,5 +933,109 @@
     "use": "Use in TradeRock",
     "license": "License",
     "link": "About"
+  },
+  "login": {
+    "title": "Sign in to TradeRock",
+    "intro": "This TradeRock is open on the home network. Sign in with your account to see your vault and trade.",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "noAccount": "No account? Ask whoever runs TradeRock on the PC to create one for you.",
+    "as": "Signed in as {{name}}",
+    "logout": "Sign out",
+    "errors": {
+      "login_failed": "Wrong username or password.",
+      "too_many_attempts": "Too many wrong attempts. Wait a few minutes and try again.",
+      "csrf": "This page is out of date. Reload it and try again."
+    }
+  },
+  "server": {
+    "title": "Server mode (phones and other PCs)",
+    "on": "On",
+    "off": "Off",
+    "onBadge": "Server mode",
+    "onHint": "Other people on the home network can sign in. See Settings.",
+    "intro": "While the app is open, other people on the same network (your home Wi-Fi or cable) open TradeRock in their phone or PC browser, sign in with an account and use their own vault. Since there is only one radio, trades wait in a queue, one at a time.",
+    "warningTitle": "Home network only",
+    "warningInternet": "Never open this port on your router or put TradeRock on the internet. Anyone outside could try to get in.",
+    "warningHttp": "The connection is not encrypted (http): someone on the same network could see passwords. Use it only on trusted networks, with passwords you don't use anywhere else.",
+    "interface": "Network interface",
+    "interfaceHelp": "How this PC connects to the home network. TradeRock listens only there.",
+    "wired": "cable",
+    "wireless": "Wi-Fi",
+    "blocked": "trading card",
+    "port": "Port",
+    "portHelp": "A number from 1024 to 65535. The default is 8337.",
+    "radioWifi": "The Wi-Fi card that does the trades leaves the network during a trade, so it can't be used here.",
+    "noInterface": "No connected network interface was found. Connect the PC to the home network.",
+    "noInterfaceWifi": "This PC's only network is the Wi-Fi card that does the trades. Plug in a network cable or a second Wi-Fi adapter (or use the ESP32 as the radio).",
+    "turnOn": "Turn server mode on",
+    "turnOff": "Turn off",
+    "offOnStart": "Server mode always starts off when the app opens.",
+    "openOnPhone": "On the phone (same network), point the camera at the code or type the address:",
+    "qrAlt": "QR code with TradeRock's network address",
+    "interfaceUsed": "Interface {{name}}",
+    "sessions_one": "{{count}} person signed in",
+    "sessions_other": "{{count}} people signed in",
+    "errors": {
+      "port_invalid": "Choose a port from 1024 to 65535.",
+      "interface_not_found": "That interface is no longer connected. Pick another one.",
+      "interface_is_radio": "That is the Wi-Fi card that does the trades. Pick another interface.",
+      "bind_failed": "Couldn't use that port (another program may be using it). Try another port."
+    },
+    "localOnly": "This screen only opens in the TradeRock window on the PC itself."
+  },
+  "accounts": {
+    "title": "Accounts",
+    "intro": "Each account has its own vault, history and \"My trainer\", and starts with the demo Pokémon. The setup wizard, prod.keys and the radio stay in this PC window only.",
+    "owner": "PC owner",
+    "ownerNoName": "You (this PC)",
+    "ownerHint": "No network access",
+    "ownerSetup": "Sign in from a phone",
+    "edit": "Name and password",
+    "newPassword": "New password (leave empty to keep)",
+    "you": "you",
+    "disabled": "disabled",
+    "lastLogin": "Last sign-in: {{date}}",
+    "roles": {
+      "user": "User",
+      "admin": "Administrator"
+    },
+    "role": "Type",
+    "rolesHelp": "Administrators can also create and manage accounts and remove people from the queue. Users only use their own vault and trade.",
+    "makeAdmin": "Make administrator",
+    "makeUser": "Make user",
+    "disable": "Disable",
+    "enable": "Enable",
+    "create": "New account",
+    "createButton": "Create account",
+    "usernameHelp": "3 to 24 unaccented letters, numbers, dot, hyphen or _.",
+    "passwordHelp": "At least 8 characters.",
+    "deleteTitle": "Delete the account {{name}}?",
+    "deleteBody": "This person's vault (Pokémon, boxes, tags and history) will be deleted too. This can't be undone.",
+    "errors": {
+      "username_taken": "There is already an account with that name.",
+      "username_invalid": "Invalid name: use 3 to 24 unaccented letters, numbers, dot, hyphen or _.",
+      "password_invalid": "The password must have 8 to 128 characters.",
+      "owner_fixed": "The PC owner's account can't be deleted, disabled or made a user.",
+      "account_not_found": "That account no longer exists."
+    }
+  },
+  "queue": {
+    "title": "In the queue",
+    "host": "PC owner",
+    "now": "Now",
+    "you": "you",
+    "empty": "Nobody in the queue.",
+    "position": "You are number {{position}} in the queue",
+    "starting": "It's your turn: the trade is starting…",
+    "help": "There is only one radio, so trades happen one at a time. When your turn comes, the trade starts by itself: keep the Switch ready, in the Direct Corner room as Leader, and keep this page open.",
+    "leave": "Leave the queue",
+    "beforeTitle": "Trade queue",
+    "freeNow": "The radio is free: the trade starts as soon as you click.",
+    "ahead_one": "There is {{count}} trade ahead of you. You join the queue and yours starts by itself when it's your turn.",
+    "ahead_other": "There are {{count}} trades ahead of you. You join the queue and yours starts by itself when it's your turn.",
+    "join": "Join the queue",
+    "removed": "An administrator removed you from the queue. You can join again whenever you want."
   }
 }

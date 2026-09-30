@@ -1,8 +1,10 @@
 using System.Net;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.FileProviders;
 using TradeRock.App.Api;
+using TradeRock.App.Server;
 using TradeRock.Core;
 
 namespace TradeRock.App;
@@ -25,7 +27,7 @@ public static class TradeRockServer
         {
             throw new InvalidOperationException(
                 "Fora do modo desenvolvimento, o TradeRock só escuta em 127.0.0.1. " +
-                "O acesso pela rede será o \"modo servidor\", com contas e senha.");
+                "Para a rede, ligue o \"modo servidor\" nas Configurações (contas com senha).");
         }
 
         token ??= isDev && !string.IsNullOrEmpty(options.DevToken)
@@ -33,6 +35,11 @@ public static class TradeRockServer
             : SessionToken.Generate();
 
         builder.Configuration["AllowedHosts"] = options.AllowedHosts;
+
+        // Modo servidor: o endpoint da rede e os hosts aceitos mudam com o app aberto. O Kestrel já
+        // recarrega a seção "Kestrel" da configuração (reloadOnChange), e a filtragem de hosts também.
+        var lanConfig = new LanConfigSource();
+        ((IConfigurationBuilder)builder.Configuration).Add(lanConfig);
 
         // A URL inicial carrega o token (?t=...). O log de requisições do ASP.NET Core
         // registra a URL completa em Information, então ele fica restrito a avisos.
@@ -45,12 +52,15 @@ public static class TradeRockServer
         builder.Services.AddSingleton(token);
         builder.Services.AddSingleton(paths);
         builder.Services.AddTradeRock(paths, builder.Configuration);
+        builder.Services.AddSingleton(lanConfig);
+        builder.Services.AddServerMode();
 
         configure?.Invoke(builder);
 
         var app = builder.Build();
         app.InitializeDataAsync().GetAwaiter().GetResult();
 
+        app.UseRateLimiter();
         app.UseMiddleware<SessionAuthMiddleware>();
 
         var frontend = FrontendFiles();
@@ -94,6 +104,7 @@ public static class TradeRockServer
         api.MapSaves();
         api.MapSetup();
         api.MapWorker();
+        api.MapServer();
     }
 
     /// <summary>Endereço real após o start (a porta 0 vira uma porta livre).</summary>

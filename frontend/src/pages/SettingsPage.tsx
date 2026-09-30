@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Card, Field, inputClass } from '../components/ui'
-import { api } from '../lib/api'
+import { ApiError, api } from '../lib/api'
 import { languages } from '../i18n'
 import { ContentFile } from '../components/Markdown'
 import { trainerNameErrors } from '../lib/trainer'
@@ -9,6 +9,8 @@ import type { Engine, MyTrainer, Pokemon, TradeSettings } from '../lib/types'
 import { Link } from 'react-router'
 import { useTheme, type ThemeChoice } from '../theme'
 import { AppImageWorkerSettings } from './setup/AppImageWorker'
+import { AccountsCard, ServerModeCard } from './settings/ServerSettings'
+import { useAuth } from '../lib/auth'
 
 type NumberSetting = Exclude<keyof TradeSettings, 'allowIllegal'>
 
@@ -31,13 +33,19 @@ export default function SettingsPage() {
   const [meErrors, setMeErrors] = useState<string[]>([])
   const [received, setReceived] = useState<Pokemon[]>([])
   const [pickOpen, setPickOpen] = useState(false)
+  const [engineError, setEngineError] = useState<string | null>(null)
+  const { me: caller } = useAuth()
+  // Pela rede: só aparência, "Meu treinador" e (administradores) as contas. O resto é da janela do PC.
+  const local = caller?.local !== false
 
   useEffect(() => {
-    api.get<TradeSettings>('/api/settings/trade').then(setSettings).catch(() => undefined)
-    api.get<Engine[]>('/api/engines').then(setEngines).catch(() => undefined)
+    if (local) {
+      api.get<TradeSettings>('/api/settings/trade').then(setSettings).catch(() => undefined)
+      api.get<Engine[]>('/api/engines').then(setEngines).catch(() => undefined)
+    }
     api.get<MyTrainer | undefined>('/api/settings/my-trainer').then((m) => m && setMe(m)).catch(() => undefined)
     api.get<Pokemon[]>('/api/pokemon').then((list) => setReceived(list.filter((p) => p.origin === 'received'))).catch(() => undefined)
-  }, [])
+  }, [local])
 
   async function saveMe(next: MyTrainer = me) {
     const errors = trainerNameErrors(next.name)
@@ -66,12 +74,14 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">{t('settings.title')}</h1>
 
-      <Card className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-semibold">{t('wizard.title')}</span>
-        <Link to="/configurar" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
-          {t('wizard.bannerAction')}
-        </Link>
-      </Card>
+      {local && (
+        <Card className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-semibold">{t('wizard.title')}</span>
+          <Link to="/configurar" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
+            {t('wizard.bannerAction')}
+          </Link>
+        </Card>
+      )}
 
       <Card className="space-y-3">
         <h2 className="font-semibold">{t('settings.appearance')}</h2>
@@ -159,32 +169,43 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card className="space-y-3">
-        <h2 className="font-semibold">{t('settings.engineTitle')}</h2>
-        <p className="text-sm text-slate-500">{t('settings.engineHelp')}</p>
-        <ul className="space-y-2">
-          {engines.map((engine) => (
-            <li key={engine.id} className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="engine"
-                checked={engine.selected}
-                disabled={!engine.available}
-                onChange={() =>
-                  void api.put('/api/engines/selected', { id: engine.id }).then(() =>
-                    setEngines((list) => list.map((e) => ({ ...e, selected: e.id === engine.id }))),
-                  )
-                }
-              />
-              {t(`settings.engines.${engine.id}`, { defaultValue: engine.id })}
-              {!engine.available && engine.reasonCode && (
-                <span className="text-xs text-slate-500">({t(`settings.engineReasons.${engine.reasonCode}`, { defaultValue: engine.reasonCode })})</span>
-              )}
-            </li>
-          ))}
-        </ul>
-        <AppImageWorkerSettings />
-      </Card>
+      {local && (
+        <Card className="space-y-3">
+          <h2 className="font-semibold">{t('settings.engineTitle')}</h2>
+          <p className="text-sm text-slate-500">{t('settings.engineHelp')}</p>
+          <ul className="space-y-2">
+            {engines.map((engine) => (
+              <li key={engine.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="engine"
+                  checked={engine.selected}
+                  disabled={!engine.available}
+                  onChange={() =>
+                    void api
+                      .put('/api/engines/selected', { id: engine.id })
+                      .then(() => {
+                        setEngineError(null)
+                        setEngines((list) => list.map((e) => ({ ...e, selected: e.id === engine.id })))
+                      })
+                      .catch((e: unknown) => setEngineError(e instanceof ApiError && e.code ? e.code : 'unknown'))
+                  }
+                />
+                {t(`settings.engines.${engine.id}`, { defaultValue: engine.id })}
+                {!engine.available && engine.reasonCode && (
+                  <span className="text-xs text-slate-500">({t(`settings.engineReasons.${engine.reasonCode}`, { defaultValue: engine.reasonCode })})</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          {engineError && (
+            <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+              {t(`settings.engineErrors.${engineError}`, { defaultValue: t('common.error') })}
+            </p>
+          )}
+          <AppImageWorkerSettings />
+        </Card>
+      )}
 
       {settings && (
         <Card className="space-y-3">
@@ -214,6 +235,9 @@ export default function SettingsPage() {
           <Button onClick={() => void save()}>{saved ? t('common.saved') : t('common.save')}</Button>
         </Card>
       )}
+
+      {local && <ServerModeCard />}
+      {caller?.role === 'admin' && <AccountsCard />}
     </div>
   )
 }

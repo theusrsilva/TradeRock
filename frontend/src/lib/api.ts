@@ -1,4 +1,18 @@
 // Cliente da API. O cookie de sessão (HttpOnly) vai automaticamente; em dev o proxy do Vite injeta o token.
+// Pela rede (modo servidor), toda alteração leva também o token anti-CSRF recebido no login.
+
+let csrfToken: string | null = null
+
+export const unauthorizedEvent = 'traderock:unauthorized'
+
+export function setCsrfToken(token: string | null) {
+  csrfToken = token
+}
+
+/** Cabeçalhos extras para requisições que alteram algo (POST/PUT/DELETE). */
+export function csrfHeaders(): Record<string, string> {
+  return csrfToken ? { 'X-TradeRock-CSRF': csrfToken } : {}
+}
 
 export class ApiError extends Error {
   constructor(
@@ -11,7 +25,12 @@ export class ApiError extends Error {
 }
 
 async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const init: RequestInit = { method, credentials: 'same-origin', headers: { Accept: 'application/json' }, signal }
+  const init: RequestInit = {
+    method,
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json', ...(method === 'GET' ? {} : csrfHeaders()) },
+    signal,
+  }
   if (body instanceof FormData) {
     init.body = body
   } else if (body !== undefined) {
@@ -30,6 +49,8 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
     } catch {
       // corpo vazio ou não-JSON
     }
+    // Pela rede, o login expirou ou caiu (senha trocada, modo servidor desligado): volta à tela de entrada.
+    if (response.status === 401 && code === 'login_required') window.dispatchEvent(new Event(unauthorizedEvent))
     throw new ApiError(response.status, code, errors)
   }
   if (response.status === 204) return undefined as T

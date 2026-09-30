@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
+using TradeRock.App.Server;
 using TradeRock.Core.Storage;
 using TradeRock.Core.Trading;
 
@@ -26,11 +27,19 @@ public static class TradeEndpoints
 
     public sealed record TradeEntryDto(int TradeIndex, Guid SentPokemonId, Guid? ReceivedPokemonId);
 
+    /// <summary>Pedido na fila, como todos veem: nome da conta e posição (0 = trocando agora).</summary>
+    public sealed record QueueItemDto(Guid Id, string? Name, bool IsHost, int Position, bool Mine, DateTimeOffset EnqueuedAt);
+
+    public sealed record QueueDto(IReadOnlyList<QueueItemDto> Entries, bool ServerMode);
+
+    /// <summary>Resposta de POST /trades quando o rádio está ocupado: a troca espera na fila e começa sozinha.</summary>
+    public sealed record QueuedDto(bool Queued, Guid EntryId, int Position);
+
     public static void MapTrades(this IEndpointRouteBuilder api)
     {
         var group = api.MapGroup("/trades");
 
-        group.MapPost("/", async (StartTradeDto body, EngineRegistry engines, TradeCoordinator coordinator,
+        group.MapPost("/", async (StartTradeDto body, HttpContext context, EngineRegistry engines, TradeQueue queue,
             PokemonStore store, SettingsStore settings, TradeRock.Core.Setup.SetupService setup, CancellationToken ct) =>
         {
             if (body.Party is null || body.OfferedSlots is null || body.Trainer is null)
@@ -78,28 +87,54 @@ public static class TradeEndpoints
                 new TrainerProfile(body.Trainer.Name, body.Trainer.Tid, body.Trainer.Sid),
                 engine.IsSimulation ? body.Simulation : null);
 
+            // Um rádio, uma troca por vez: com o rádio livre começa agora; senão espera a vez na fila.
+            var caller = Caller.Of(context);
             try
             {
-                var snapshot = coordinator.Start(engine, request, tradeSettings);
-                return Results.Accepted("/api/trades/current", snapshot);
+                var ticket = queue.Enqueue(caller.UserId, caller.Username, engine, request, tradeSettings);
+                return ticket.Started is { } snapshot
+                    ? Results.Accepted("/api/trades/current", snapshot)
+                    : Results.Accepted("/api/trades/queue", new QueuedDto(true, ticket.EntryId, ticket.Position));
             }
             catch (InvalidTradeRequestException ex)
             {
                 return Results.BadRequest(new { error = "invalid", errors = ex.Errors });
             }
-            catch (TradeBusyException)
+            catch (AlreadyQueuedException)
             {
                 return Results.Conflict(new { error = "busy" });
             }
         });
 
-        group.MapGet("/current", (TradeCoordinator coordinator) =>
-            coordinator.Current is { } s ? Results.Ok(s) : Results.NoContent());
+        // Cada conta só vê as próprias trocas (a fila mostra a vez de todo mundo).
+        group.MapGet("/current", (HttpContext context, TradeCoordinator coordinator) =>
+            coordinator.Current is { } s && s.OwnerId == Caller.Of(context).UserId ? Results.Ok(s) : Results.NoContent());
 
-        group.MapPost("/current/cancel", async (TradeCoordinator coordinator) =>
+        // Cancela a troca em andamento: quem a pediu ou um administrador.
+        group.MapPost("/current/cancel", async (HttpContext context, TradeCoordinator coordinator) =>
         {
+            var caller = Caller.Of(context);
+            if (coordinator.Current is not { } current)
+                return Results.NoContent();
+            if (current.OwnerId != caller.UserId && !caller.IsAdmin)
+                return Results.Json(new { error = "not_yours" }, statusCode: StatusCodes.Status403Forbidden);
             await coordinator.CancelAsync(TimeSpan.FromSeconds(30));
-            return coordinator.Current is { } s ? Results.Ok(s) : Results.NoContent();
+            return coordinator.Current is { } s && s.OwnerId == caller.UserId ? Results.Ok(s) : Results.NoContent();
+        });
+
+        group.MapGet("/queue", (HttpContext context, TradeQueue queue, ServerMode server) =>
+        {
+            var caller = Caller.Of(context);
+            return new QueueDto(queue.Snapshot().Select(e => new QueueItemDto(e.Id, e.OwnerName,
+                e.OwnerId == TradeRock.Core.Storage.OwnerScope.LocalOwner, e.Position, e.OwnerId == caller.UserId, e.EnqueuedAt)).ToList(),
+                server.IsEnabled);
+        });
+
+        // Sai da fila: quem pediu ou um administrador (a troca em andamento se cancela em /current/cancel).
+        group.MapDelete("/queue/{id:guid}", (Guid id, HttpContext context, TradeQueue queue) =>
+        {
+            var caller = Caller.Of(context);
+            return queue.Leave(id, caller.IsAdmin ? null : caller.UserId) ? Results.NoContent() : Results.NotFound();
         });
 
         group.MapGet("/events", StreamEventsAsync);
@@ -134,6 +169,7 @@ public static class TradeEndpoints
 
         using var subscription = coordinator.Subscribe(afterSeq);
         var ct = context.RequestAborted;
+        var me = Caller.Of(context).UserId;
         try
         {
             while (!ct.IsCancellationRequested)
@@ -154,6 +190,8 @@ public static class TradeEndpoints
 
                 while (subscription.Reader.TryRead(out var e))
                 {
+                    if (coordinator.OwnerOf(e.SessionId) != me)
+                        continue; // troca de outra conta
                     var data = JsonSerializer.Serialize(e, json.Value.SerializerOptions);
                     await context.Response.WriteAsync($"id: {e.Seq}\nevent: trade\ndata: {data}\n\n", ct);
                 }

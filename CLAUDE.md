@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D17).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D19).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -45,6 +45,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Worker | Em Python (runtime embutido). Canal por stdin/stdout em vez de socket Unix. Polkit `auth_admin_keep`. Patches do FRLG-LDN-Trade-Console aplicados. `iw` e `ip` estáticos embutidos (o autor não quer mandar a pessoa instalar pré-requisitos) |
 | Pacotes | .deb e AppImage. Sem verificação de atualizações (a pessoa baixa o Release). Tag `v*` publica o Release direto. Tela Sobre com créditos e oferta do código-fonte |
 | Teste com o Switch | Até 30 s. Sessão de outro jogo decifrada não aprova. Vale até mudar a placa ou o prod.keys (não expira) |
+| Modo servidor | HTTP (só rede de casa, com aviso). Argon2id (Konscious). Fila começa a troca sozinha. Conta nova com os Pokémon de demonstração. Porta 8337. Começa desligado a cada abertura |
 
 ## Estado das entregas
 
@@ -58,11 +59,11 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 6 | Worker privilegiado + polkit + PythonLdnEngine + fluxo de teste no host | feita, **sem teste com hardware real** |
 | 7 | Teste do beacon com a placa Wi-Fi (etapa 6 do assistente) | feita, **sem teste com hardware real** |
 | 8 | Empacotamento Linux (AppImage e .deb) e CI | feita; AppImage com FUSE, pkexec e janela **não testados** |
-| 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | **próxima** |
-| 10 | Modo servidor na rede | **próxima** |
-| 11 | Build e instalador Windows (só ESP32) | — |
+| 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | feita, **sem placa real** |
+| 10 | Modo servidor na rede (contas, cofre por conta, fila) | feita, **sem celular real** |
+| 11 | Build e instalador Windows (só ESP32) | **próxima** |
 
-A branch mais recente é `entrega-9-esp32`. O `main` do GitHub ainda tem só o commit inicial.
+A branch mais recente é `entrega-10-servidor`. O `main` do GitHub ainda tem só o commit inicial.
 
 ## Pendências já combinadas
 
@@ -77,6 +78,7 @@ A branch mais recente é `entrega-9-esp32`. O `main` do GitHub ainda tem só o c
     tem placa);
   - teste da placa com root;
   - AppImage montado por FUSE, instalação do worker pelo pkexec (diálogo) e a janela a partir dos pacotes.
+  - modo servidor com um celular de verdade na rede (Entrega 10, D19).
 
   O roteiro de teste no host está em [docs/dev-host.md](docs/dev-host.md).
 
@@ -84,7 +86,7 @@ A branch mais recente é `entrega-9-esp32`. O `main` do GitHub ainda tem só o c
 
 | Pasta | Conteúdo |
 | --- | --- |
-| `app/TradeRock.App` | ASP.NET Core + Photino (API em `Api/`, DI em `ServiceSetup.cs`) |
+| `app/TradeRock.App` | ASP.NET Core + Photino (API em `Api/`, DI em `ServiceSetup.cs`, modo servidor em `Server/`: contas, logins, `AccessPolicy`, liga/desliga) |
 | `app/Frlg.Trade.Core.Patched` | Núcleo C# do easyworld compilado com `engines/patches/frlg-ldn-trade-esp32` |
 | `app/TradeRock.Core` | Domínio: `Trading/`, `Engines/` (Fake, PythonLdn, Esp32Serial, `Worker/`), `Esp32/` (firmware, serial, esptool), `Pokemon/`, `Builder/`, `Storage/` (EF Core + SQLite), `Saves/`, `Setup/` (catálogo, probe do Linux, verificações, prod.keys) |
 | `app/TradeRock.Tests` | xUnit v3; worker falso em `FakeWorker.cs`, ESP32 falso em `fake_esp32.py` (pseudo-terminal) |

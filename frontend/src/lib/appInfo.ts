@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from './api'
+import { api, csrfHeaders } from './api'
 import type { Health } from './types'
 
 let cached: Promise<Health> | null = null
@@ -30,7 +30,7 @@ export async function postForBlob(path: string, body: unknown): Promise<{ blob: 
   const response = await fetch(path, {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
     body: JSON.stringify(body),
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)

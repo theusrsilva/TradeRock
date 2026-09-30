@@ -18,7 +18,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Host e container compartilham o repositório: nenhum dos dois compila a saída do outro. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);obj/**;bin/**;obj-container/**;bin-container/**</DefaultItemExcludes>
-    <Version>0.9.0</Version>
+    <Version>0.10.0</Version>
     <Product>TradeRock</Product>
     <Company>TradeRock</Company>
     <Copyright>AGPL-3.0-or-later</Copyright>

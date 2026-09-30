@@ -1,3 +1,4 @@
+using TradeRock.App.Server;
 using Microsoft.Extensions.Caching.Memory;
 using PKHeX.Core;
 using TradeRock.Core.Builder;
@@ -58,7 +59,7 @@ public static class BuilderEndpoints
             try
             {
                 var imported = await store.ImportAsync(body.Data, PokemonOrigin.Created, null, ct);
-                var me = await settings.GetAsync<MyTrainer?>(MyTrainerKey, null, ct);
+                var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
                 return Results.Ok(new { created = imported.Created, pokemon = PokemonEndpoints.PokemonDto.From(imported.Pokemon, me) });
             }
             catch (InvalidPokemonFileException ex)
@@ -132,7 +133,7 @@ public static class BuilderEndpoints
             if (!cache.TryGetValue<SaveContents>($"sav:{token}", out var contents) || contents is null)
                 return Results.NotFound(new { error = "sav_expired" });
 
-            var me = await settings.GetAsync<MyTrainer?>(MyTrainerKey, null, ct);
+            var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
             var results = new List<object>();
             foreach (var index in body.Indices.Distinct())
             {
@@ -149,7 +150,7 @@ public static class BuilderEndpoints
     private static void MapMyTrainer(IEndpointRouteBuilder api)
     {
         api.MapGet("/settings/my-trainer", async (SettingsStore settings, CancellationToken ct) =>
-            await settings.GetAsync<MyTrainer?>(MyTrainerKey, null, ct) is { } me ? Results.Ok(me) : Results.NoContent());
+            await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct) is { } me ? Results.Ok(me) : Results.NoContent());
 
         api.MapPut("/settings/my-trainer", async (MyTrainer body, SettingsStore settings, CancellationToken ct) =>
         {
@@ -158,7 +159,7 @@ public static class BuilderEndpoints
                 errors.Add("badges_invalid");
             if (errors.Count > 0)
                 return Results.BadRequest(new { error = "invalid", errors });
-            await settings.SetAsync(MyTrainerKey, body, ct);
+            await settings.SetAsync(UserSettings.Key(MyTrainerKey), body, ct);
             return Results.Ok(body);
         });
 
@@ -167,9 +168,9 @@ public static class BuilderEndpoints
         {
             if (await store.GetAsync(id, ct) is not { } p)
                 return Results.NotFound();
-            var current = await settings.GetAsync<MyTrainer?>(MyTrainerKey, null, ct);
+            var current = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
             var me = new MyTrainer(p.OtName, p.Tid, p.Sid, current?.Gender ?? 0, current?.Badges ?? 8, current?.HasNationalDex ?? true);
-            await settings.SetAsync(MyTrainerKey, me, ct);
+            await settings.SetAsync(UserSettings.Key(MyTrainerKey), me, ct);
             return Results.Ok(me);
         });
     }
@@ -177,7 +178,7 @@ public static class BuilderEndpoints
     /// <summary>OT padrão do construtor: "Meu treinador" ou, sem ele, o treinador padrão do motor (EMU).</summary>
     public static async Task<TrainerSpec> DefaultTrainerAsync(SettingsStore settings, CancellationToken ct)
     {
-        var me = await settings.GetAsync<MyTrainer?>(MyTrainerKey, null, ct);
+        var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
         if (me is not null)
             return new TrainerSpec(me.Name, me.Tid, me.Sid ?? 0, me.Gender);
         var d = TrainerProfile.Default;

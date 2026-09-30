@@ -20,6 +20,8 @@
   <ItemGroup>
     <PackageReference Include="Photino.NET" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+    <PackageReference Include="QRCoder" />
   </ItemGroup>
 
   <ItemGroup>

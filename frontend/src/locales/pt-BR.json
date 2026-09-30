@@ -94,7 +94,8 @@
       "party": "Time",
       "trainer": "Jogo e treinador",
       "reminder": "Preparar o Switch",
-      "live": "Troca"
+      "live": "Troca",
+      "queue": "Fila"
     },
     "party": {
       "title": "Monte o time do PC",
@@ -313,6 +314,10 @@
       "worker_missing": "falta instalar o componente de rede",
       "wifi_not_configured": "configure a placa no assistente",
       "esp32_not_configured": "configure o ESP32 no assistente"
+    },
+    "engineErrors": {
+      "server_mode_on_radio": "O modo servidor está usando a placa Wi-Fi das trocas. Desligue o modo servidor ou escolha outra interface antes.",
+      "busy": "Espere a troca e a fila terminarem para mudar o motor."
     }
   },
   "close": {
@@ -928,5 +933,109 @@
     "use": "Uso no TradeRock",
     "license": "Licença",
     "link": "Sobre"
+  },
+  "login": {
+    "title": "Entrar no TradeRock",
+    "intro": "Este TradeRock está aberto na rede da casa. Entre com a sua conta para ver o seu cofre e trocar.",
+    "username": "Nome de usuário",
+    "password": "Senha",
+    "submit": "Entrar",
+    "noAccount": "Não tem conta? Peça para quem cuida do TradeRock no PC criar uma para você.",
+    "as": "Conectado como {{name}}",
+    "logout": "Sair",
+    "errors": {
+      "login_failed": "Nome ou senha incorretos.",
+      "too_many_attempts": "Muitas tentativas erradas. Espere alguns minutos e tente de novo.",
+      "csrf": "A página ficou desatualizada. Recarregue e tente de novo."
+    }
+  },
+  "server": {
+    "title": "Modo servidor (celular e outros PCs)",
+    "on": "Ligado",
+    "off": "Desligado",
+    "onBadge": "Modo servidor",
+    "onHint": "Outras pessoas da rede de casa podem entrar. Veja em Configurações.",
+    "intro": "Enquanto o app estiver aberto, outras pessoas da mesma rede (Wi-Fi ou cabo da sua casa) abrem o TradeRock no navegador do celular ou do PC delas, entram com uma conta e usam o próprio cofre. Como só existe um rádio, as trocas entram numa fila, uma por vez.",
+    "warningTitle": "Só para a rede da sua casa",
+    "warningInternet": "Nunca libere esta porta no roteador nem coloque o TradeRock na internet. Qualquer pessoa de fora poderia tentar entrar.",
+    "warningHttp": "A conexão não é criptografada (http): alguém na mesma rede poderia ver as senhas. Use só em redes de confiança e senhas que você não usa em outro lugar.",
+    "interface": "Interface de rede",
+    "interfaceHelp": "Por onde este PC está ligado na rede da casa. O TradeRock escuta só nela.",
+    "wired": "cabo",
+    "wireless": "Wi-Fi",
+    "blocked": "placa das trocas",
+    "port": "Porta",
+    "portHelp": "Número de 1024 a 65535. O padrão é 8337.",
+    "radioWifi": "A placa Wi-Fi que faz as trocas sai da rede durante a troca, então ela não pode ser usada aqui.",
+    "noInterface": "Nenhuma interface de rede ligada foi encontrada. Conecte o PC à rede da casa.",
+    "noInterfaceWifi": "A única rede deste PC é pela placa Wi-Fi das trocas. Ligue um cabo de rede ou um segundo adaptador Wi-Fi (ou use o ESP32 como rádio).",
+    "turnOn": "Ligar o modo servidor",
+    "turnOff": "Desligar",
+    "offOnStart": "O modo servidor começa desligado sempre que o app abre.",
+    "openOnPhone": "No celular (na mesma rede), aponte a câmera para o código ou digite o endereço:",
+    "qrAlt": "Código QR com o endereço do TradeRock na rede",
+    "interfaceUsed": "Interface {{name}}",
+    "sessions_one": "{{count}} pessoa conectada",
+    "sessions_other": "{{count}} pessoas conectadas",
+    "errors": {
+      "port_invalid": "Escolha uma porta de 1024 a 65535.",
+      "interface_not_found": "Essa interface não está mais ligada. Escolha outra.",
+      "interface_is_radio": "Essa é a placa Wi-Fi das trocas. Escolha outra interface.",
+      "bind_failed": "Não deu para usar essa porta (outro programa pode estar usando). Tente outra porta."
+    },
+    "localOnly": "Esta tela só abre na janela do TradeRock no próprio PC."
+  },
+  "accounts": {
+    "title": "Contas",
+    "intro": "Cada conta tem o próprio cofre, histórico e \"Meu treinador\", e começa com os Pokémon de demonstração. O assistente, o prod.keys e o rádio ficam só nesta janela do PC.",
+    "owner": "Dono do PC",
+    "ownerNoName": "Você (este PC)",
+    "ownerHint": "Sem acesso pela rede",
+    "ownerSetup": "Entrar pelo celular",
+    "edit": "Nome e senha",
+    "newPassword": "Senha nova (deixe vazio para manter)",
+    "you": "você",
+    "disabled": "desativada",
+    "lastLogin": "Último acesso: {{date}}",
+    "roles": {
+      "user": "Usuário",
+      "admin": "Administrador"
+    },
+    "role": "Tipo",
+    "rolesHelp": "Administradores também criam e gerenciam contas e podem tirar pessoas da fila. Usuários só usam o próprio cofre e trocam.",
+    "makeAdmin": "Tornar administrador",
+    "makeUser": "Tornar usuário",
+    "disable": "Desativar",
+    "enable": "Reativar",
+    "create": "Nova conta",
+    "createButton": "Criar conta",
+    "usernameHelp": "De 3 a 24 letras sem acento, números, ponto, hífen ou _.",
+    "passwordHelp": "Pelo menos 8 caracteres.",
+    "deleteTitle": "Apagar a conta {{name}}?",
+    "deleteBody": "O cofre dessa pessoa (Pokémon, caixas, tags e histórico) também será apagado. Isso não pode ser desfeito.",
+    "errors": {
+      "username_taken": "Já existe uma conta com esse nome.",
+      "username_invalid": "Nome inválido: use de 3 a 24 letras sem acento, números, ponto, hífen ou _.",
+      "password_invalid": "A senha precisa ter de 8 a 128 caracteres.",
+      "owner_fixed": "A conta do dono do PC não pode ser apagada, desativada nem virar usuário.",
+      "account_not_found": "Essa conta não existe mais."
+    }
+  },
+  "queue": {
+    "title": "Na fila",
+    "host": "Dono do PC",
+    "now": "Agora",
+    "you": "você",
+    "empty": "Ninguém na fila.",
+    "position": "Você é o {{position}}º da fila",
+    "starting": "Chegou a sua vez: a troca está começando…",
+    "help": "Só existe um rádio, então as trocas acontecem uma por vez. Quando chegar a sua vez, a troca começa sozinha: deixe o Switch pronto, na sala do Direct Corner como Leader, e esta página aberta.",
+    "leave": "Sair da fila",
+    "beforeTitle": "Fila de trocas",
+    "freeNow": "O rádio está livre: a troca começa assim que você clicar.",
+    "ahead_one": "Há {{count}} troca na sua frente. Você entra na fila e a sua começa sozinha quando chegar a vez.",
+    "ahead_other": "Há {{count}} trocas na sua frente. Você entra na fila e a sua começa sozinha quando chegar a vez.",
+    "join": "Entrar na fila",
+    "removed": "Você foi tirado da fila por um administrador. Pode entrar de novo quando quiser."
   }
 }

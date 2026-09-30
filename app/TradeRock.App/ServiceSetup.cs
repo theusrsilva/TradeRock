@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.RateLimiting;
+using TradeRock.App.Server;
 using TradeRock.Core;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Engines;
@@ -37,6 +39,7 @@ public static class ServiceSetup
         services.AddSingleton<TradeRecorder>();
         services.AddSingleton<ITradeRecorder>(sp => sp.GetRequiredService<TradeRecorder>());
         services.AddSingleton<TradeCoordinator>();
+        services.AddSingleton<TradeQueue>();
         services.AddSingleton<WindowBridge>();
 
         // Worker privilegiado (placa Wi-Fi, só Linux). Em desenvolvimento, a instalação dev
@@ -82,6 +85,37 @@ public static class ServiceSetup
         services.AddSingleton<ITradeEngine, Esp32SerialEngine>();
         services.AddSingleton<EngineRegistry>();
     }
+
+    /// <summary>
+    /// Modo servidor (Entrega 10): contas, logins pela rede, freio de tentativas e limite de requisições por
+    /// endereço da rede (a janela local não tem limite).
+    /// </summary>
+    public static void AddServerMode(this IServiceCollection services)
+    {
+        services.AddSingleton<AccountStore>();
+        services.AddSingleton<LanSessions>();
+        services.AddSingleton<LoginThrottle>();
+        services.AddSingleton<INetworkInterfaces, SystemNetworkInterfaces>();
+        services.AddSingleton<ILanListener, KestrelLanListener>();
+        services.AddSingleton<ServerMode>();
+        services.AddRateLimiter(o =>
+        {
+            o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+            {
+                if (!context.RequestServices.GetRequiredService<ServerMode>().IsLanRequest(context))
+                    return RateLimitPartition.GetNoLimiter("local");
+                var address = context.Connection.RemoteIpAddress?.ToString() ?? "?";
+                return RateLimitPartition.GetFixedWindowLimiter(address, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = LanRequestsPerMinute,
+                    Window = TimeSpan.FromMinutes(1),
+                });
+            });
+        });
+    }
+
+    public const int LanRequestsPerMinute = 600;
 
     /// <summary>build/worker/stage do repositório (scripts/build-worker.sh), para rodar do código-fonte.</summary>
     private static string? FindDevStage()

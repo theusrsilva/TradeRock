@@ -284,10 +284,11 @@ public sealed class VaultStore(IDbContextFactory<TradeRockDb> dbFactory, Pokemon
         if (validTags.Count != add.Distinct().Count())
             throw new VaultException("tag_not_found");
 
-        await db.PokemonTags.Where(pt => pokemonIds.Contains(pt.PokemonId) && remove.Contains(pt.TagId)).ExecuteDeleteAsync(ct);
-
-        var existing = await db.PokemonTags.Where(pt => pokemonIds.Contains(pt.PokemonId)).ToListAsync(ct);
+        // Só Pokémon deste cofre (PokemonTags não tem filtro de dono próprio).
         var known = await db.Pokemon.Where(p => pokemonIds.Contains(p.Id)).Select(p => p.Id).ToListAsync(ct);
+        await db.PokemonTags.Where(pt => known.Contains(pt.PokemonId) && remove.Contains(pt.TagId)).ExecuteDeleteAsync(ct);
+
+        var existing = await db.PokemonTags.Where(pt => known.Contains(pt.PokemonId)).ToListAsync(ct);
         foreach (var pid in known)
         {
             foreach (var tid in validTags.Where(t => !existing.Any(e => e.PokemonId == pid && e.TagId == t)))
@@ -336,7 +337,11 @@ public sealed class VaultStore(IDbContextFactory<TradeRockDb> dbFactory, Pokemon
         db.Pokemon.RemoveRange(deletable);
         await db.SaveChangesAsync(ct);
 
-        foreach (var p in deletable)
+        // O arquivo é compartilhado entre cofres com o mesmo Pokémon: só sai quando ninguém mais o usa.
+        var hashes = deletable.Select(p => p.Sha256).Distinct().ToList();
+        var stillUsed = await db.Pokemon.IgnoreQueryFilters().Where(p => hashes.Contains(p.Sha256))
+            .Select(p => p.Sha256).Distinct().ToListAsync(ct);
+        foreach (var p in deletable.Where(p => !stillUsed.Contains(p.Sha256)))
         {
             var path = pokemon.FilePath(p.Sha256);
             if (File.Exists(path))
