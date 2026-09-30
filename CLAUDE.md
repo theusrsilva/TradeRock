@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D19).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D20).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -46,6 +46,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Pacotes | .deb e AppImage. Sem verificação de atualizações (a pessoa baixa o Release). Tag `v*` publica o Release direto. Tela Sobre com créditos e oferta do código-fonte |
 | Teste com o Switch | Até 30 s. Sessão de outro jogo decifrada não aprova. Vale até mudar a placa ou o prod.keys (não expira) |
 | Modo servidor | HTTP (só rede de casa, com aviso). Argon2id (Konscious). Fila começa a troca sozinha. Conta nova com os Pokémon de demonstração. Porta 8337. Começa desligado a cada abertura |
+| Windows | Só ESP32. Instalador Inno Setup com administrador (regra do firewall só em redes privadas). Sem assinatura digital por enquanto. Dados em `%LOCALAPPDATA%` com ACL só do usuário. Sem WebView2: abre no navegador |
 
 ## Estado das entregas
 
@@ -61,16 +62,17 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 8 | Empacotamento Linux (AppImage e .deb) e CI | feita; AppImage com FUSE, pkexec e janela **não testados** |
 | 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | feita, **sem placa real** |
 | 10 | Modo servidor na rede (contas, cofre por conta, fila) | feita, **sem celular real** |
-| 11 | Build e instalador Windows (só ESP32) | **próxima** |
+| 11 | Build e instalador Windows (só ESP32) | feita, **sem ESP32 real no Windows** |
 
-A branch mais recente é `entrega-10-servidor`. O `main` do GitHub ainda tem só o commit inicial.
+A branch mais recente é `entrega-11-windows`. Todas as entregas da especificação estão feitas. O `main` do GitHub ainda tem só o commit inicial.
 
 ## Pendências já combinadas
 
 - **GB-Link** (outro firmware ESP32 com host em C# para Windows e Linux): fora da Entrega 9 por decisão
   do autor. Avaliar depois, se o firmware do easyworld der problema em placa real.
 - **Nunca verificado de verdade:**
-  - janela nativa e diálogos do Photino (o ambiente de desenvolvimento era WSL, sem WebKitGTK);
+  - janela nativa do Photino no Linux (WebKitGTK) e os diálogos de arquivo nos dois sistemas (no
+    Windows, a janela abriu com o WebView2);
   - `.sav` real e o formato de save NSO do Switch;
   - troca com Switch real;
   - teste com o Switch (Entrega 7, D16);
@@ -78,7 +80,9 @@ A branch mais recente é `entrega-10-servidor`. O `main` do GitHub ainda tem só
     tem placa);
   - teste da placa com root;
   - AppImage montado por FUSE, instalação do worker pelo pkexec (diálogo) e a janela a partir dos pacotes.
-  - modo servidor com um celular de verdade na rede (Entrega 10, D19).
+  - modo servidor com um celular de verdade na rede (Entrega 10, D19);
+  - ESP32 real no Windows: gravação, troca e driver do CH340/CP210x (Entrega 11, D20). O app, a janela,
+    o instalador e os testes foram verificados num Windows 11 real, pelo WSL.
 
   O roteiro de teste no host está em [docs/dev-host.md](docs/dev-host.md).
 
@@ -94,8 +98,9 @@ A branch mais recente é `entrega-10-servidor`. O `main` do GitHub ainda tem só
 | `frontend/` | React + Vite + TS + Tailwind; o build vai para `app/TradeRock.App/wwwroot` |
 | `catalog/hardware-catalog.json` | Catálogo de placas |
 | `engines/` | Submódulos (frlg-ldn-trade, frlg-ldn-trade-esp32, PKHeX-Plugins) e `patches/` |
-| `scripts/` | `ci.sh`, `dev-host.sh`, `build-worker.sh`, `build-nettools.sh`, `install-worker.sh`, `package-linux.sh`, `smoke-linux.sh` |
+| `scripts/` | `ci.sh`, `dev-host.sh`, `build-worker.sh`, `build-nettools.sh`, `install-worker.sh`, `package-linux.sh`, `smoke-linux.sh`, `package-windows.sh`, `smoke-windows.ps1` |
 | `packaging/linux/` | Atalho, ícone e `worker-setup.sh` (instalação do worker do AppImage como root) |
+| `packaging/windows/` | `traderock.iss` (Inno Setup), `traderock.ico` e `make-icon.py` |
 
 ## Ambiente
 
@@ -105,3 +110,6 @@ A branch mais recente é `entrega-10-servidor`. O `main` do GitHub ainda tem só
   resultado fica em `~/.cache/traderock`.
 - JSON dos enums: snake_case. xUnit v3 com Microsoft.Testing.Platform:
   `dotnet test --project app/TradeRock.Tests`.
+- Windows a partir do WSL: o WSL roda `.exe` do Windows. `scripts/package-windows.sh --installer` acha o
+  Inno Setup 6 instalado no Windows (winget, escopo do usuário) e dá para rodar o app, os testes
+  publicados para `win-x64` e `scripts/smoke-windows.ps1` (pede o UAC) pelo `powershell.exe`.

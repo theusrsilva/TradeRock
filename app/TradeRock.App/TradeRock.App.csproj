@@ -13,6 +13,16 @@
     <FrontendDir>$(MSBuildThisFileDirectory)..\..\frontend\</FrontendDir>
   </PropertyGroup>
 
+  <!-- Windows (Entrega 11): executável de janela (sem console) com o ícone. O .ico vai também ao lado
+       do .exe, para o ícone da janela do Photino. -->
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+    <OutputType>WinExe</OutputType>
+    <ApplicationIcon>..\..\packaging\windows\traderock.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+    <None Include="..\..\packaging\windows\traderock.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="TradeRock.Tests" />
   </ItemGroup>

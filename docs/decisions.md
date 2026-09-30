@@ -503,3 +503,46 @@ Com o app aberto, a mesma interface é servida para a rede da casa (celular, out
     um administrador.
 - **Não verificado:** celular de verdade na rede. Testado com o Kestrel real em `127.0.0.2` (liga,
   desliga e porta ocupada) e, no WSL, por curl no IP da `eth0`.
+
+## D20. Windows (Entrega 11)
+
+Windows 10 1809+ e 11, x64, **só o motor ESP32** (o Windows não dá acesso de baixo nível ao Wi-Fi).
+
+- **Compilado no Linux.** `scripts/package-windows.sh` publica o app para `win-x64` (self-contained)
+  daqui mesmo, com o mesmo núcleo do easyworld e os mesmos patches do Linux. Só o Inno Setup (instalador)
+  e a execução dos testes precisam do Windows. No CI, um job Linux monta `build/windows` (app + testes) e
+  um job Windows roda os testes, gera o instalador e faz a fumaça (`scripts/smoke-windows.ps1`: instala em
+  silêncio, confere versão, firewall, esptool, API e ACL, e desinstala). Os testes que dependem do Linux
+  (worker, pkexec, `/sys`, pseudo-terminal) usam `[LinuxFact]` e são pulados no Windows.
+- **Instalador Inno Setup, com administrador** (decisão do autor). Instala em Arquivos de Programas e
+  cria a regra do Firewall do Windows para o modo servidor: entrada TCP, **só o `traderock.exe` e só no
+  perfil "Privada"**. A regra sai na desinstalação. O "Abrir o TradeRock" do fim roda como o usuário
+  (`runasoriginaluser`): o app nunca roda como administrador.
+- **Sem assinatura digital por enquanto** (decisão do autor). O Windows mostra o aviso do SmartScreen na
+  primeira vez; o README explica o "Mais informações → Executar assim mesmo" e o `SHA256SUMS` do Release
+  inclui o instalador.
+- **Dados em `%LOCALAPPDATA%\TradeRock`**, não em `%APPDATA%` (que acompanha o perfil móvel: o prod.keys
+  não deve viajar). A pasta de dados e a de chaves ganham uma ACL **sem herança, só com o usuário atual**
+  (equivalente ao 700/600 do Linux); o que é criado dentro herda. A desinstalação não apaga os dados.
+- **Leitura do sistema pelo WMI** (`System.Management`, `Win32_PnPEntity`): portas COM com VID/PID e
+  nome do conversor, e conversores **sem driver** (código 28 do Gerenciador de Dispositivos), que não
+  ganham porta COM. O aviso `usb_driver_missing` passou a independer da porta escolhida e só aparece para
+  conversores do catálogo, com o link do fabricante (WCH, Silicon Labs, FTDI).
+- **esptool no Windows.** CPython 3.12 do python-build-standalone para Windows (sha256 fixo, sem `.pdb`,
+  Tcl/Tk e testes) em `esp32-runtime/`, com as rodas `win_amd64` de `worker/requirements-esp32-windows.lock`
+  (hash fixo; inclui o `colorama`, que o rich-click só exige no Windows). O esptool só existe como
+  código-fonte: vira uma roda `py3-none-any` a partir do sdist conferido pelo `requirements.lock`. O pip do
+  Python do Linux instala as rodas do Windows numa pasta, sem executá-las.
+  - No Windows, "acesso negado" ao abrir a COM é **porta em uso** (não há grupo de permissão).
+  - Pedido e respostas em UTF-8 (caminhos com acento), sem janela de console.
+- **Janela.** Executável `WinExe` (sem console) com ícone (`packaging/windows/traderock.ico`, gerado por
+  `make-icon.py` a partir das formas do `icon.svg`). Chamado de um terminal (`--version`, `--no-window`),
+  escreve no console de quem chamou. **Sem WebView2** (Windows 10 antigo): mensagem com o link oficial da
+  Microsoft e o app abre no navegador padrão; nada é baixado.
+- **Modo servidor no Windows.** Adaptadores virtuais (Hyper-V, WSL, VirtualBox, VMware, Docker) aparecem
+  marcados como "virtual" e no fim da lista. A tela avisa que a regra do firewall vale só para redes
+  "Privadas".
+- **Verificado no Windows 11 real** (via WSL): 247 testes passando (31 pulados, só Linux), janela com
+  WebView2, API, ACL do prod.keys, esptool (porta ausente) e a fumaça completa do instalador.
+  **Não verificado:** ESP32 real no Windows (gravação, troca, driver do CH340/CP210x).
+

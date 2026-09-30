@@ -652,6 +652,7 @@ export interface LanInterface {
   address: string
   wireless: boolean
   blocked: boolean
+  virtual: boolean
 }
 
 export interface ServerModeStatus {

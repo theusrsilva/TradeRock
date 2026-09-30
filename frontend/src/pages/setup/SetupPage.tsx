@@ -358,8 +358,8 @@ function PrepareStep({
           )}
           <fieldset className="space-y-1">
             <legend className="font-medium">{t('wizard.choosePort')}</legend>
-            {system.serialPorts.length === 0 && <p className="text-sm text-slate-500">{t('wizard.noPorts')}</p>}
-            {system.serialPorts.map((p) => {
+            {system.serialPorts.filter((p) => !p.driverMissing).length === 0 && <p className="text-sm text-slate-500">{t('wizard.noPorts')}</p>}
+            {system.serialPorts.filter((p) => !p.driverMissing).map((p) => {
               const chip = catalog.usbSerial.find((u) => u.vid === p.vendorId && u.pid === p.productId)
               return (
                 <label key={p.path} className="flex items-center gap-2 text-sm">

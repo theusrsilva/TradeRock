@@ -190,7 +190,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         await Json(await _client.PutAsJsonAsync("/api/setup/state", new { radio = "wifi", phy = "phy1" }));
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Assistente_teste_da_placa_e_rede()
     {
         await ConfigureWifiAsync();
@@ -226,7 +226,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.DoesNotContain(Hex, report);
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Placa_reprovada_bloqueia_a_troca()
     {
         _worker.Mode = "card_fail";
@@ -243,7 +243,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.Contains("setup_incomplete", await response.Content.ReadAsStringAsync());
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Worker_ausente_responde_409()
     {
         _worker.Installed = null;
@@ -282,7 +282,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
     private static JsonElement CheckElement(JsonElement status, string id) =>
         status.GetProperty("checks").EnumerateArray().First(c => c.GetProperty("id").GetString() == id);
 
-    [Theory]
+    [LinuxTheory]
     [InlineData("found_not_decrypted")]
     [InlineData("other_session")]
     [InlineData("not_found")]
@@ -300,7 +300,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.False(sw.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Teste_com_o_switch_vale_so_para_o_mesmo_prod_keys()
     {
         await ReadyAsync();
@@ -312,7 +312,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.False(status.GetProperty("readyToTrade").GetBoolean());
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Teste_com_o_switch_sem_chaves_e_placa_desconhecida()
     {
         await Json(await _client.PutAsJsonAsync("/api/setup/state", new { radio = "wifi", phy = "phy1" }));
@@ -325,7 +325,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.Equal(0, _worker.Launches);
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Cancelar_o_teste_com_o_switch_avisa_o_worker()
     {
         _worker.BeaconMode = "hang";
@@ -366,7 +366,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         return events;
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Troca_real_de_ponta_a_ponta_com_o_worker()
     {
         await ReadyAsync();
@@ -393,7 +393,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.DoesNotContain(Convert.ToBase64String(Encoding.UTF8.GetBytes(Hex))[..16], history);
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Cancelar_pede_ao_worker_e_espera_ele_sair()
     {
         await ReadyAsync();
@@ -412,7 +412,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.Contains(_worker.Requests, r => r["op"]!.GetValue<string>() == "cancel");
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Sala_nao_encontrada_tenta_de_novo()
     {
         await ReadyAsync();
@@ -425,7 +425,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.Contains(events, e => e.GetProperty("errorCode").GetString() == "no_network_found");
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Simulacao_do_assistente_nao_libera_o_motor_real()
     {
         await ReadyAsync();

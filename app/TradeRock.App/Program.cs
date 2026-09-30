@@ -6,6 +6,11 @@ internal static class Program
     [STAThread] // exigido pelo WebView2 no Windows
     private static int Main(string[] args)
     {
+        // Windows: o executável é de janela (sem console). Chamado de um terminal (--version,
+        // --no-window), escreve no console de quem chamou.
+        if (OperatingSystem.IsWindows())
+            WindowsConsole.AttachToParent();
+
         // Antes de tudo: não cria pasta de dados nem banco (usado pelos pacotes e pelo CI).
         if (args is ["--version"])
         {
@@ -38,6 +43,17 @@ internal static class Program
             return 1;
         }
 
+        // Windows sem WebView2: avisa e abre no navegador padrão, com o app rodando até o fim da sessão.
+        if (OperatingSystem.IsWindows() && WindowPrerequisites.WebView2Version() is null)
+        {
+            logger.LogWarning("WebView2 ausente: abrindo no navegador.");
+            WindowPrerequisites.ShowMessage(WindowPrerequisites.WebView2Message, "TradeRock");
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(TradeRockServer.GetLaunchUri(app).ToString()) { UseShellExecute = true });
+            app.WaitForShutdownAsync().GetAwaiter().GetResult();
+            app.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            return 0;
+        }
+
         RunWindow(TradeRockServer.GetLaunchUri(app), options.DevTools, app.Services.GetRequiredService<WindowBridge>());
 
         app.StopAsync().GetAwaiter().GetResult();
@@ -59,7 +75,29 @@ internal static class Program
             .SetContextMenuEnabled(devTools)
             .Load(launchUri);
 
+        // Windows: ícone da janela e da barra de tarefas (o instalador põe o .ico ao lado do .exe).
+        var icon = Path.Combine(AppContext.BaseDirectory, "traderock.ico");
+        if (OperatingSystem.IsWindows() && File.Exists(icon))
+            window.SetIconFile(icon);
+
         bridge.Attach(window);
         window.WaitForClose();
+    }
+}
+
+internal static class WindowsConsole
+{
+    private const int AttachParentProcess = -1;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern bool AttachConsole(int processId);
+
+    public static void AttachToParent()
+    {
+        if (!AttachConsole(AttachParentProcess))
+            return;
+        // Reabre as saídas padrão no console recém-ligado.
+        Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
+        Console.SetError(new StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
     }
 }

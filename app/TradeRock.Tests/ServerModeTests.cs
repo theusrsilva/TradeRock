@@ -57,7 +57,7 @@ public sealed class ServerModeTests : IAsyncLifetime
         {
             b.WebHost.UseTestServer();
             b.Services.AddSingleton<INetworkInterfaces>(new FakeInterfaces(
-                ("eth0", IPAddress.Parse(LanHost), false), ("wlan0", IPAddress.Parse("192.168.50.11"), true)));
+                new("eth0", IPAddress.Parse(LanHost), false), new("wlan0", IPAddress.Parse("192.168.50.11"), true)));
             b.Services.AddSingleton<ILanListener, FakeLanListener>();
             b.Services.AddSingleton<IStartupFilter, LanMarker>();
         });
@@ -452,9 +452,9 @@ public sealed class ServerModeTests : IAsyncLifetime
         simulation = new { scenario = "success" },
     };
 
-    private sealed class FakeInterfaces(params (string, IPAddress, bool)[] list) : INetworkInterfaces
+    private sealed class FakeInterfaces(params NetworkInterfaceInfo[] list) : INetworkInterfaces
     {
-        public IReadOnlyList<(string Name, IPAddress Address, bool Wireless)> List() => list;
+        public IReadOnlyList<NetworkInterfaceInfo> List() => list;
     }
 
     /// <summary>Sem Kestrel no TestServer: só troca os hosts aceitos, como o listener real.</summary>
@@ -619,6 +619,6 @@ public sealed class KestrelServerModeTests : IAsyncLifetime
 
     private sealed class LoopbackAlias : INetworkInterfaces
     {
-        public IReadOnlyList<(string Name, IPAddress Address, bool Wireless)> List() => [("lo-test", IPAddress.Parse("127.0.0.2"), false)];
+        public IReadOnlyList<NetworkInterfaceInfo> List() => [new("lo-test", IPAddress.Parse("127.0.0.2"), false)];
     }
 }

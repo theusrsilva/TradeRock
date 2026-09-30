@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Badge, Button, Card, Field, inputClass, Modal } from '../../components/ui'
 import { ApiError, api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
+import { useAppInfo } from '../../lib/appInfo'
 import type { Account, ServerModeStatus, UserRole } from '../../lib/types'
 
 function errorCode(e: unknown) {
@@ -13,6 +14,7 @@ function errorCode(e: unknown) {
 export function ServerModeCard() {
   const { t } = useTranslation()
   const { reload } = useAuth()
+  const info = useAppInfo()
   const [status, setStatus] = useState<ServerModeStatus | null>(null)
   const [choice, setChoice] = useState('')
   const [port, setPort] = useState(8337)
@@ -23,7 +25,7 @@ export function ServerModeCard() {
     const s = await api.get<ServerModeStatus>('/api/server')
     setStatus(s)
     setPort(s.port)
-    const usable = s.interfaces.filter((i) => !i.blocked)
+    const usable = s.interfaces.filter((i) => !i.blocked && !i.virtual).concat(s.interfaces.filter((i) => !i.blocked && i.virtual))
     setChoice((current) => current || (usable.some((i) => i.name === s.interface) ? s.interface! : usable[0]?.name) || '')
   }, [])
 
@@ -60,6 +62,7 @@ export function ServerModeCard() {
         <p>{t('server.warningInternet')}</p>
         <p>{t('server.warningHttp')}</p>
       </div>
+      {info?.os === 'windows' && <p className="text-sm text-slate-600 dark:text-slate-300">{t('server.windowsFirewall')}</p>}
 
       {status.enabled && status.url ? (
         <div className="flex flex-wrap items-center gap-4">
@@ -88,7 +91,7 @@ export function ServerModeCard() {
                 <select className={inputClass} value={choice} onChange={(e) => setChoice(e.target.value)}>
                   {status.interfaces.map((i) => (
                     <option key={i.name} value={i.name} disabled={i.blocked}>
-                      {i.name} · {i.address} · {i.wireless ? t('server.wireless') : t('server.wired')}
+                      {i.name} · {i.address} · {i.virtual ? t('server.virtual') : i.wireless ? t('server.wireless') : t('server.wired')}
                       {i.blocked ? ` (${t('server.blocked')})` : ''}
                     </option>
                   ))}

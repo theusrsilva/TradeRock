@@ -983,7 +983,9 @@
       "interface_is_radio": "That is the Wi-Fi card that does the trades. Pick another interface.",
       "bind_failed": "Couldn't use that port (another program may be using it). Try another port."
     },
-    "localOnly": "This screen only opens in the TradeRock window on the PC itself."
+    "localOnly": "This screen only opens in the TradeRock window on the PC itself.",
+    "virtual": "virtual (not the home network)",
+    "windowsFirewall": "On Windows, the installer already allowed TradeRock through the Firewall, on \"Private\" networks only. If the phone can't open it, check in Windows Settings → Network & internet that the home network is set to \"Private network\"."
   },
   "accounts": {
     "title": "Accounts",

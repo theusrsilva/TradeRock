@@ -207,14 +207,14 @@ public sealed class Esp32SerialLinkTests : IDisposable
         return path;
     }
 
-    [Fact]
+    [LinuxFact]
     public void Firmware_responde_ao_hello()
     {
         var port = StartDevice(new { mode = "ok", target = "esp32c6" });
         Assert.Equal("esp32c6", new SerialEsp32Link().Probe(port, CancellationToken.None).Target);
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData("silent", "esp32_firmware_missing")]
     [InlineData("incapable", "esp32_firmware_incompatible")]
     public void Sem_firmware_ou_incompativel(string mode, string code)
@@ -224,14 +224,14 @@ public sealed class Esp32SerialLinkTests : IDisposable
         Assert.Equal(code, e.Code);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Porta_inexistente()
     {
         var e = Assert.Throws<Esp32Exception>(() => new SerialEsp32Link().Probe("/dev/ttyUSB-nao-existe", CancellationToken.None));
         Assert.Equal("serial_port_missing", e.Code);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Acha_e_decifra_a_sala()
     {
         var raw = Vectors.GetProperty("advertisements")[0].GetProperty("raw").GetString()!;
@@ -246,7 +246,7 @@ public sealed class Esp32SerialLinkTests : IDisposable
         Assert.True(result.Passed);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Anuncio_que_nao_decifra()
     {
         var raw = Vectors.GetProperty("advertisements")[0].GetProperty("raw").GetString()!;

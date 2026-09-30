@@ -87,7 +87,7 @@ public sealed class ProdKeys(AppPaths paths)
         return hex.Length > 0 && hex.Length % 2 == 0 && hex.All(Uri.IsHexDigit);
     }
 
-    /// <summary>Guarda (só se válido) com permissão 600 no Linux. Devolve o resultado da validação.</summary>
+    /// <summary>Guarda (só se válido) com permissão 600 no Linux (ACL só do usuário no Windows). Devolve o resultado da validação.</summary>
     public KeysValidation Save(ReadOnlySpan<byte> file)
     {
         if (file.Length is 0 or > MaxBytes)
@@ -111,7 +111,7 @@ public sealed class ProdKeys(AppPaths paths)
         }
         else
         {
-            // Windows (Fase 2): a pasta fica no perfil do usuário; ACL só do usuário entra junto com o instalador.
+            // Windows: a pasta de chaves tem ACL só do usuário (AppPaths.EnsureCreated) e o arquivo a herda.
             File.WriteAllBytes(temp, file.ToArray());
         }
         File.Move(temp, FilePath, overwrite: true);

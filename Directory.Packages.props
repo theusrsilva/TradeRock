@@ -7,6 +7,8 @@
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.8" />
     <PackageVersion Include="System.IO.Ports" Version="10.0.7" />
+    <!-- Windows (Entrega 11): portas COM e dispositivos sem driver pelo WMI. -->
+    <PackageVersion Include="System.Management" Version="10.0.7" />
     <!-- Modo servidor (Entrega 10): hash de senha Argon2id e QR code do endereço. -->
     <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <PackageVersion Include="QRCoder" Version="1.8.0" />

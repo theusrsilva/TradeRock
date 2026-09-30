@@ -20,8 +20,14 @@ public sealed record ServerModeSettings(string? Interface = null, int Port = Ser
     public const int DefaultPort = 8337;
 }
 
-/// <summary>Uma interface de rede com IPv4. <see cref="Blocked"/> = é a placa Wi-Fi que faz as trocas.</summary>
-public sealed record LanInterface(string Name, string Address, bool Wireless, bool Blocked);
+/// <summary>
+/// Uma interface de rede com IPv4. <see cref="Blocked"/> = é a placa Wi-Fi que faz as trocas.
+/// <see cref="Virtual"/> = adaptador de máquina virtual (Hyper-V, WSL, VirtualBox, VMware): não é a rede da casa.
+/// </summary>
+public sealed record LanInterface(string Name, string Address, bool Wireless, bool Blocked, bool Virtual = false);
+
+/// <summary>Interface como o sistema a mostra.</summary>
+public sealed record NetworkInterfaceInfo(string Name, IPAddress Address, bool Wireless, bool Virtual = false);
 
 public sealed record ServerModeStatus(
     bool Enabled,
@@ -35,19 +41,27 @@ public sealed record ServerModeStatus(
 /// <summary>Interfaces de rede do PC (trocável nos testes).</summary>
 public interface INetworkInterfaces
 {
-    IReadOnlyList<(string Name, IPAddress Address, bool Wireless)> List();
+    IReadOnlyList<NetworkInterfaceInfo> List();
 }
 
 public sealed class SystemNetworkInterfaces : INetworkInterfaces
 {
-    public IReadOnlyList<(string Name, IPAddress Address, bool Wireless)> List() =>
+    private static readonly string[] VirtualHints = ["Hyper-V", "Virtual", "VMware", "VirtualBox", "WSL", "vEthernet"];
+
+    public IReadOnlyList<NetworkInterfaceInfo> List() =>
         NetworkInterface.GetAllNetworkInterfaces()
             .Where(n => n.OperationalStatus == OperationalStatus.Up && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
             .SelectMany(n => n.GetIPProperties().UnicastAddresses
                 .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a.Address))
-                .Select(a => (n.Name, a.Address, n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)))
-            .OrderBy(n => n.Name, StringComparer.Ordinal)
+                .Select(a => new NetworkInterfaceInfo(n.Name, a.Address, n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211,
+                    IsVirtual(n))))
+            .OrderBy(n => n.Virtual).ThenBy(n => n.Name, StringComparer.Ordinal)
             .ToList();
+
+    private static bool IsVirtual(NetworkInterface n) =>
+        VirtualHints.Any(h => n.Name.Contains(h, StringComparison.OrdinalIgnoreCase) || n.Description.Contains(h, StringComparison.OrdinalIgnoreCase))
+        || (OperatingSystem.IsLinux() && (n.Name.StartsWith("docker", StringComparison.Ordinal) || n.Name.StartsWith("br-", StringComparison.Ordinal)
+            || n.Name.StartsWith("veth", StringComparison.Ordinal) || n.Name.StartsWith("virbr", StringComparison.Ordinal)));
 }
 
 /// <summary>Liga e desliga o endereço da rede no servidor web (trocável nos testes).</summary>
@@ -216,7 +230,7 @@ public sealed class ServerMode(ILanListener listener, INetworkInterfaces network
         var blocked = await RadioInterfacesAsync(forceWifi: false, ct);
         var list = network.List()
             .Select(n => new LanInterface(n.Name, n.Address.ToString(), n.Wireless, blocked.Contains(n.Name)
-                || (radio == "wifi" && status.State.Phy is null && n.Wireless)))
+                || (radio == "wifi" && status.State.Phy is null && n.Wireless), n.Virtual))
             .ToList();
         return (radio, list);
     }

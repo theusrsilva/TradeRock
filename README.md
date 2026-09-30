@@ -53,12 +53,38 @@ não aceitam essa instalação.
 Cada Release traz também o `SHA256SUMS` e o código-fonte completo (com os submódulos) e o das
 ferramentas de rede embutidas (veja **Sobre** no rodapé do app).
 
+## Instalação (Windows)
+
+Windows 10 (versão 1809 ou mais nova) ou 11, 64 bits. No Windows o rádio é sempre um **ESP32** no
+USB (veja [Plataformas](#plataformas)).
+
+1. Baixe o `TradeRock-Setup-<versão>.exe` na página de
+   [Releases](https://github.com/theusrsilva/TradeRock/releases).
+2. Abra o instalador. Como ele ainda **não tem assinatura digital**, o Windows mostra "O Windows
+   protegeu o computador": clique em **Mais informações → Executar assim mesmo**. Se quiser, confira
+   antes o arquivo pelo `SHA256SUMS` do Release (`Get-FileHash TradeRock-Setup-<versão>.exe` no
+   PowerShell).
+3. O instalador pede **administrador** para instalar em Arquivos de Programas e liberar o TradeRock no
+   Firewall do Windows (só em redes privadas, para o [modo servidor](#modo-servidor-celular-e-outros-pcs)).
+   O TradeRock em si roda sempre como o seu usuário.
+
+Tudo o que o app precisa vem junto (o .NET e o Python da gravação do ESP32). A janela usa o
+**Microsoft Edge WebView2**, que já vem no Windows 11 e nos Windows 10 atualizados; se faltar, o app
+abre no navegador e mostra o link da página oficial da Microsoft.
+
+Os seus Pokémon, chaves e configurações ficam em `%LOCALAPPDATA%\TradeRock`, só com acesso do seu
+usuário. Para remover: **Configurações do Windows → Aplicativos → TradeRock → Desinstalar**. Os seus
+dados continuam na pasta acima (apague-a se não for mais usar).
+
+Conversores USB **CH340** ou **CP210x** podem precisar de driver: o Windows Update costuma
+instalar sozinho; se não, o assistente mostra o link do fabricante.
+
 ## Plataformas
 
 | Sistema | Motor de troca | Situação |
 | --- | --- | --- |
 | Linux x64 (AppImage, .deb) | Placa Wi-Fi do PC (padrão) ou ESP32 via USB | Fase 1 |
-| Windows x64 (instalador) | Só ESP32 via USB | Fase 2 |
+| Windows 10/11 x64 (instalador) | Só ESP32 via USB | Fase 2 (Entrega 11) |
 
 No Windows, a placa Wi-Fi do PC não serve: o sistema não dá o acesso de baixo nível ao Wi-Fi
 que o LDN exige.
@@ -281,7 +307,7 @@ Detalhes em [docs/decisions.md](docs/decisions.md) (D19).
 | Sistema | Pasta |
 | --- | --- |
 | Linux | `$XDG_DATA_HOME/traderock` (padrão `~/.local/share/traderock`) |
-| Windows | `%APPDATA%\TradeRock` |
+| Windows | `%LOCALAPPDATA%\TradeRock` (só o seu usuário tem acesso) |
 
 Dentro dela:
 
@@ -326,10 +352,15 @@ scripts/package-linux.sh            # dist/traderock_<versão>_amd64.deb e dist/
 scripts/package-linux.sh 0.8.1 --sources   # também o código-fonte e o das ferramentas de rede
 sudo scripts/smoke-linux.sh deb dist/traderock_*.deb          # teste de fumaça (instala e remove)
 sudo scripts/smoke-linux.sh appimage dist/TradeRock-*.AppImage
+
+scripts/package-windows.sh           # build/windows/app (compilado daqui, do Linux ou do WSL)
+scripts/package-windows.sh --installer   # + dist/TradeRock-Setup-<versão>.exe (Inno Setup 6 no Windows)
+pwsh scripts/smoke-windows.ps1 dist\TradeRock-Setup-<versão>.exe <versão>   # no Windows, como administrador
 ```
 
 No CI (`.github/workflows/ci.yml`), cada push gera os pacotes como artefatos e testa o .deb no Ubuntu
-22.04 e 24.04 e no Debian 12 e 13. Uma tag `v*` publica o Release. Detalhes em
+22.04 e 24.04 e no Debian 12 e 13. O Windows é compilado no Linux e testado num runner Windows
+(testes, instalador e fumaça: instala, confere e desinstala). Uma tag `v*` publica o Release. Detalhes em
 [packaging/README.md](packaging/README.md) e na decisão D17.
 
 ## Licença e créditos

@@ -9,15 +9,16 @@ public interface ISystemProbe
     SystemSnapshot Read();
 }
 
-/// <summary>Leitura do sistema real. O Windows (só ESP32) ganha leitura completa na Fase 2.</summary>
+/// <summary>Leitura do sistema real: Linux (placa Wi-Fi e ESP32) ou Windows (só ESP32).</summary>
 public sealed class RealSystemProbe : ISystemProbe
 {
     public SystemSnapshot Read()
     {
         if (OperatingSystem.IsLinux())
             return new LinuxProbe().Read();
-        var os = OperatingSystem.IsWindows() ? "windows" : "other";
-        return new SystemSnapshot(os, false, null, null, [], [], null, false, false);
+        if (OperatingSystem.IsWindows())
+            return WindowsProbe.Read();
+        return new SystemSnapshot("other", false, null, null, [], [], null, false, false);
     }
 }
 

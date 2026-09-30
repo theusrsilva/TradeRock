@@ -141,7 +141,17 @@ class Esp32FlashTests(unittest.TestCase):
         }
         for text, code in cases.items():
             with self.subTest(text=text):
-                self.assertEqual(esp32_flash.classify(text), code)
+                self.assertEqual(esp32_flash.classify(text, windows=False), code)
+
+    def test_codigos_de_erro_no_windows(self):
+        cases = {
+            "FatalError: Could not open COM3, the port is busy or doesn't exist.\n(could not open port 'COM3': PermissionError(13, 'Acesso negado.', None, 5))": "serial_busy",
+            "FatalError: Could not open COM9, the port is busy or doesn't exist.\n(could not open port 'COM9': FileNotFoundError(2, 'O sistema não pode encontrar o arquivo especificado.', None, 2))": "serial_port_missing",
+            "FatalError: Failed to connect to ESP32: No serial data received.": "boot_mode_required",
+        }
+        for text, code in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(esp32_flash.classify(text, windows=True), code)
 
     def test_esptool_real_tem_a_api_usada(self):
         """Confere, no esptool instalado (Python embutido), os nomes da API que o script usa."""

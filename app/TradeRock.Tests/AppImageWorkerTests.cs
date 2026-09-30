@@ -62,7 +62,7 @@ public sealed class FakePayload : IDisposable
 [SupportedOSPlatform("linux")]
 public sealed class BundledWorkerTests
 {
-    [Fact]
+    [LinuxFact]
     public async Task Instala_atualiza_e_remove_com_o_script_real()
     {
         using var p = new FakePayload();
@@ -93,7 +93,7 @@ public sealed class BundledWorkerTests
         Assert.Equal(["uninstall", Path.Combine(p.FsRoot, "usr/local/lib/traderock"), p.Policy], shell.Calls[^1]);
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Worker_incompleto_nao_substitui_o_instalado()
     {
         using var p = new FakePayload();
@@ -109,7 +109,7 @@ public sealed class BundledWorkerTests
         Assert.Equal("v1", File.ReadAllText(p.Installed(BundledWorker.IdFile)).Trim());
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData(126, "auth_cancelled")]
     [InlineData(127, "not_authorized")]
     [InlineData(1, "worker_install_failed")]
@@ -120,7 +120,7 @@ public sealed class BundledWorkerTests
         Assert.Equal(code, (await Assert.ThrowsAsync<WorkerException>(() => bundled.InstallAsync(CancellationToken.None))).Code);
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Sem_worker_embutido()
     {
         var bundled = new BundledWorker(new ShShell(), null);
@@ -128,7 +128,7 @@ public sealed class BundledWorkerTests
         Assert.Equal("worker_not_bundled", (await Assert.ThrowsAsync<WorkerException>(() => bundled.InstallAsync(CancellationToken.None))).Code);
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Script_recusa_pastas_estranhas()
     {
         foreach (var args in new[] { new[] { "uninstall", "/", "/x.policy" }, ["uninstall", "/usr/local/lib/traderock", "/etc/passwd"], ["format", "/a/traderock", "/a.policy"] })
@@ -138,7 +138,7 @@ public sealed class BundledWorkerTests
         }
     }
 
-    [Fact]
+    [LinuxFact]
     public void Acha_o_worker_embutido_ao_lado_do_app()
     {
         using var p = new FakePayload();
@@ -148,7 +148,7 @@ public sealed class BundledWorkerTests
         Assert.Null(BundledWorker.FindPayload(Directory.CreateDirectory(Path.Combine(app, "sub")).FullName));
     }
 
-    [Fact]
+    [LinuxFact]
     public void Verificacao_do_worker_no_appimage()
     {
         var linux = SetupScenarios.All["linux-compatible"] with { SimulatedScenario = null };
@@ -169,7 +169,7 @@ public sealed class BundledWorkerTests
         Assert.Equal("worker_missing", Code(null, null));
     }
 
-    [Fact]
+    [LinuxFact]
     public void AppImage_prefere_a_propria_copia()
     {
         var root = Directory.CreateTempSubdirectory("traderock-locator-").FullName;
@@ -232,7 +232,7 @@ public sealed class WorkerApiTests : IAsyncLifetime
         return JsonDocument.Parse(text).RootElement.Clone();
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Instalar_e_remover_pela_api()
     {
         var info = await Json(await _client.GetAsync("/api/worker"));
@@ -248,7 +248,7 @@ public sealed class WorkerApiTests : IAsyncLifetime
         Assert.False(File.Exists(_payload.Installed("traderock-worker")));
     }
 
-    [Fact]
+    [LinuxFact]
     public async Task Senha_cancelada_responde_409()
     {
         _shell.ForcedExitCode = 126;

@@ -36,16 +36,32 @@ public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir
     /// </summary>
     public static string? FindRuntime(string? appImagePayload, bool preferDev, string? devStage)
     {
+        // Windows: o instalador põe o runtime ao lado do app (scripts/package-windows.sh).
+        if (OperatingSystem.IsWindows())
+        {
+            var bundled = Path.Combine(AppContext.BaseDirectory, WindowsRuntimeDir);
+            return IsRuntime(bundled) ? bundled : null;
+        }
+
         var candidates = new List<string?> { appImagePayload };
         var installs = WorkerLocator.Candidates.Select(c => c.Prefix).ToList();
         if (preferDev)
             installs = [.. installs.OrderBy(p => p == WorkerLocator.Dev.Prefix ? 0 : 1)];
         candidates.AddRange(installs);
         candidates.Add(devStage);
-        return candidates.FirstOrDefault(root => root is not null
-            && File.Exists(Path.Combine(root, "python", "bin", "python3"))
-            && File.Exists(Path.Combine(root, "worker", "run.py")));
+        return candidates.FirstOrDefault(root => root is not null && IsRuntime(root));
     }
+
+    /// <summary>Pasta do runtime do esptool no Windows, ao lado do traderock.exe.</summary>
+    public const string WindowsRuntimeDir = "esp32-runtime";
+
+    /// <summary>python/bin/python3 (Linux) ou python/python.exe (Windows, python-build-standalone).</summary>
+    public static string PythonPath(string root) => OperatingSystem.IsWindows()
+        ? Path.Combine(root, "python", "python.exe")
+        : Path.Combine(root, "python", "bin", "python3");
+
+    private static bool IsRuntime(string root) =>
+        File.Exists(PythonPath(root)) && File.Exists(Path.Combine(root, "worker", "run.py"));
 
     public bool Available => runtimeRoot() is not null;
 
@@ -96,18 +112,34 @@ public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir
     private async Task<JsonObject> RunAsync(JsonObject request, Action<Esp32Progress>? progress, CancellationToken ct)
     {
         var root = runtimeRoot() ?? throw new Esp32Exception("esptool_missing", "O esptool embutido não foi encontrado.");
-        var start = new ProcessStartInfo(Path.Combine(root, "python", "bin", "python3"))
+        var start = new ProcessStartInfo(PythonPath(root))
         {
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
+            CreateNoWindow = true, // Windows: sem janela de console piscando
+            // O pedido e as respostas são JSON em UTF-8 (caminhos com acento no Windows).
+            StandardInputEncoding = new System.Text.UTF8Encoding(false),
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8,
         };
         foreach (var arg in new[] { "-I", "-B", Path.Combine(root, "worker", "run.py"), "--esp32" })
             start.ArgumentList.Add(arg);
         start.Environment.Clear();
-        start.Environment["PATH"] = "/usr/bin:/bin";
-        start.Environment["LANG"] = "C.UTF-8";
+        if (OperatingSystem.IsWindows())
+        {
+            // O Python do Windows precisa do SystemRoot (criptografia, sockets) e de uma pasta temporária.
+            var systemRoot = Environment.GetEnvironmentVariable("SystemRoot") ?? @"C:\Windows";
+            start.Environment["SystemRoot"] = systemRoot;
+            start.Environment["PATH"] = Path.Combine(systemRoot, "System32");
+            start.Environment["TEMP"] = start.Environment["TMP"] = Path.GetTempPath();
+        }
+        else
+        {
+            start.Environment["PATH"] = "/usr/bin:/bin";
+            start.Environment["LANG"] = "C.UTF-8";
+        }
 
         using var process = Process.Start(start) ?? throw new Esp32Exception("esptool_missing", "Não foi possível iniciar o esptool.");
         using var kill = ct.Register(() => { try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } });

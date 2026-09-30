@@ -323,20 +323,27 @@ public static class SetupChecks
             yield return new SetupCheck("esp32_board", 4, board.Status == CompatStatus.Untested ? CheckStatus.Warning : CheckStatus.Ok,
                 board.Status != CompatStatus.Untested, $"esp32_board_{Name(board.Status)}", Args(("model", board.Model)));
 
-        var port = system.SerialPorts.FirstOrDefault(p => p.Path == state.SerialPort);
-        if (system.SerialPorts.Count == 0)
+        // Windows: conversor ligado sem driver não ganha porta COM. Avisa com o link do fabricante.
+        // (Só os conversores do catálogo: outro aparelho USB sem driver não é problema do TradeRock.)
+        foreach (var missing in system.SerialPorts.Where(p => p.DriverMissing).DistinctBy(p => (p.VendorId, p.ProductId)))
+        {
+            if (catalog.MatchUsbSerial(missing.VendorId, missing.ProductId) is not { } missingChip)
+                continue;
+            yield return new SetupCheck("usb_driver", 4, CheckStatus.Error, true, "usb_driver_missing",
+                Args(("chip", missingChip.Name), ("url", missingChip.DriverUrl ?? "")));
+        }
+
+        var ports = system.SerialPorts.Where(p => !p.DriverMissing).ToList();
+        var port = ports.FirstOrDefault(p => p.Path == state.SerialPort);
+        if (ports.Count == 0)
             yield return new SetupCheck("serial_port", 4, CheckStatus.Error, true, "serial_none");
         else if (port is null)
-            yield return new SetupCheck("serial_port", 4, CheckStatus.Error, true, "serial_not_chosen", Args(("count", system.SerialPorts.Count.ToString())));
+            yield return new SetupCheck("serial_port", 4, CheckStatus.Error, true, "serial_not_chosen", Args(("count", ports.Count.ToString())));
         else
         {
             var chip = catalog.MatchUsbSerial(port.VendorId, port.ProductId);
             yield return new SetupCheck("serial_port", 4, CheckStatus.Ok, true, "serial_ok",
                 Args(("port", port.Path), ("chip", chip?.Name ?? port.ProductName ?? "?")));
-
-            if (port.DriverMissing)
-                yield return new SetupCheck("usb_driver", 4, CheckStatus.Error, true, "usb_driver_missing",
-                    Args(("chip", chip?.Name ?? "?"), ("url", chip?.DriverUrl ?? "")));
 
             // Conferência da porta com o tipo de placa: C3 usa USB nativa; S3/C6/clássico, o conversor.
             if (board is not null && chip is not null)

@@ -23,7 +23,15 @@ public sealed class SessionAuthTests : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         await _app.DisposeAsync();
-        Directory.Delete(_dataDir, recursive: true);
+        // Windows: o pool do SQLite segura o arquivo do banco aberto até ser limpo.
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try
+        {
+            Directory.Delete(_dataDir, recursive: true);
+        }
+        catch (IOException)
+        {
+        }
     }
 
     private HttpClient Client(string host = "127.0.0.1")

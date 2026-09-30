@@ -80,7 +80,7 @@ internal sealed class FakeLinuxRoot : IDisposable
 
 public sealed class LinuxProbeTests
 {
-    [Fact]
+    [LinuxFact]
     public void Le_placas_driver_modulo_barramento_ids_e_internet()
     {
         using var fs = FakeLinuxRoot.Laptop();
@@ -115,7 +115,7 @@ public sealed class LinuxProbeTests
         Assert.False(snap.BrlttyRunning);
     }
 
-    [Theory]
+    [LinuxTheory]
     [InlineData("QEMU", "Standard PC (Q35 + ICH9, 2009)", "QEMU/KVM")]
     [InlineData("innotek GmbH", "VirtualBox", "VirtualBox")]
     [InlineData("VMware, Inc.", "VMware Virtual Platform", "VMware")]
@@ -126,7 +126,7 @@ public sealed class LinuxProbeTests
         Assert.Equal(expected, new LinuxProbe(fs.Root).DetectVirtualMachine());
     }
 
-    [Fact]
+    [LinuxFact]
     public void Detecta_wsl_e_flag_hypervisor()
     {
         using var fs = new FakeLinuxRoot()
@@ -137,7 +137,7 @@ public sealed class LinuxProbeTests
         Assert.Equal("desconhecida", probe.DetectVirtualMachine());
     }
 
-    [Fact]
+    [LinuxFact]
     public void Arch_usa_o_grupo_uucp()
     {
         Assert.Equal("uucp", SetupScenarios.All["linux-esp32"].SerialGroup);
@@ -145,7 +145,7 @@ public sealed class LinuxProbeTests
         Assert.Equal("uucp", manjaro.SerialGroup);
     }
 
-    [Fact]
+    [LinuxFact]
     public void Sistema_sem_nada_nao_quebra()
     {
         using var fs = new FakeLinuxRoot();
@@ -522,11 +522,19 @@ public sealed class SetupChecksTests
     [Fact]
     public void Windows_sem_driver_do_ch340_aponta_o_site_do_fabricante()
     {
-        var checks = Checks("windows-esp32", new SetupState { Radio = "esp32", Esp32Board = "esp32-s3", SerialPort = "COM3" }, GoodKeys);
+        // O conversor sem driver não tem porta COM: o aviso aparece antes de escolher a porta.
+        var checks = Checks("windows-esp32", new SetupState { Radio = "esp32", Esp32Board = "esp32-s3" }, GoodKeys);
         var driver = Get(checks, "usb_driver");
         Assert.Equal(CheckStatus.Error, driver.Status);
         Assert.Equal("https://www.wch-ic.com/downloads/CH341SER_EXE.html", driver.Args!["url"]);
+        Assert.Equal("serial_not_chosen", Get(checks, "serial_port").Code);
+        Assert.Equal("1", Get(checks, "serial_port").Args!["count"]); // só a COM4 conta como porta
         Assert.DoesNotContain(checks, c => c.Id == "serial_group"); // grupos são coisa do Linux
+
+        // Escolhida a porta da USB nativa, o aviso do driver do outro conversor continua.
+        checks = Checks("windows-esp32", new SetupState { Radio = "esp32", Esp32Board = "esp32-c3", SerialPort = "COM4" }, GoodKeys);
+        Assert.Equal("serial_ok", Get(checks, "serial_port").Code);
+        Assert.Equal(CheckStatus.Error, Get(checks, "usb_driver").Status);
     }
 
     [Fact]
@@ -570,5 +578,44 @@ public sealed class SetupChecksTests
         Assert.Contains("formato válido", report);
         Assert.DoesNotContain("ash", report); // nome do usuário
         Assert.DoesNotContain("aes_kek", report); // nem nomes de chaves
+    }
+}
+
+public sealed class WindowsProbeTests
+{
+    [Fact]
+    public void Portas_com_vid_pid_e_conversor_sem_driver()
+    {
+        var devices = new[]
+        {
+            new PnpDevice(@"USB\VID_303A&PID_1001&MI_00\6&1A2B3C&0&0000", "Dispositivo Serial USB (COM4)", 0, "Ports"),
+            new PnpDevice(@"USB\VID_10C4&PID_EA60\0001", "Silicon Labs CP210x USB to UART Bridge (COM12)", 0, "Ports"),
+            new PnpDevice(@"FTDIBUS\VID_0403+PID_6001+A50285BIA\0000", "USB Serial Port (COM3)", 0, "Ports"),
+            new PnpDevice(@"USB\VID_1A86&PID_7523\5&2A8F0B1&0&3", "USB2.0-Serial", WindowsProbe.DriverNotInstalled, null),
+            new PnpDevice(@"ACPI\PNP0501\1", "Porta de comunicação (COM1)", 0, "Ports"),
+        };
+        var ports = WindowsProbe.Ports(devices, ["COM1", "COM3", "COM4", "COM12", "COM7"]);
+
+        Assert.Equal(["COM1", "COM3", "COM4", "COM7", "COM12", @"USB\VID_1A86&PID_7523\5&2A8F0B1&0&3"], ports.Select(p => p.Path));
+        var native = ports.Single(p => p.Path == "COM4");
+        Assert.Equal(("303a", "1001", "Dispositivo Serial USB"), (native.VendorId, native.ProductId, native.ProductName));
+        Assert.Equal(("0403", "6001"), (ports.Single(p => p.Path == "COM3").VendorId, ports.Single(p => p.Path == "COM3").ProductId));
+        Assert.Null(ports.Single(p => p.Path == "COM1").VendorId);
+        Assert.Null(ports.Single(p => p.Path == "COM7").ProductName); // só pelo nome (WMI não mostrou)
+        var missing = Assert.Single(ports, p => p.DriverMissing);
+        Assert.Equal(("1a86", "7523"), (missing.VendorId, missing.ProductId));
+    }
+
+    [Fact]
+    public void Aparelho_sem_driver_fora_do_catalogo_nao_vira_aviso()
+    {
+        var system = SetupScenarios.All["windows-esp32"] with
+        {
+            SerialPorts = [new SerialPortInfo(@"USB\VID_046D&PID_0825\X", "046d", "0825", "Webcam", DriverMissing: true)],
+        };
+        var catalog = HardwareCatalog.Embedded;
+        var checks = SetupChecks.Evaluate(system, RadioAdvisor.Advise(system, catalog), new SetupState { Radio = "esp32" }, null, catalog);
+        Assert.DoesNotContain(checks, c => c.Id == "usb_driver");
+        Assert.Equal("serial_none", checks.Single(c => c.Id == "serial_port").Code);
     }
 }

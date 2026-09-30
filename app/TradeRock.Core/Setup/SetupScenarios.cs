@@ -57,9 +57,10 @@ public static class SetupScenarios
             [new SerialPortInfo("/dev/ttyUSB0", "1a86", "7523", "USB Serial")],
             User("wheel"), true, true),
 
-        // Windows com um conversor CH340 sem driver instalado.
+        // Windows com um conversor CH340 sem driver instalado (sem porta COM) e um ESP32-C3 pela USB nativa.
         ["windows-esp32"] = new("windows", false, null, null, [],
-            [new SerialPortInfo("COM3", "1a86", "7523", "USB-SERIAL CH340", DriverMissing: true)],
+            [new SerialPortInfo(@"USB\VID_1A86&PID_7523\5&2A8F0B1&0&3", "1a86", "7523", "USB-SERIAL CH340", DriverMissing: true),
+             new SerialPortInfo("COM4", "303a", "1001", "Dispositivo serial USB")],
             null, false, false),
     }.ToDictionary(kv => kv.Key, kv => kv.Value with { SimulatedScenario = kv.Key });
 }

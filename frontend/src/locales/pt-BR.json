@@ -983,7 +983,9 @@
       "interface_is_radio": "Essa é a placa Wi-Fi das trocas. Escolha outra interface.",
       "bind_failed": "Não deu para usar essa porta (outro programa pode estar usando). Tente outra porta."
     },
-    "localOnly": "Esta tela só abre na janela do TradeRock no próprio PC."
+    "localOnly": "Esta tela só abre na janela do TradeRock no próprio PC.",
+    "virtual": "virtual (não é a rede da casa)",
+    "windowsFirewall": "No Windows, o instalador já liberou o TradeRock no Firewall, só em redes \"Privadas\". Se o celular não conseguir abrir, confira em Configurações do Windows → Rede e Internet se a rede da casa está como \"Rede privada\"."
   },
   "accounts": {
     "title": "Contas",

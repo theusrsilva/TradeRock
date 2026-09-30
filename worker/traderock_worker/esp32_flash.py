@@ -62,10 +62,16 @@ def make_logger(emit, template_cls, stage):
     return JsonLogger()
 
 
-def classify(text):
+def classify(text, windows=sys.platform == "win32"):
     """Mensagem de erro do esptool/pyserial → código estável (o app traduz)."""
     t = text.lower()
     # O esptool usa "could not open port" para todos; o errno do pyserial diz o motivo.
+    if windows and "could not open port" in t:
+        # Windows: "PermissionError(13, 'Acesso negado.', None, 5)" é porta em uso por outro programa
+        # (não há grupo de permissão); FileNotFoundError(2, ...) é porta que não existe.
+        if "permissionerror" in t or "(13," in t:
+            return "serial_busy"
+        return "serial_port_missing"
     if "permission denied" in t or "errno 13" in t:
         return "serial_permission"
     if "resource busy" in t or "errno 16" in t:
@@ -164,7 +170,7 @@ def main():
     os.dup2(2, 1)  # qualquer print de biblioteca vai para o log
     sys.stdout = sys.stderr
     try:
-        params = json.loads(sys.stdin.readline())
+        params = json.loads(sys.stdin.buffer.readline().decode("utf-8"))  # UTF-8 também no Windows
         run(params, emit)
     except ValueError as e:
         emit({"type": "error", "code": "invalid_request", "message": str(e)})
