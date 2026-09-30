@@ -373,7 +373,10 @@ git tag -a v0.12.0 -m "Resumo da versão.
 - Novidade 1.
 - Correção 2."
 git push origin v0.12.0
-``` Detalhes em
+```
+
+Versões com sufixo (`v1.0.0-rc.1`) ou com `[pré-lançamento]` na mensagem da tag saem marcadas como
+pré-lançamento (a marca não aparece no texto do Release). Detalhes em
 [packaging/README.md](packaging/README.md) e na decisão D17.
 
 ## Licença e créditos

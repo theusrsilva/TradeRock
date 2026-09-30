@@ -221,7 +221,9 @@ jobs:
             if [[ $(git cat-file -t "$GITHUB_REF_NAME") == tag ]]; then
               echo "## Novidades"
               echo
-              git tag -l --format='%(contents:subject)%0a%0a%(contents:body)' "$GITHUB_REF_NAME" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
+              # A marca [pré-lançamento] (ou [pre-release]) só serve para o passo seguinte: sai do texto.
+              git tag -l --format='%(contents:subject)%0a%0a%(contents:body)' "$GITHUB_REF_NAME" \
+                | sed -E 's/ *\[(pré-lançamento|pre-release)\] *//g' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
               echo
             fi
             # O .deb troca "-" por "~" na versão (1.0.0-rc.1 → 1.0.0~rc.1), como no package-linux.sh.
@@ -234,8 +236,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=${GITHUB_REF_NAME#v}
+          # Pré-lançamento: versão com sufixo (1.0.0-rc.1) ou a marca [pré-lançamento] na mensagem da tag.
           prerelease=""
           [[ $version == *-* ]] && prerelease="--prerelease"
+          if [[ $(git cat-file -t "$GITHUB_REF_NAME") == tag ]] \
+            && git tag -l --format='%(contents)' "$GITHUB_REF_NAME" | grep -qE '\[(pré-lançamento|pre-release)\]'; then
+            prerelease="--prerelease"
+          fi
           (cd dist && sha256sum -c SHA256SUMS)
           gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" \
             --title "TradeRock $version" --notes-file release-notes.md --generate-notes $prerelease
