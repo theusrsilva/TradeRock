@@ -358,9 +358,10 @@ scripts/package-windows.sh --installer   # + dist/TradeRock-Setup-<versão>.exe 
 pwsh scripts/smoke-windows.ps1 dist\TradeRock-Setup-<versão>.exe <versão>   # no Windows, como administrador
 ```
 
-No CI (`.github/workflows/ci.yml`), cada push gera os pacotes como artefatos e testa o .deb no Ubuntu
-22.04 e 24.04 e no Debian 12 e 13. O Windows é compilado no Linux e testado num runner Windows
-(testes, instalador e fumaça: instala, confere e desinstala). Uma tag `v*` publica o Release. Detalhes em
+O CI (`.github/workflows/ci.yml`) roda **só nas tags `v*`** (ou à mão, pela aba Actions). Ele
+testa tudo, gera os pacotes, testa o .deb no Ubuntu 22.04 e 24.04 e no Debian 12 e 13, e testa o
+Windows num runner Windows (testes, instalador e fumaça: instala, confere e desinstala). Na tag, com
+tudo passando, publica o Release. Detalhes em
 [packaging/README.md](packaging/README.md) e na decisão D17.
 
 ## Licença e créditos
