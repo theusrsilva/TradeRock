@@ -1,0 +1,4 @@
+#!/bin/sh
+# Worker privilegiado do TradeRock. Iniciado pelo app via pkexec (política @ACTION_ID@).
+# Ignora argumentos: tudo chega pela entrada padrão, validado pelo worker.
+exec "@PREFIX@/python/bin/python3" -I -B "@PREFIX@/worker/run.py"

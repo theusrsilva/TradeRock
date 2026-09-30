@@ -1,0 +1,26 @@
+<Project>
+  <!--
+    Dentro do container (TRADEROCK_CONTAINER=1), bin/obj ficam em pastas próprias: o repositório é
+    compartilhado com o host e os caminhos absolutos gravados no restore são diferentes.
+  -->
+  <PropertyGroup Condition="'$(TRADEROCK_CONTAINER)' == '1' And !$(MSBuildProjectDirectory.Replace('\', '/').Contains('/engines/'))">
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)/obj-container/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildProjectDirectory)/bin-container/</BaseOutputPath>
+  </PropertyGroup>
+
+  <!-- Aplica-se só aos projetos do TradeRock; os submódulos em engines/ mantêm a própria configuração. -->
+  <PropertyGroup Condition="!$(MSBuildProjectDirectory.Replace('\', '/').Contains('/engines/'))">
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Host e container compartilham o repositório: nenhum dos dois compila a saída do outro. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**;bin/**;obj-container/**;bin-container/**</DefaultItemExcludes>
+    <Version>0.11.0</Version>
+    <Product>TradeRock</Product>
+    <Company>TradeRock</Company>
+    <Copyright>AGPL-3.0-or-later</Copyright>
+  </PropertyGroup>
+</Project>

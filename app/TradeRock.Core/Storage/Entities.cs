@@ -1,0 +1,172 @@
+using TradeRock.Core.Trading;
+
+namespace TradeRock.Core.Storage;
+
+public enum PokemonOrigin
+{
+    Imported,
+    Received,
+    Demo,
+    Created,
+}
+
+/// <summary>
+/// Pokémon guardado. O arquivo (.pk3 decriptado) fica em disco, nomeado pelo SHA-256;
+/// aqui ficam o hash e o resumo para listar e buscar. A Entrega 4 (cofre) amplia esta tabela.
+/// </summary>
+public sealed class StoredPokemon : IOwned
+{
+    public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
+    public required string Sha256 { get; set; }
+    public int Size { get; set; }
+    public ushort Species { get; set; }
+    public required string SpeciesName { get; set; }
+    public required string Nickname { get; set; }
+    public byte Level { get; set; }
+    public bool IsShiny { get; set; }
+    public bool IsEgg { get; set; }
+    public byte Gender { get; set; }
+    public required string OtName { get; set; }
+    public ushort Tid { get; set; }
+    public ushort Sid { get; set; }
+    public required string OriginGame { get; set; }
+
+    /// <summary>Item segurado (ID interno da Gen 3).</summary>
+    public ushort HeldItem { get; set; }
+
+    /// <summary>Flag de encontro fatídico (eventos, Mew/Deoxys/Lugia/Ho-Oh dos tickets).</summary>
+    public bool Fateful { get; set; }
+
+    /// <summary>Resultado do LegalityAnalysis ("legal", "illegal", "unverifiable"); null = ainda não analisado.</summary>
+    public string? Legality { get; set; }
+
+    /// <summary>Versão do PKHeX.Core que fez a análise (refeita quando o PKHeX é atualizado).</summary>
+    public string? LegalityPkhexVersion { get; set; }
+
+    public PokemonOrigin Origin { get; set; }
+    public string? SourceFileName { get; set; }
+    public DateTimeOffset AddedAt { get; set; }
+
+    /// <summary>PID (para achar "possíveis duplicatas": mesmo Pokémon com dados diferentes). Null = ainda não lido.</summary>
+    public uint? Pid { get; set; }
+
+    /// <summary>Caixa do cofre; null = Caixa de entrada.</summary>
+    public Guid? BoxId { get; set; }
+
+    /// <summary>Posição na caixa (0–29); null na Caixa de entrada.</summary>
+    public int? Slot { get; set; }
+
+    /// <summary>Na lixeira desde; null = ativo.</summary>
+    public DateTimeOffset? DeletedAt { get; set; }
+
+    public List<PokemonTag> Tags { get; set; } = [];
+}
+
+/// <summary>Caixa do cofre (30 posições, como no jogo).</summary>
+public sealed class VaultBox : IOwned
+{
+    public const int Slots = 30;
+
+    public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
+    public required string Name { get; set; }
+    public int Order { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public sealed class Tag : IOwned
+{
+    public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
+    public required string Name { get; set; }
+
+    /// <summary>Nome de cor da paleta da interface (ex.: "sky", "amber").</summary>
+    public required string Color { get; set; }
+}
+
+public sealed class PokemonTag
+{
+    public Guid PokemonId { get; set; }
+    public Guid TagId { get; set; }
+}
+
+/// <summary>Histórico de uma sessão de troca (uma ou mais trocas com o mesmo Switch).</summary>
+public sealed class TradeRecord : IOwned
+{
+    public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset? EndedAt { get; set; }
+    public required string EngineId { get; set; }
+    public bool IsSimulation { get; set; }
+    public TradeGame Game { get; set; }
+    public required string TrainerName { get; set; }
+    public ushort Tid { get; set; }
+    public ushort? Sid { get; set; }
+    public TradeSessionStatus Status { get; set; }
+    public int Attempts { get; set; }
+    public int TradesPlanned { get; set; }
+    public int TradesCompleted { get; set; }
+    public string? FailureCode { get; set; }
+    public string? FailureMessage { get; set; }
+
+    /// <summary>Eventos da sessão em JSON (sem dados de chave: os motores nunca os emitem).</summary>
+    public required string EventsJson { get; set; }
+
+    public List<TradeRecordEntry> Entries { get; set; } = [];
+}
+
+public sealed class TradeRecordEntry
+{
+    public int Id { get; set; }
+    public Guid TradeRecordId { get; set; }
+    public int TradeIndex { get; set; }
+    public Guid SentPokemonId { get; set; }
+    public Guid? ReceivedPokemonId { get; set; }
+}
+
+/// <summary>Treinador simulado salvo (preset).</summary>
+public sealed class TrainerPreset : IOwned
+{
+    public Guid Id { get; set; }
+    public Guid OwnerId { get; set; }
+    public required string Label { get; set; }
+    public required string Name { get; set; }
+    public ushort Tid { get; set; }
+    public ushort? Sid { get; set; }
+    public TradeGame Game { get; set; }
+}
+
+/// <summary>Configuração chave → JSON.</summary>
+public sealed class SettingEntry
+{
+    public required string Key { get; set; }
+    public required string Json { get; set; }
+}
+
+public enum UserRole
+{
+    User,
+    Admin,
+}
+
+/// <summary>
+/// Conta do modo servidor. A conta com Id = <see cref="OwnerScope.LocalOwner"/> é o dono do PC (sempre
+/// administrador); ela só entra pela rede depois de ganhar nome e senha.
+/// </summary>
+public sealed class UserAccount
+{
+    public Guid Id { get; set; }
+
+    /// <summary>Nome de login, em minúsculas. Null só na conta do dono ainda sem acesso pela rede.</summary>
+    public string? Username { get; set; }
+
+    /// <summary>Argon2id no formato PHC ($argon2id$v=19$m=...,t=...,p=...$sal$hash). Null = não entra pela rede.</summary>
+    public string? PasswordHash { get; set; }
+
+    public UserRole Role { get; set; }
+    public bool Disabled { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? LastLoginAt { get; set; }
+}

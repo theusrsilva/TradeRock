@@ -1,0 +1,217 @@
+using TradeRock.Core.Engines.Worker;
+using TradeRock.Core.Esp32;
+using TradeRock.Core.Trading;
+using TradeRock.Core.Setup;
+
+namespace TradeRock.App.Api;
+
+public static class SetupEndpoints
+{
+    public sealed record SimulationDto(string? Scenario);
+    public sealed record CardTestDto(string Phy);
+    public sealed record SwitchTestDto(string Phy, string? SimulatedOutcome = null);
+    public sealed record Esp32SwitchTestDto(string? SimulatedOutcome = null);
+
+    public static void MapSetup(this IEndpointRouteBuilder api)
+    {
+        var setup = api.MapGroup("/setup");
+
+        setup.MapGet("/", async (SetupService service, CancellationToken ct) => ToDto(await service.StatusAsync(ct)));
+
+        setup.MapGet("/catalog", (SetupService service) => service.Catalog);
+
+        setup.MapPut("/state", async (SetupStatePatch patch, SetupService service, CancellationToken ct) =>
+        {
+            if (patch.Radio is not null and not (RadioAdvisor.Wifi or RadioAdvisor.Esp32))
+                return Results.BadRequest(new { error = "radio_invalid" });
+            await service.UpdateStateAsync(patch, ct);
+            return Results.Ok(ToDto(await service.StatusAsync(ct)));
+        });
+
+        setup.MapPost("/reset", async (SetupService service, CancellationToken ct) =>
+        {
+            await service.ResetAsync(ct);
+            return Results.Ok(ToDto(await service.StatusAsync(ct)));
+        });
+
+        // prod.keys: valida e guarda com permissão 600. A resposta nunca traz valores de chave.
+        setup.MapPost("/keys", async (HttpRequest request, ProdKeys keys, CancellationToken ct) =>
+        {
+            if (!request.HasFormContentType)
+                return Results.BadRequest(new { error = "expected_form" });
+            var form = await request.ReadFormAsync(ct);
+            if (form.Files.Count != 1 || form.Files[0].Length is 0 or > ProdKeys.MaxBytes)
+                return Results.BadRequest(new { error = "keys_size" });
+            using var buffer = new MemoryStream();
+            await form.Files[0].CopyToAsync(buffer, ct);
+            var validation = keys.Save(buffer.ToArray());
+            return validation.Valid ? Results.Ok(validation) : Results.BadRequest(new { error = "keys_invalid", validation });
+        }).DisableAntiforgery();
+
+        setup.MapDelete("/keys", (ProdKeys keys) =>
+        {
+            keys.Delete();
+            return Results.NoContent();
+        });
+
+        // Teste real da placa. Se o worker ainda não estiver rodando, o sistema pede a senha de
+        // administrador (diálogo do polkit) antes de começar.
+        setup.MapPost("/card-test", async (CardTestDto body, SetupService service, CancellationToken ct) =>
+        {
+            try
+            {
+                var result = await service.RunCardTestAsync(body.Phy, ct);
+                return Results.Ok(new { result, status = ToDto(await service.StatusAsync(ct)) });
+            }
+            catch (ArgumentException)
+            {
+                return Results.BadRequest(new { error = "phy_invalid" });
+            }
+            catch (WorkerException e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+        });
+
+        // Teste com o Switch: procura a sala (aberta como Leader) e tenta decifrar o anúncio, sem entrar.
+        // Leva até SetupService.SwitchTestSeconds; se a pessoa cancelar (o pedido é abortado), o worker para.
+        setup.MapPost("/switch-test", async (SwitchTestDto body, SetupService service, CancellationToken ct) =>
+        {
+            try
+            {
+                var result = await service.RunSwitchTestAsync(body.Phy, body.SimulatedOutcome, ct);
+                return Results.Ok(new { result, status = ToDto(await service.StatusAsync(ct)) });
+            }
+            catch (ArgumentException e)
+            {
+                return Results.BadRequest(new { error = e.ParamName == "outcome" ? "outcome_invalid" : "phy_invalid" });
+            }
+            catch (ProdKeysException e)
+            {
+                return Results.BadRequest(new { error = e.Code });
+            }
+            catch (WorkerException e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+        });
+
+        MapEsp32(setup);
+
+        // Configuração do NetworkManager/udev para as interfaces do LDN (feita pelo worker, como root).
+        setup.MapPost("/network-config", async (SetupService service, CancellationToken ct) =>
+        {
+            try
+            {
+                await service.InstallNetworkConfigAsync(ct);
+                return Results.Ok(ToDto(await service.StatusAsync(ct)));
+            }
+            catch (WorkerException e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+        });
+
+        setup.MapGet("/report", async (SetupService service, CancellationToken ct) =>
+        {
+            var report = SetupReport.Build(await service.StatusAsync(ct), AppVersion.Current);
+            return Results.Text(report, "text/markdown; charset=utf-8");
+        });
+
+        // Simulação de cenários: só em desenvolvimento.
+        setup.MapGet("/scenarios", async (IHostEnvironment env, SetupService service, CancellationToken ct) =>
+            env.IsDevelopment()
+                ? Results.Ok(new { scenarios = SetupScenarios.All.Keys, current = await service.SimulationAsync(ct) })
+                : Results.NotFound());
+
+        setup.MapPut("/simulation", async (SimulationDto body, IHostEnvironment env, SetupService service, CancellationToken ct) =>
+        {
+            if (!env.IsDevelopment())
+                return Results.NotFound();
+            try
+            {
+                await service.SetSimulationAsync(body.Scenario, ct);
+            }
+            catch (ArgumentException)
+            {
+                return Results.BadRequest(new { error = "scenario_invalid" });
+            }
+            return Results.Ok(ToDto(await service.StatusAsync(ct)));
+        });
+    }
+
+    /// <summary>
+    /// ESP32: firmware (LDN_HELLO sem reiniciar a placa; esptool para identificar, conferir e gravar) e
+    /// teste com o Switch. Nada disso roda com uma troca em andamento: a porta serial seria disputada.
+    /// </summary>
+    private static void MapEsp32(RouteGroupBuilder setup)
+    {
+        var esp32 = setup.MapGroup("/esp32");
+
+        async Task<IResult> Run<T>(Func<Task<T>> action, SetupService service, TradeCoordinator coordinator, CancellationToken ct)
+        {
+            if (coordinator.IsBusy)
+                return Results.Conflict(new { error = "busy", message = "Há uma troca em andamento." });
+            try
+            {
+                var result = await action();
+                return Results.Ok(new { result, status = ToDto(await service.StatusAsync(ct)) });
+            }
+            catch (Esp32Exception e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+            catch (ArgumentException)
+            {
+                return Results.BadRequest(new { error = "outcome_invalid" });
+            }
+            catch (ProdKeysException e)
+            {
+                return Results.BadRequest(new { error = e.Code });
+            }
+        }
+
+        esp32.MapPost("/probe", (Esp32Setup esp, SetupService service, TradeCoordinator coordinator, CancellationToken ct) =>
+            Run(() => esp.ProbeAsync(ct), service, coordinator, ct));
+        esp32.MapPost("/identify", (Esp32Setup esp, SetupService service, TradeCoordinator coordinator, CancellationToken ct) =>
+            Run(() => esp.IdentifyAsync(ct), service, coordinator, ct));
+        esp32.MapPost("/verify", (Esp32Setup esp, SetupService service, TradeCoordinator coordinator, CancellationToken ct) =>
+            Run(() => esp.VerifyAsync(ct), service, coordinator, ct));
+        esp32.MapPost("/switch-test", (Esp32SwitchTestDto body, Esp32Setup esp, SetupService service, TradeCoordinator coordinator, CancellationToken ct) =>
+            Run(() => esp.SwitchTestAsync(body.SimulatedOutcome, ct), service, coordinator, ct));
+
+        // Gravar leva de 30 s a 2 min: começa em segundo plano e o app acompanha pelo GET.
+        esp32.MapPost("/flash", async (Esp32Setup esp, TradeCoordinator coordinator, CancellationToken ct) =>
+        {
+            if (coordinator.IsBusy)
+                return Results.Conflict(new { error = "busy", message = "Há uma troca em andamento." });
+            try
+            {
+                return Results.Accepted("/api/setup/esp32/flash", await esp.StartFlashAsync(ct));
+            }
+            catch (Esp32Exception e)
+            {
+                return Results.Conflict(new { error = e.Code, message = e.Message });
+            }
+        });
+        esp32.MapGet("/flash", async (Esp32Setup esp, SetupService service, CancellationToken ct) =>
+            esp.CurrentJob is { } job
+                ? Results.Ok(new { job, status = job.Finished ? ToDto(await service.StatusAsync(ct)) : null })
+                : Results.NotFound());
+    }
+
+    /// <summary>Resposta do assistente. Nome de usuário fica de fora (não é necessário na interface).</summary>
+    public static object ToDto(SetupStatus s) => new
+    {
+        system = s.System with { User = s.System.User is { } u ? u with { Name = "" } : null },
+        serialGroup = s.System.SerialGroup,
+        advice = s.Advice,
+        state = s.State,
+        keys = s.Keys,
+        checks = s.Checks,
+        readyToTrade = s.ReadyToTrade,
+        catalogUpdatedAt = HardwareCatalog.Embedded.UpdatedAt,
+        switchTestSeconds = SetupService.SwitchTestSeconds,
+        simulatedSwitchOutcomes = s.System.SimulatedScenario is null ? null : SetupService.SimulatedSwitchOutcomes,
+    };
+}

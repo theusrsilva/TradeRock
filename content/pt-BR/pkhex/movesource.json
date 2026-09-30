@@ -1,0 +1,19 @@
+{
+  "SourceDefault": "Golpe padrão.",
+  "SourceDuplicate": "Golpe repetido.",
+  "SourceEmpty": "Golpe vazio.",
+  "SourceInvalid": "Golpe inválido.",
+  "SourceLevelUp": "Aprendido subindo de nível.",
+  "SourceRelearn": "Golpe reaprendível.",
+  "SourceSpecial": "Golpe especial (não reaprendível).",
+  "SourceTMHM": "Aprendido por TM/HM.",
+  "SourceTutor": "Aprendido com tutor de golpes.",
+  "SourceShared": "Golpe compartilhado (não reaprendível).",
+  "RelearnEgg": "Golpe de ovo básico.",
+  "EggInherited": "Golpe de ovo herdado.",
+  "EggTMHM": "Golpe de TM/HM herdado.",
+  "EggInheritedTutor": "Golpe de tutor herdado.",
+  "EggInvalid": "Não é um golpe de ovo esperado.",
+  "EggLevelUp": "Golpe herdado, aprendido subindo de nível.",
+  "LevelUpSuffix": " @ nv{0}"
+}

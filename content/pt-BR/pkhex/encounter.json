@@ -1,0 +1,13 @@
+{
+  "EncounterType": "Tipo de encontro",
+  "Version": "Versão",
+  "Level": "Nível",
+  "LevelRange": "Faixa de nível",
+  "Location": "Local",
+  "OriginSeed": "Semente de origem",
+  "PIDType": "Tipo de PID",
+  "Time": "Horário",
+  "FrameNewGame": "Novo jogo: 0x{0}, frame: {1}",
+  "FrameInitial": "Inicial: 0x{0}, frame: {1}",
+  "SuffixDays": " (dias: {0})"
+}

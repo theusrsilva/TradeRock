@@ -1,0 +1,17 @@
+{
+  "profiles": {
+    "TradeRock (janela)": {
+      "commandName": "Project",
+      "commandLineArgs": "--dev-tools",
+      "environmentVariables": { "DOTNET_ENVIRONMENT": "Development", "ASPNETCORE_ENVIRONMENT": "Development" }
+    },
+    "TradeRock (backend p/ Vite)": {
+      "commandName": "Project",
+      "commandLineArgs": "--no-window --port 5080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Server__DevToken": "dev-token-traderock-0000000000000000"
+      }
+    }
+  }
+}

@@ -1,0 +1,143 @@
+# Testar no host Linux (placa Wi-Fi real)
+
+O motor com a placa Wi-Fi (`PythonLdnEngine`) **não roda em container nem no WSL**. Ele precisa de:
+
+- **Acesso ao phy da placa.** O motor usa `/sys/class/ieee80211/phy*`, modo monitor e transmissão de
+  quadros de ação via nl80211. Um container não enxerga o phy do host, e o WSL não tem placa Wi-Fi.
+- **NetworkManager fora do caminho.** Ele não pode controlar as interfaces que a biblioteca LDN cria
+  (`ldn*`).
+- **root.** Criar interfaces e trocar de modo exige privilégio. No TradeRock isso fica isolado no
+  worker, iniciado via `pkexec` com uma política polkit própria. O app principal nunca roda como
+  root.
+
+## Requisitos
+
+- Linux instalado de verdade (dual boot serve).
+- .NET 10 SDK e Node 24.
+- `libwebkit2gtk-4.1-0` e `libnotify4`, para a janela.
+- `pkexec`. No Ubuntu 24.04: `sudo apt install pkexec`. `iw` e `ip` não precisam estar instalados:
+  o worker traz os seus, compilados por `scripts/build-nettools.sh`.
+- Um agente do polkit na sessão, que é o diálogo de senha. GNOME e KDE já trazem um.
+
+## Rodar
+
+```bash
+scripts/dev-host.sh
+```
+
+O script:
+
+1. compila o frontend e o app;
+2. monta o worker com `scripts/build-worker.sh`:
+   - o Python 3.12 do python-build-standalone, com o checksum conferido;
+   - as dependências do motor, com hash fixo;
+   - o frlg-ldn-trade com os patches de `engines/patches`;
+   - `iw` e `ip` estáticos, compilados na primeira vez com `scripts/build-nettools.sh` (uns 2 minutos)
+     e guardados em `~/.cache/traderock`;
+3. instala o worker com `sudo`, se ele estiver ausente ou desatualizado:
+   - em `/usr/local/lib/traderock-dev`, com dono root e sem escrita para outros usuários;
+   - junto com a política `/usr/share/polkit-1/actions/io.github.traderock.worker.dev.policy`;
+4. abre o app em modo desenvolvimento.
+
+Opções:
+- `--no-worker` pula os passos 2 e 3.
+- `--uninstall-worker` remove o worker e a política.
+
+## Roteiro de teste
+
+1. **Configurações → Abrir o assistente.**
+   - Na etapa 2, envie o `prod.keys`.
+   - Na etapa 3, escolha a placa Wi-Fi.
+2. **Etapa 4 → Testar a placa.**
+   - O sistema pede a senha de administrador, uma vez por sessão do app.
+   - Durante uns 10 s, o Wi-Fi da placa cai e volta sozinho.
+   - Anote o resultado por canal (enviados e recebidos).
+3. **Etapa 4 → Configurar o NetworkManager** (recomendado).
+4. **Etapa 6 → Procurar a sala**, com o Switch no Direct Corner como Leader, na tela de espera:
+   - o teste escuta por até 30 s e para ao achar a sala; o Wi-Fi da placa cai e volta sozinho;
+   - anote o resultado e abra **Detalhes** (canal, protocolo LDN, anúncios que não decifraram,
+     canais que a placa não sintonizou);
+   - repita com a sala fechada (deve dar "nenhuma sala") e, se tiver, com um prod.keys de outra
+     versão (deve dar "encontrada, mas não decifrada");
+   - confira que o Switch **não** recebe pedido de entrada durante o teste.
+5. **Configurações → Motor de troca → Placa Wi-Fi do PC.** Concluir o assistente já seleciona esse
+   motor.
+6. **Trocar**, com o Switch no Direct Corner como Leader:
+   - aprove o pedido de entrada ("EMU", ou o nome que você escolheu);
+   - sente na cadeira da esquerda;
+   - troque;
+   - cancele no menu de troca;
+   - saia da sala.
+7. Se algo falhar:
+   - **Resumo → Exportar relatório.**
+   - Log de diagnóstico: rode com `--Logging:LogLevel:TradeRock=Debug` para ver as linhas `worker:`,
+     que são o log verboso do motor. Nenhum desses logs tem chaves.
+
+## Testar os pacotes
+
+Gere com `scripts/package-linux.sh` (ou baixe o artefato `traderock-linux` do CI).
+
+- **.deb:** remova a instalação de desenvolvimento (`scripts/dev-host.sh --uninstall-worker`) e rode
+  `sudo apt install ./dist/traderock_*.deb`. Abra pelo menu de aplicativos e siga o roteiro acima. O
+  diálogo de senha deve citar "Rodar o componente de rede do TradeRock".
+- **AppImage:**
+  1. `chmod +x dist/TradeRock-*.AppImage` e abra com dois cliques ou pelo terminal (precisa de FUSE).
+  2. Etapa 4 → **Instalar o componente de rede**. O diálogo de senha cita `/bin/sh`: é o script de
+     instalação. Confira `/usr/local/lib/traderock` (dono root) e
+     `/usr/share/polkit-1/actions/io.github.traderock.worker.appimage.policy`.
+  3. Teste a placa: o diálogo agora cita o componente de rede.
+  4. **Configurações → Remover o componente de rede** apaga os dois.
+- `sudo scripts/smoke-linux.sh deb|appimage <pacote>` faz a parte automática sem Switch.
+
+## Como as peças se encaixam
+
+```
+app (usuário) ──pkexec──▶ /usr/local/lib/traderock-dev/traderock-worker   (root)
+     ▲   stdin/stdout JSON        │
+     └────────────────────────────┤  python3 -I worker/run.py
+                                  ├─ --child card   teste da placa (ldn.wlan)
+                                  ├─ --child beacon teste com o Switch (ldn.Scanner, sem entrar na sala)
+                                  └─ --child trade  uma tentativa de troca (frlgtrade.run_live)
+```
+
+- **Uma operação de rádio por vez.** Cada troca e cada teste roda num processo filho. O motor instala
+  o próprio tratador de Ctrl+C, que só funciona na thread principal.
+- **Cancelar:**
+  1. primeiro SIGINT: o motor sai da sala e espera o Switch fechar (até 30 s);
+  2. segundo SIGINT: encerra na hora (até 10 s);
+  3. SIGKILL.
+
+  Em todos os casos, o worker apaga as interfaces `ldn*` e devolve cada interface da placa ao estado
+  anterior (ligada e gerenciada pelo NetworkManager, se era assim).
+- **App fechado ou travado:** o stdin do worker fecha, e ele cancela, restaura o rádio e sai.
+- **Arquivos:** `.pk3` e `prod.keys` chegam como bytes e ficam numa pasta temporária do root
+  (permissão 700), apagada no fim. O Pokémon recebido volta como bytes no instante do commit.
+
+## Testes sem hardware
+
+- `python3 -m unittest discover -s worker/tests -t worker` cobre:
+  - validação, rádio (com `/sys` falso) e mapeamento de eventos;
+  - o wrapper contra um motor falso e o laço de protocolo;
+  - o teste com o Switch (`beacon_child.run_scan`) com dublês de `trio` e da biblioteca LDN
+    (`worker/tests/fake_ldn`): sala achada, chaves erradas, outro jogo, placa sem 5 GHz;
+  - um teste que confere se cada frase do motor usada no mapeamento ainda existe no submódulo.
+- `WorkerTests.cs` cobre a API de ponta a ponta com um worker falso: assistente, teste da placa,
+  teste com o Switch (resultados, validade e cancelamento), troca, cancelamento e retry.
+
+## Roteiro de teste com um ESP32 de verdade
+
+Não precisa de root nem do worker instalado: o ESP32 conversa com o app pela serial. Basta o grupo
+`dialout` (no Arch, `uucp`) e o runtime Python com o esptool (`scripts/build-worker.sh`).
+
+1. Ligue a placa com um **cabo USB de dados**. No S3, use a porta do conversor USB-serial (UART); no
+   C3, a USB nativa.
+2. **Etapa 3:** escolha "ESP32 via USB". **Etapa 4:** marque o modelo da placa e a porta
+   (`/dev/ttyUSB0` ou `/dev/ttyACM0`). O app faz o `LDN_HELLO` sozinho.
+3. **Identificar a placa:** confira se o chip e a flash batem com o que você comprou.
+4. **Gravar o firmware:** leva de 30 s a 2 min. Se a placa não entrar no modo de gravação, siga as
+   instruções do botão BOOT. No fim, "O firmware do TradeRock respondeu" deve aparecer como OK.
+5. **Etapa 6:** com o Switch no Direct Corner como Leader, faça o teste com o Switch.
+6. Troque, com o motor "ESP32 via USB" selecionado em Configurações.
+7. Se algo falhar, mande:
+   - o relatório (Resumo → Exportar relatório);
+   - o `native.log` da sessão, em `~/.local/share/traderock/logs/esp32/<sessão>/`, que não tem chaves.

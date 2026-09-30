@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>TradeRock</vendor>
+  <action id="@ACTION_ID@">
+    <description>Run the TradeRock network component</description>
+    <description xml:lang="pt_BR">Rodar o componente de rede do TradeRock</description>
+    <message>TradeRock needs administrator permission to use the Wi-Fi card for trading with the Switch.</message>
+    <message xml:lang="pt_BR">O TradeRock precisa de permissão de administrador para usar a placa Wi-Fi na troca com o Switch.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">@PREFIX@/traderock-worker</annotate>
+  </action>
+</policyconfig>

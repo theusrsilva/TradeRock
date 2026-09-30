@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>TradeRock.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TradeRock.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PKHeX.Core" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="System.Management" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- PKHeX.Core.AutoMod (santacrab2/PKHeX-Plugins, MIT), do submódulo: não é publicado no NuGet. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\engines\PKHeX-Plugins\PKHeX.Core.AutoMod\PKHeX.Core.AutoMod.csproj" />
+  </ItemGroup>
+
+  <!-- Núcleo do easyworld com os patches do TradeRock (motor ESP32). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Frlg.Trade.Core.Patched\Frlg.Trade.Core.Patched.csproj" />
+  </ItemGroup>
+
+  <!-- Traduções das mensagens do PKHeX (content/<idioma>/pkhex) e dados do construtor. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\content\pt-BR\pkhex\*.json" LogicalName="pkhex/pt-BR/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Builder\Data\unverifiable.json" LogicalName="builder/unverifiable.json" />
+    <EmbeddedResource Include="..\..\catalog\hardware-catalog.json" LogicalName="catalog/hardware-catalog.json" />
+    <EmbeddedResource Include="..\..\packaging\linux\worker-setup.sh" LogicalName="worker-setup.sh" />
+  </ItemGroup>
+
+  <!-- Firmware do ESP32 (binários completos publicados pelo easyworld, gravados em 0x0) e os SHA256 deles. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\engines\frlg-ldn-trade-esp32\firmware\release\*.bin" LogicalName="firmware/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\engines\frlg-ldn-trade-esp32\firmware\release\SHA256SUMS.txt" LogicalName="firmware/SHA256SUMS.txt" />
+  </ItemGroup>
+
+  <!-- Pokémon de demonstração (modo demonstração e testes), lidos do submódulo do easyworld. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\engines\frlg-ldn-trade-esp32\assets\party\*.pk3" LogicalName="demo/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
