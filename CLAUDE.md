@@ -12,9 +12,15 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
   pacote NuGet. Se algo não existir, diga.
 - Converse em **português**. Os textos da interface ficam em `frontend/src/locales/{pt-BR,en}.json`
   e os textos explicativos em `content/{pt-BR,en}/**/*.md`. Explique tudo de forma simples.
-- **Commits:** cada entrega na própria branch (`entrega-N-nome`), criada a partir da anterior, com o
+- **Commits:** cada trabalho na própria branch, criada a partir da `main` e levada à `main` por PR, com o
   trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Commite quando o autor pedir;
-  o padrão combinado é commitar cada entrega ao terminá-la.
+  o padrão combinado é commitar cada entrega ao terminá-la. Antes de commitar, confira a branch atual
+  (o autor faz merge e troca de branch pelo VS Code).
+- **Tags de versão:** sempre na `main` do GitHub (`git tag -a vX origin/main`), com a versão que o autor
+  disser (nunca escolha nem sugira o número). A mensagem da tag vira as "Novidades" do Release; a marca
+  `[pré-lançamento]` só quando o autor pedir (versões com sufixo, como `v1.0.0-rc.1`, também saem
+  como pré-lançamento). O CI roda só nas tags `v*` e publica o Release com o texto de
+  `packaging/release-notes.md` e a lista automática do GitHub.
 - Rode `scripts/ci.sh` antes de commitar. Ele roda typecheck, testes e build do frontend, os testes
   do worker (Python `unittest`) e o build e os testes do .NET.
 
@@ -64,7 +70,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 10 | Modo servidor na rede (contas, cofre por conta, fila) | feita, **sem celular real** |
 | 11 | Build e instalador Windows (só ESP32) | feita, **sem ESP32 real no Windows** |
 
-A branch mais recente é `entrega-11-windows`. Todas as entregas da especificação estão feitas. O `main` do GitHub ainda tem só o commit inicial.
+Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-lançamento é a tag `v0.00.01`. As branches das entregas foram apagadas depois do merge.
 
 ## Pendências já combinadas
 
