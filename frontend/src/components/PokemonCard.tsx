@@ -22,8 +22,8 @@ export function PokemonCard({
     <div
       className={`flex items-center gap-3 rounded-xl border p-3 ${
         highlight
-          ? 'border-sky-400 bg-sky-50 dark:border-sky-600 dark:bg-sky-950/40'
-          : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+          ? 'border-sky-400 bg-accent-soft'
+          : 'border-line bg-surface'
       }`}
     >
       <img
@@ -36,9 +36,9 @@ export function PokemonCard({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="truncate font-semibold">{name}</span>
           {pokemon.nickname && pokemon.nickname !== pokemon.speciesName && (
-            <span className="text-xs text-slate-500">({pokemon.speciesName})</span>
+            <span className="text-xs text-muted">({pokemon.speciesName})</span>
           )}
-          <span className="text-xs text-slate-500">#{pokemon.species}</span>
+          <span className="text-xs text-muted">#{pokemon.species}</span>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge>{pokemon.isEgg ? t('pokemon.egg') : t('pokemon.level', { level: pokemon.level })}</Badge>
@@ -47,7 +47,7 @@ export function PokemonCard({
           <LegalityBadge status={pokemon.legality} />
         </div>
         {!compact && (
-          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{t('pokemon.ot', { name: pokemon.otName })}</p>
+          <p className="truncate text-xs text-muted">{t('pokemon.ot', { name: pokemon.otName })}</p>
         )}
         <WarningList warnings={pokemon.warnings ?? []} />
       </div>

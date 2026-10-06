@@ -1,132 +1,147 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, inputClass } from '../../components/ui'
+import { Icon, inputClass } from '../../components/ui'
 import type { VaultOverview } from '../../lib/types'
 import { acceptsPokemon, draggedPokemon } from './dnd'
 
 export type Scope = 'inbox' | 'trash' | string // string = id da caixa
 
+/**
+ * Caixas do cofre: lista na lateral (computador) ou fileira que rola para o lado (celular).
+ * Soltar um Pokémon numa caixa move para ela.
+ */
 export function Sidebar({
   overview,
   scope,
+  horizontal,
   onScope,
   onCreate,
-  onRename,
-  onDelete,
-  onReorder,
   onDropPokemon,
 }: {
   overview: VaultOverview
   scope: Scope
+  horizontal: boolean
   onScope: (scope: Scope) => void
   onCreate: (name: string) => Promise<void>
-  onRename: (id: string, name: string) => Promise<void>
-  onDelete: (id: string) => Promise<void>
-  onReorder: (ids: string[]) => Promise<void>
   onDropPokemon: (pokemonId: string, target: 'inbox' | 'trash' | string) => void
 }) {
   const { t } = useTranslation()
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
-  const [editing, setEditing] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
 
-  const item = (key: Scope, label: string, count: number, extra?: React.ReactNode) => (
-    <li key={key}>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onScope(key)}
-        onKeyDown={(e) => e.key === 'Enter' && onScope(key)}
-        onDragOver={(e) => {
-          if (acceptsPokemon(e)) {
-            e.preventDefault()
-            setDropTarget(key)
-          }
-        }}
-        onDragLeave={() => setDropTarget(null)}
-        onDrop={(e) => {
-          const id = draggedPokemon(e)
-          setDropTarget(null)
-          if (id) onDropPokemon(id, key)
-        }}
-        className={`group flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${
-          scope === key ? 'bg-sky-100 font-medium text-sky-900 dark:bg-sky-900/50 dark:text-sky-200' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-        } ${dropTarget === key ? 'ring-2 ring-sky-500' : ''}`}
-      >
-        <span className="truncate">{label}</span>
-        <span className="flex items-center gap-1">
-          {extra}
-          <span className="text-xs text-slate-500">{count}</span>
-        </span>
-      </div>
-    </li>
+  const items: { key: Scope; label: string; icon: string; count: number }[] = [
+    { key: 'inbox', label: t('vault.inbox'), icon: 'inbox', count: overview.inboxCount },
+    ...overview.boxes.map((b) => ({ key: b.id, label: b.name, icon: 'inventory_2', count: b.count })),
+  ]
+  const trash = { key: 'trash', label: t('vault.trash'), icon: 'delete', count: overview.trashCount }
+
+  const dropProps = (key: Scope) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (acceptsPokemon(e)) {
+        e.preventDefault()
+        setDropTarget(key)
+      }
+    },
+    onDragLeave: () => setDropTarget(null),
+    onDrop: (e: React.DragEvent) => {
+      const id = draggedPokemon(e)
+      setDropTarget(null)
+      if (id) onDropPokemon(id, key)
+    },
+  })
+
+  const createForm = (
+    <form
+      className="flex gap-1"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (name.trim()) void onCreate(name.trim()).then(() => {
+          setName('')
+          setCreating(false)
+        })
+      }}
+    >
+      <input
+        autoFocus
+        className={`${inputClass} h-9! text-sm!`}
+        placeholder={t('vault.boxName')}
+        maxLength={24}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === 'Escape' && setCreating(false)}
+      />
+      <button type="submit" aria-label={t('vault.newBox')} className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-accent text-accent-ink">
+        <Icon name="check" />
+      </button>
+    </form>
   )
 
-  const ids = overview.boxes.map((b) => b.id)
-  const move = (index: number, delta: number) => {
-    const next = [...ids]
-    const [x] = next.splice(index, 1)
-    next.splice(index + delta, 0, x)
-    void onReorder(next)
-  }
+  if (horizontal)
+    return (
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex w-full gap-1.5 overflow-x-auto pb-0.5">
+          {[...items, trash].map((it) => (
+            <button
+              key={it.key}
+              type="button"
+              onClick={() => onScope(it.key)}
+              {...dropProps(it.key)}
+              className={`flex h-[38px] shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3.5 text-sm whitespace-nowrap ${
+                scope === it.key ? 'border-accent bg-accent-soft font-bold' : 'border-line bg-surface'
+              }`}
+            >
+              <Icon name={it.icon} className="text-lg" />
+              {it.label}
+              <span className="text-xs text-muted">{it.count}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setCreating(!creating)}
+            aria-label={t('vault.newBox')}
+            className="flex h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-line text-muted"
+          >
+            <Icon name="add" />
+          </button>
+        </div>
+        {creating && createForm}
+      </div>
+    )
+
+  const row = (it: { key: Scope; label: string; icon: string; count: number }) => (
+    <button
+      key={it.key}
+      type="button"
+      onClick={() => onScope(it.key)}
+      {...dropProps(it.key)}
+      className={`flex h-10 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-left text-sm ${
+        scope === it.key ? 'bg-accent-soft font-bold text-ink' : 'text-ink hover:bg-surface2'
+      } ${dropTarget === it.key ? 'ring-2 ring-accent' : ''}`}
+    >
+      <Icon name={it.icon} className="text-[19px]" />
+      <span className="flex-1 truncate">{it.label}</span>
+      <span className="text-[12.5px] text-muted">{it.count}</span>
+    </button>
+  )
 
   return (
-    <nav className="space-y-3" aria-label={t('vault.title')}>
-      <ul className="space-y-0.5">{item('inbox', t('vault.inbox'), overview.inboxCount)}</ul>
-
-      <ul className="space-y-0.5">
-        {overview.boxes.map((box, index) =>
-          editing === box.id ? (
-            <li key={box.id} className="px-1">
-              <input
-                autoFocus
-                className={inputClass}
-                defaultValue={box.name}
-                maxLength={24}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void onRename(box.id, (e.target as HTMLInputElement).value).then(() => setEditing(null))
-                  if (e.key === 'Escape') setEditing(null)
-                }}
-                onBlur={(e) => void onRename(box.id, e.target.value).then(() => setEditing(null))}
-              />
-            </li>
-          ) : (
-            item(
-              box.id,
-              box.name,
-              box.count,
-              scope === box.id && (
-                <span className="flex gap-0.5 text-xs">
-                  <button type="button" title={t('vault.moveUp')} disabled={index === 0} className="px-1 disabled:opacity-30" onClick={(e) => { e.stopPropagation(); move(index, -1) }}>▲</button>
-                  <button type="button" title={t('vault.moveDown')} disabled={index === ids.length - 1} className="px-1 disabled:opacity-30" onClick={(e) => { e.stopPropagation(); move(index, 1) }}>▼</button>
-                  <button type="button" title={t('vault.rename')} className="px-1" onClick={(e) => { e.stopPropagation(); setEditing(box.id) }}>✎</button>
-                  <button type="button" title={box.count > 0 ? t('vault.boxNotEmpty') : t('vault.deleteBox')} disabled={box.count > 0} className="px-1 disabled:opacity-30" onClick={(e) => { e.stopPropagation(); void onDelete(box.id) }}>✕</button>
-                </span>
-              ),
-            )
-          ),
-        )}
-      </ul>
-
+    <nav className="flex max-w-[220px] flex-[1_1_180px] flex-col gap-0.5 rounded-xl border border-line bg-surface p-2" aria-label={t('vault.title')}>
+      {items.map(row)}
       {creating ? (
-        <form
-          className="flex gap-1 px-1"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (name.trim()) void onCreate(name.trim()).then(() => { setName(''); setCreating(false) })
-          }}
-        >
-          <input autoFocus className={inputClass} placeholder={t('vault.boxName')} maxLength={24} value={name} onChange={(e) => setName(e.target.value)} />
-          <Button type="submit" variant="secondary">+</Button>
-        </form>
+        <div className="px-1 py-1">{createForm}</div>
       ) : (
-        <Button variant="ghost" className="w-full justify-start" onClick={() => setCreating(true)}>
-          + {t('vault.newBox')}
-        </Button>
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="flex h-10 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted hover:bg-surface2"
+        >
+          <Icon name="add" className="text-[19px]" />
+          {t('vault.newBox')}
+        </button>
       )}
-
-      <ul className="space-y-0.5 border-t border-slate-200 pt-3 dark:border-slate-700">{item('trash', `🗑 ${t('vault.trash')}`, overview.trashCount)}</ul>
+      <div className="mx-1 my-1.5 h-px bg-line" />
+      {row(trash)}
     </nav>
   )
 }

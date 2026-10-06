@@ -77,7 +77,7 @@ export function SaveImportDialog({ initialFile, onClose, onImported }: { initial
             {t('pokemon.savChoose')}
           </Button>
         )}
-        {message && <p className={message.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}>{message.text}</p>}
+        {message && <p className={message.ok ? 'text-ok' : 'text-bad'}>{message.text}</p>}
         {upload && (
           <>
             <p className="font-medium">{t('pokemon.savHeader', { game: upload.game, trainer: upload.trainerName, tid: upload.tid })}</p>
@@ -87,12 +87,12 @@ export function SaveImportDialog({ initialFile, onClose, onImported }: { initial
             <ul className="max-h-72 space-y-1 overflow-y-auto">
               {upload.entries.map((e) => (
                 <li key={e.index}>
-                  <label className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <label className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-surface2">
                     <input type="checkbox" checked={selected.includes(e.index)} onChange={() => toggle(e.index)} />
                     <img src={spriteUrl(e.summary.species)} alt="" className="h-8 w-8 [image-rendering:pixelated]" />
                     <span className="flex-1">
                       {e.summary.nickname} · {t('pokemon.level', { level: e.summary.level })}
-                      <span className="block text-xs text-slate-500">
+                      <span className="block text-xs text-muted">
                         {e.place === 'party' ? t('pokemon.savParty', { n: e.slot + 1 }) : t('pokemon.savBox', { box: e.box + 1, slot: e.slot + 1 })}
                       </span>
                     </span>

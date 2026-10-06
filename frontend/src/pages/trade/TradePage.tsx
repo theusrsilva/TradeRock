@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router'
 import { markTradeRunning } from '../../components/Layout'
-import { ContentFile } from '../../components/Markdown'
 import { SwitchReady } from '../../components/illustrations/SwitchReady'
-import { Button, Card } from '../../components/ui'
+import { Button, Callout, Icon } from '../../components/ui'
 import { ApiError, api } from '../../lib/api'
+import { useConnection } from '../../lib/connection'
 import { DEFAULT_TRAINER, trainerNameErrors } from '../../lib/trainer'
-import type { Engine, Pokemon, QueuedTrade, StartTrade, TradeQueue, TradeSession, TradeSettings } from '../../lib/types'
+import type { Pokemon, QueuedTrade, StartTrade, TradeQueue, TradeSession, TradeSettings } from '../../lib/types'
 import { useAuth } from '../../lib/auth'
+import { takeTradeRequest } from '../../lib/tradeRequest'
 import { QueueList, QueueStep } from './QueueStep'
 import { useTradeSession } from '../../lib/useTradeSession'
 import { LiveView } from './LiveView'
@@ -18,14 +20,21 @@ const baseSteps = ['party', 'trainer', 'reminder'] as const
 // No modo servidor, um passo a mais: entrar na fila e aguardar a vez.
 const serverSteps = [...baseSteps, 'queue'] as const
 
+const prepIcons = ['local_hospital', 'storefront', 'flag', 'devices']
+
 export default function TradePage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { session, events, connected, refresh } = useTradeSession()
+  const { demo: simulation, ready } = useConnection()
   const [startedHere, setStartedHere] = useState<string | null>(null)
   const [step, setStep] = useState(0)
   const [pokemon, setPokemon] = useState<Pokemon[]>([])
-  const [simulation, setSimulation] = useState(false)
-  const [party, setParty] = useState<PartyState>({ party: [], offered: [] })
+  // "Usar na troca" no cofre: o Pokémon já entra no time, indo para o Switch.
+  const [party, setParty] = useState<PartyState>(() => {
+    const ids = takeTradeRequest()
+    return { party: ids, offered: ids }
+  })
   const [trainer, setTrainer] = useState<TrainerState>({
     game: 'fire_red',
     trainer: DEFAULT_TRAINER,
@@ -37,6 +46,7 @@ export default function TradePage() {
   const [allowIllegal, setAllowIllegal] = useState(false)
   const [starting, setStarting] = useState(false)
   const { me } = useAuth()
+  const remote = me?.local === false
   const [queue, setQueue] = useState<TradeQueue | null>(null)
   const [queuedId, setQueuedId] = useState<string | null>(null)
   const [leaving, setLeaving] = useState(false)
@@ -97,10 +107,6 @@ export default function TradePage() {
   useEffect(() => {
     loadPokemon()
     api.get<TradeSettings>('/api/settings/trade').then((s) => setAllowIllegal(s.allowIllegal)).catch(() => undefined)
-    api
-      .get<Engine[]>('/api/engines')
-      .then((engines) => setSimulation(engines.find((e) => e.selected)?.isSimulation ?? false))
-      .catch(() => undefined)
   }, [loadPokemon])
 
   useEffect(() => markTradeRunning(session), [session])
@@ -122,14 +128,12 @@ export default function TradePage() {
     )
   }
 
-  const offeredIllegal = party.offered.some((id) => pokemon.find((p) => p.id === id)?.legality === 'illegal')
+  const byId = new Map(pokemon.map((p) => [p.id, p]))
+  const offeredIllegal = party.offered.some((id) => byId.get(id)?.legality === 'illegal')
   const problems = partyProblems(party, offeredIllegal && !allowIllegal)
-  const canContinue =
-    step === 0
-      ? problems.length === 0
-      : step === 1
-        ? trainerNameErrors(trainer.trainer.name).length === 0
-        : !offeredIllegal || acceptIllegal
+  const canGo = (target: number) =>
+    target <= 0 || (problems.length === 0 && (target <= 1 || trainerNameErrors(trainer.trainer.name).length === 0))
+  const canContinue = step < 2 ? canGo(step + 1) : !offeredIllegal || acceptIllegal
 
   async function start() {
     setStarting(true)
@@ -161,67 +165,120 @@ export default function TradePage() {
     }
   }
 
-  return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">{t('trade.title')}</h1>
+  const sending = party.party.filter((id) => party.offered.includes(id)).map((id) => byId.get(id))
+  const sendNames = sending.map((p) => (p ? (p.nickname || p.speciesName).toUpperCase() : '?')).join(', ')
+  const prepSteps = t('ui.trade.prep', { returnObjects: true }) as { title: string; sub: string }[]
 
-      <ol className="flex flex-wrap gap-2 text-sm" aria-label="steps">
-        {wizardSteps.map((s, i) => (
-          <li
-            key={s}
-            className={`rounded-full px-3 py-1 ${
-              i === step
-                ? 'bg-sky-600 text-white'
-                : i < step
-                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
-                  : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-            }`}
-          >
-            {i + 1}. {t(`trade.wizard.${s}`)}
-          </li>
-        ))}
-      </ol>
+  return (
+    <div className="flex flex-col gap-5">
+      {simulation && !ready && (
+        <Callout tone="amber" icon="science">
+          <span className="mr-2">
+            <b>{t('demo.badge')}.</b> {t('ui.trade.demoBanner')}
+          </span>
+          {!remote && (
+            <button type="button" onClick={() => navigate('/configuracoes?aba=conexao')} className="cursor-pointer font-bold underline">
+              {t('ui.trade.setupConnection')}
+            </button>
+          )}
+        </Callout>
+      )}
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h1 className="font-display text-[23px] font-bold md:text-[28px]">{t('ui.trade.title')}</h1>
+        <ol className="flex max-w-full items-center gap-1.5 overflow-x-auto" aria-label="steps">
+          {wizardSteps.map((s, i) => {
+            const on = i === step
+            const done = i < step
+            const reachable = i < step || (i === step + 1 && canContinue && i < 3)
+            return (
+              <li key={s}>
+                <button
+                  type="button"
+                  disabled={!reachable && !on}
+                  onClick={() => reachable && step < 3 && setStep(i)}
+                  aria-current={on ? 'step' : undefined}
+                  className={`flex h-9 cursor-pointer items-center gap-2 rounded-full border py-0 pr-3.5 pl-1.5 text-sm font-semibold whitespace-nowrap disabled:cursor-default ${on ? 'border-accent bg-accent-soft text-ink' : 'border-line text-muted'}`}
+                >
+                  <span
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[13px] font-bold ${on || done ? 'bg-accent text-accent-ink' : 'bg-surface2 text-muted'}`}
+                  >
+                    {done ? '✓' : i + 1}
+                  </span>
+                  <span className={on ? '' : 'max-md:hidden'}>{t(`ui.trade.steps.${s}`)}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ol>
+      </div>
 
       {step === 0 && <PartyStep pokemon={pokemon} state={party} onChange={setParty} onReload={loadPokemon} allowIllegal={allowIllegal} />}
       {step === 1 && <TrainerStep state={trainer} onChange={setTrainer} simulation={simulation} />}
       {step === 2 && (
-        <Card className="space-y-4">
-          <h2 className="font-semibold">{t('trade.reminder.title')}</h2>
-          <SwitchReady
-            labels={[
-              t('trade.reminder.illustration.center'),
-              t('trade.reminder.illustration.counter'),
-              t('trade.reminder.illustration.leader'),
-            ]}
-          />
-          <ContentFile name="trade/lembrete" />
+        <div className="flex flex-col gap-[18px] rounded-xl border border-line bg-surface p-[22px]">
+          <div>
+            <div className="text-lg font-bold">{t('trade.reminder.title')}</div>
+            <div className="text-sm text-muted">{t('ui.trade.prepSub')}</div>
+          </div>
+          <SwitchReady labels={[t('trade.reminder.illustration.center'), t('trade.reminder.illustration.counter'), t('trade.reminder.illustration.leader')]} />
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+            {prepSteps.map((p, i) => (
+              <div key={p.title} className="flex gap-2.5 rounded-lg bg-surface2 p-3">
+                <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-bold text-accent-ink">{i + 1}</span>
+                <div className="text-sm leading-snug">
+                  <b className="flex items-center gap-1.5">
+                    {p.title}
+                    <Icon name={prepIcons[i]} className="text-[17px] text-muted" />
+                  </b>
+                  <span className="text-muted">{p.sub}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <details className="text-sm">
+            <summary className="cursor-pointer font-semibold text-accent">{t('ui.trade.learnMore')}</summary>
+            <p className="mt-2 text-muted">{t('ui.trade.prepMore')}</p>
+          </details>
+
           {offeredIllegal && (
-            <label className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-300">
-              <input type="checkbox" className="mt-0.5" checked={acceptIllegal} onChange={(e) => setAcceptIllegal(e.target.checked)} />
+            <label className="flex items-start gap-2 rounded-lg bg-bad-soft p-3 text-sm text-bad">
+              <input type="checkbox" className="mt-0.5 accent-[var(--tr-bad)]" checked={acceptIllegal} onChange={(e) => setAcceptIllegal(e.target.checked)} />
               {t('trade.party.acceptIllegal')}
             </label>
           )}
           {serverMode && queue && (
-            <div className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-              <h3 className="text-sm font-semibold">{t('queue.beforeTitle')}</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                {queue.entries.length === 0 ? t('queue.freeNow') : t('queue.ahead', { count: queue.entries.length })}
+            <Callout tone="sky" icon="groups">
+              <p>
+                {remote ? t('ui.trade.queueNote') : ''}{' '}
+                <b>{queue.entries.length === 0 ? t('queue.freeNow') : t('queue.ahead', { count: queue.entries.length })}</b>
               </p>
-              <QueueList queue={queue} />
-            </div>
+              {queue.entries.length > 0 && (
+                <div className="mt-2">
+                  <QueueList queue={queue} />
+                </div>
+              )}
+            </Callout>
           )}
-          {leftQueue && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">{t('queue.removed')}</p>}
+          {leftQueue && <Callout tone="amber">{t('queue.removed')}</Callout>}
           {startErrors.length > 0 && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-300">
+            <Callout tone="red" icon="error">
               <p>{t('trade.startError')}</p>
               <ul className="list-disc pl-5">
                 {startErrors.map((e) => (
                   <li key={e}>{t(`errors.${e}`, { defaultValue: t('failures.unknown') })}</li>
                 ))}
               </ul>
-            </div>
+            </Callout>
           )}
-        </Card>
+          <div className="flex items-center gap-3 rounded-lg bg-surface2 px-3.5 py-3">
+            <Icon name="swap_horiz" className="text-[22px] text-accent" />
+            <div className="flex-1 text-sm">
+              <b>{sending.length ? t('ui.trade.sending', { names: sendNames }) : t('ui.trade.nothingToSend')}</b> · {t(`trade.trainer.${trainer.game}`)} ·{' '}
+              {t('ui.trade.trainerLabel')} <b>{trainer.trainer.name}</b>
+            </div>
+          </div>
+        </div>
       )}
 
       {step === 3 && queuedId && (
@@ -244,25 +301,17 @@ export default function TradePage() {
         />
       )}
 
-      {step === 0 && problems.length > 0 && (
-        <ul className="text-sm text-slate-500">
-          {problems.map((p) => (
-            <li key={p}>• {t(p)}</li>
-          ))}
-        </ul>
-      )}
-
       {step < 3 && (
-        <div className="flex justify-between">
-          <Button variant="secondary" disabled={step === 0} onClick={() => setStep(step - 1)}>
+        <div className="flex items-center justify-between">
+          <Button variant="secondary" size="lg" disabled={step === 0} onClick={() => setStep(step - 1)}>
             {t('common.back')}
           </Button>
           {step < 2 ? (
-            <Button disabled={!canContinue} onClick={() => setStep(step + 1)}>
-              {t('common.next')}
+            <Button size="lg" iconAfter="arrow_forward" disabled={!canContinue} onClick={() => setStep(step + 1)}>
+              {t('ui.trade.continue')}
             </Button>
           ) : (
-            <Button disabled={starting || !canContinue} onClick={() => void start()}>
+            <Button size="lg" iconAfter="play_arrow" disabled={starting || !canContinue} onClick={() => void start()}>
               {serverMode && queue && queue.entries.length > 0 ? t('queue.join') : t('trade.reminder.start')}
             </Button>
           )}

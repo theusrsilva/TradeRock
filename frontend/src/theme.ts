@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
@@ -19,25 +19,43 @@ function readChoice(): ThemeChoice {
   return 'system'
 }
 
+// Escolha compartilhada entre o menu (botão claro/escuro) e Configurações → Preferências.
+let current: ThemeChoice = typeof window === 'undefined' ? 'system' : readChoice()
+const listeners = new Set<() => void>()
+
+function setChoice(choice: ThemeChoice) {
+  current = choice
+  try {
+    localStorage.setItem(storageKey, choice)
+  } catch {
+    // ignora
+  }
+  listeners.forEach((l) => l())
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
+
+const media = () => window.matchMedia('(prefers-color-scheme: dark)')
+
+function subscribeSystem(listener: () => void) {
+  const m = media()
+  m.addEventListener('change', listener)
+  return () => m.removeEventListener('change', listener)
+}
+
+/** Tema escolhido, o tema em uso (claro/escuro) e a função para trocar. Aplica a classe `dark` no <html>. */
 export function useTheme() {
-  const [choice, setChoice] = useState<ThemeChoice>(readChoice)
+  const choice = useSyncExternalStore(subscribe, () => current, () => current)
+  const systemDark = useSyncExternalStore(subscribeSystem, () => media().matches, () => false)
+  const theme = resolveTheme(choice, systemDark)
 
   useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = () => {
-      const theme = resolveTheme(choice, media.matches)
-      document.documentElement.classList.toggle('dark', theme === 'dark')
-      document.documentElement.style.colorScheme = theme
-    }
-    apply()
-    media.addEventListener('change', apply)
-    try {
-      localStorage.setItem(storageKey, choice)
-    } catch {
-      // ignora
-    }
-    return () => media.removeEventListener('change', apply)
-  }, [choice])
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+    document.documentElement.style.colorScheme = theme
+  }, [theme])
 
-  return [choice, setChoice] as const
+  return [choice, setChoice, theme] as const
 }

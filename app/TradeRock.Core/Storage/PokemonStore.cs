@@ -81,6 +81,58 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
         }
     }
 
+    /// <summary>
+    /// Troca os dados de um Pokémon do cofre por outros (edição no painel do cofre). O registro continua o
+    /// mesmo: id, caixa, posição, etiquetas, origem e as trocas do histórico que apontam para ele.
+    /// </summary>
+    public async Task<StoredPokemon> ReplaceAsync(Guid id, ReadOnlyMemory<byte> file, CancellationToken ct)
+    {
+        var pk = Pk3Reader.Read(file.Span);
+
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var stored = await db.Pokemon.Include(p => p.Tags).SingleOrDefaultAsync(p => p.Id == id, ct)
+            ?? throw new VaultException("pokemon_not_found");
+        if (stored.DeletedAt is not null)
+            throw new VaultException("pokemon_in_trash");
+        if (stored.Sha256 == pk.Sha256)
+            return stored;
+        // O resultado já existe como outro Pokémon deste cofre (mesmo arquivo): não dá para ter dois iguais.
+        if (await db.Pokemon.AnyAsync(p => p.Sha256 == pk.Sha256 && p.Id != id, ct))
+            throw new VaultException("pokemon_duplicate");
+
+        await WriteFileAsync(pk, ct);
+        var oldSha = stored.Sha256;
+        var s = pk.Summary;
+        stored.Sha256 = pk.Sha256;
+        stored.Size = pk.Data.Length;
+        stored.Species = s.Species;
+        stored.SpeciesName = s.SpeciesName;
+        stored.Nickname = s.Nickname;
+        stored.Level = s.Level;
+        stored.IsShiny = s.IsShiny;
+        stored.IsEgg = s.IsEgg;
+        stored.Gender = s.Gender;
+        stored.OtName = s.OtName;
+        stored.Tid = s.Tid;
+        stored.Sid = s.Sid;
+        stored.OriginGame = s.OriginGame;
+        stored.HeldItem = s.HeldItem;
+        stored.Fateful = s.Fateful;
+        stored.Pid = new PK3(pk.Data.ToArray()).PID;
+        stored.Legality = AnalyzeLegality(pk.Data);
+        stored.LegalityPkhexVersion = LegalityReporter.PkhexVersion;
+        await db.SaveChangesAsync(ct);
+
+        // O arquivo antigo é compartilhado entre cofres: só sai quando ninguém mais o usa.
+        if (!await db.Pokemon.IgnoreQueryFilters().AnyAsync(p => p.Sha256 == oldSha, ct))
+        {
+            var path = FilePath(oldSha);
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        return stored;
+    }
+
     public async Task<IReadOnlyList<StoredPokemon>> ListAsync(CancellationToken ct)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);

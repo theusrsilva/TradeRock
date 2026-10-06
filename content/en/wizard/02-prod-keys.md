@@ -16,7 +16,7 @@ or puts them in backups, exports or reports.
 
 Here we only check the **format**: that the file is readable and has the keys the LDN library uses
 (`aes_kek_generation_source`, `aes_key_generation_source` and `master_key_00` or `master_key_12`).
-That **doesn't prove** the values are right. The proof comes in the **Switch test** (step 6): if
+That **doesn't prove** the values are right. The proof comes in the **Switch test** (last item of the list): if
 TradeRock can decrypt your game's room, the keys are right.
 
 </details>

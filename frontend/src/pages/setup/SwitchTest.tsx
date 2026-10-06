@@ -67,7 +67,7 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
   if (esp32 ? !state.serialPort : !card) return null
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+    <div className="space-y-3 rounded-xl border border-line p-4">
       <h3 className="font-semibold">{t('wizard.switchTest.title')}</h3>
       <p className="text-sm">{t('wizard.switchTest.before')}</p>
       <ol className="list-decimal space-y-1 pl-5 text-sm">
@@ -75,21 +75,21 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
         <li>{t('wizard.switchTest.stepLeader')}</li>
         <li>{t('wizard.switchTest.stepNear')}</li>
       </ol>
-      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
+      <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
         <li>{t('wizard.switchTest.noJoin')}</li>
         {esp32 ? <li>{t('wizard.switchTest.esp32Band')}</li> : <li>{t('wizard.switchTest.offline', { seconds: status.switchTestSeconds })}</li>}
       </ul>
 
-      {!keysOk && <p className="text-sm text-amber-700 dark:text-amber-300">{t('wizard.switchTest.needsKeys')}</p>}
+      {!keysOk && <p className="text-sm text-warn">{t('wizard.switchTest.needsKeys')}</p>}
       {keysOk && !radioOk && (
-        <p className="text-sm text-amber-700 dark:text-amber-300">{t(esp32 ? 'wizard.switchTest.needsFirmware' : 'wizard.switchTest.needsCard')}</p>
+        <p className="text-sm text-warn">{t(esp32 ? 'wizard.switchTest.needsFirmware' : 'wizard.switchTest.needsCard')}</p>
       )}
 
       {status.simulatedSwitchOutcomes && (
         <label className="flex flex-wrap items-center gap-2 text-xs">
           <Badge tone="amber">{t('wizard.simulation')}</Badge>
           {t('wizard.switchTest.simulate')}
-          <select className={`${inputClass} w-auto! py-1`} value={simulated} onChange={(e) => setSimulated(e.target.value as SwitchTestCode)}>
+          <select className={`${inputClass} w-auto! py-1!`} value={simulated} onChange={(e) => setSimulated(e.target.value as SwitchTestCode)}>
             {status.simulatedSwitchOutcomes.map((o) => (
               <option key={o} value={o}>
                 {o}
@@ -112,20 +112,20 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
             {test ? t('wizard.switchTest.again') : t('wizard.switchTest.run')}
           </Button>
         )}
-        {running && !esp32 && <span className="text-sm text-slate-500">{t('wizard.switchTest.waitPassword')}</span>}
+        {running && !esp32 && <span className="text-sm text-muted">{t('wizard.switchTest.waitPassword')}</span>}
       </div>
       {running && (
-        <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" aria-hidden>
+        <div className="h-1.5 overflow-hidden rounded-full bg-surface2" aria-hidden>
           <div
-            className="h-full bg-sky-600 transition-all"
+            className="h-full bg-accent transition-all"
             style={{ width: `${Math.min(100, (elapsed / status.switchTestSeconds) * 100)}%` }}
           />
         </div>
       )}
 
-      {cancelled && <p className="text-sm text-slate-500">{t('wizard.switchTest.codes.cancelled')}</p>}
+      {cancelled && <p className="text-sm text-muted">{t('wizard.switchTest.codes.cancelled')}</p>}
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
+        <p role="alert" className="rounded-lg bg-bad-soft p-3 text-sm text-bad">
           {t(`failures.${error}`, { defaultValue: t('failures.unknown') })}
         </p>
       )}
@@ -142,7 +142,7 @@ function SwitchTestView({ test, hint }: { test: SwitchTestResult; hint?: string 
   return (
     <div
       className={`space-y-2 rounded-lg p-3 text-sm ${
-        test.passed ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100' : 'bg-red-50 text-red-900 dark:bg-red-950/40 dark:text-red-100'
+        test.passed ? 'bg-ok-soft text-ok' : 'bg-bad-soft text-bad'
       }`}
     >
       <p className="font-medium">

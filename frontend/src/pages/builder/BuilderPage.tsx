@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { LegalityPanel } from '../../components/Legality'
 import { ContentFile } from '../../components/Markdown'
-import { Badge, Button, Card, Modal, inputClass } from '../../components/ui'
+import { Button, Callout, HelpTip, Icon, Modal, Toggle, inputClass, useToast } from '../../components/ui'
 import { ApiError, api, spriteUrl } from '../../lib/api'
 import type {
   AdvancedResult,
@@ -55,7 +55,7 @@ export default function BuilderPage() {
   const [auto, setAuto] = useState<BuildResult | null>(null)
   const [advanced, setAdvanced] = useState<AdvancedResult | null>(null)
   const [busy, setBusy] = useState(false)
-  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const toast = useToast()
   const [showdownOpen, setShowdownOpen] = useState(false)
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function BuilderPage() {
     [raw, mode, i18n.language],
   )
 
-  if (!data || !spec) return <p className="text-slate-500">{t('common.loading')}</p>
+  if (!data || !spec) return <p className="text-muted">{t('common.loading')}</p>
 
   const current = mode === 'auto' ? auto : advanced
   // No automático, uma geração que falhou devolve um Pokémon "vazio": não mostrar nem salvar.
@@ -116,102 +116,101 @@ export default function BuilderPage() {
   const issues = failed ? {} : issuesFrom(current?.legality, mode === 'auto' ? auto?.differences : [])
   const errors = current?.errors ?? []
   const canSave = !!current?.data && !busy && !failed
+  const legality = failed ? null : current?.legality ?? null
+  const natureOut =
+    mode === 'advanced' && advanced?.derived
+      ? data.natures[advanced.derived.nature]?.text
+      : mode === 'auto' && auto?.obtained?.nature != null
+        ? data.natures[auto.obtained.nature]?.text
+        : undefined
+  const previewSpecies = summary?.species ?? (mode === 'auto' ? spec.species : raw?.species ?? spec.species)
+  const previewName = (summary?.nickname ?? data.species[previewSpecies - 1]?.text ?? '').toUpperCase()
+  const legalLook =
+    !legality || busy
+      ? { cls: 'bg-surface2 text-muted', icon: 'hourglass_top', label: t('builder.generating') }
+      : legality.status === 'legal'
+        ? legality.checks.some((c) => c.severity === 'fishy')
+          ? { cls: 'bg-warn-soft text-warn', icon: 'warning', label: t('ui.builder.legalAttention') }
+          : { cls: 'bg-ok-soft text-ok', icon: 'verified', label: t('legality.legal') }
+        : legality.status === 'illegal'
+          ? { cls: 'bg-bad-soft text-bad', icon: 'error', label: t('legality.illegal') }
+          : { cls: 'bg-warn-soft text-warn', icon: 'help', label: t('legality.unverifiable') }
 
   async function save() {
     if (!current?.data) return
-    setSaveMessage(null)
     try {
       const r = await api.post<{ created: boolean; pokemon: Pokemon }>('/api/builder/save', { data: current.data })
-      setSaveMessage(t(r.created ? 'builder.saved' : 'builder.savedDuplicate'))
+      toast(t(r.created ? 'builder.saved' : 'builder.savedDuplicate'))
     } catch {
-      setSaveMessage(t('common.error'))
+      toast(t('common.error'))
     }
   }
 
-  function switchMode(next: Mode) {
-    setSaveMessage(null)
-    // Ao ir para o avançado, os campos brutos já vêm do último resultado automático.
-    setMode(next)
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{t('builder.title')}</h1>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setShowdownOpen(true)}>
-            {t('builder.importShowdown')}
-          </Button>
-          <div className="inline-flex rounded-lg border border-slate-300 p-0.5 dark:border-slate-600" role="tablist">
-            {(['auto', 'advanced'] as const).map((m) => (
-              <button
-                key={m}
-                role="tab"
-                aria-selected={mode === m}
-                disabled={m === 'advanced' && !raw}
-                onClick={() => switchMode(m)}
-                className={`rounded-md px-3 py-1.5 text-sm ${mode === m ? 'bg-sky-600 text-white' : 'text-slate-600 dark:text-slate-300'}`}
-              >
-                {t(m === 'auto' ? 'builder.modeAuto' : 'builder.modeAdvanced')}
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="flex flex-col gap-[18px]">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="flex-1 font-display text-[23px] font-bold md:text-[28px]">{t('builder.title')}</h1>
+        <Button variant="secondary" icon="content_paste" onClick={() => setShowdownOpen(true)}>
+          {t('builder.importShowdown')}
+        </Button>
+        <span className="inline-flex h-10 items-center rounded-lg border border-line bg-surface px-3">
+          <Toggle small on={mode === 'advanced'} disabled={mode === 'auto' && !raw} onChange={(on) => setMode(on ? 'advanced' : 'auto')} label={t('builder.modeAdvanced')} />
+        </span>
       </div>
+      {mode === 'advanced' && (
+        <Callout tone="sky" icon="construction">
+          {t('ui.builder.advancedBanner')}
+        </Callout>
+      )}
+      {id && <p className="text-sm text-muted">{t('builder.openedFrom')}</p>}
 
-      {id && <p className="text-sm text-slate-500">{t('builder.openedFrom')}</p>}
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
-        <Card className="space-y-4">
-          <ContentFile name={mode === 'auto' ? 'builder/automatico' : 'builder/avancado'} />
+      <div className="flex flex-wrap items-start gap-[18px]">
+        <div className="flex min-w-0 flex-[999_1_min(460px,100%)] flex-col gap-5 rounded-xl border border-line bg-surface p-[22px]">
+          <details className="text-sm">
+            <summary className="cursor-pointer font-semibold text-accent">{t('ui.builder.howItWorks')}</summary>
+            <div className="mt-2">
+              <ContentFile name={mode === 'auto' ? 'builder/automatico' : 'builder/avancado'} />
+            </div>
+          </details>
           {mode === 'auto' ? (
             <AutoForm data={data} spec={spec} onChange={setSpec} issues={issues} myTrainer={myTrainer} />
           ) : (
             raw && <AdvancedForm data={data} raw={raw} onChange={setRaw} issues={issues} />
           )}
-        </Card>
+        </div>
 
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-          <Card className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold">{t('builder.result')}</h2>
-              {busy && <span className="text-xs text-slate-500">{t('builder.generating')}</span>}
+        <div className="flex w-full flex-[1_1_300px] flex-col gap-3.5 md:sticky md:top-0 md:max-w-[380px]">
+          <div className="flex flex-col items-center gap-2.5 rounded-xl border border-line bg-surface p-5 text-center">
+            <div className="flex h-[140px] w-[140px] items-center justify-center rounded-xl bg-tile">
+              <img src={spriteUrl(previewSpecies)} alt="" className={`pixelated h-32 w-32 ${busy ? 'opacity-60' : ''}`} />
+            </div>
+            <div>
+              <div className="font-display text-[22px] font-bold">{previewName}</div>
+              <div className="text-[13px] text-muted">
+                #{String(previewSpecies).padStart(3, '0')}
+                {summary && ` · ${t('ui.lv', { level: summary.level })}`}
+                {natureOut && ` · ${natureOut}`}
+                {summary?.isShiny && ' · ★'}
+              </div>
+              {summary && <div className="text-[12.5px] text-muted">{t('pokemon.ot', { name: `${summary.otName} (${summary.tid})` })}</div>}
             </div>
 
             {errors.length > 0 && (
-              <ul className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-300">
-                {errors.map((e) => (
-                  <li key={e}>• {t(`builder.errors.${e}`, { defaultValue: e })}</li>
-                ))}
-              </ul>
-            )}
-
-            {summary && (
-              <div className="flex items-center gap-3">
-                <img src={spriteUrl(summary.species)} alt="" className="h-20 w-20 [image-rendering:pixelated]" />
-                <div className="space-y-1 text-sm">
-                  <p className="font-semibold">
-                    {summary.nickname} <span className="text-slate-500">#{summary.species}</span>
-                  </p>
-                  <p className="flex flex-wrap gap-1">
-                    <Badge>{t('pokemon.level', { level: summary.level })}</Badge>
-                    {summary.isShiny && <Badge tone="amber">★ {t('pokemon.shiny')}</Badge>}
-                    {mode === 'advanced' && advanced?.derived && (
-                      <Badge tone="sky">{data.natures[advanced.derived.nature]?.text}</Badge>
-                    )}
-                    {mode === 'auto' && auto?.obtained?.nature != null && <Badge tone="sky">{data.natures[auto.obtained.nature]?.text}</Badge>}
-                  </p>
-                  <p className="text-xs text-slate-500">{t('pokemon.ot', { name: `${summary.otName} (${summary.tid})` })}</p>
-                </div>
-              </div>
+              <Callout tone="red" icon="error" className="w-full text-left">
+                <ul>
+                  {errors.map((e) => (
+                    <li key={e}>{t(`builder.errors.${e}`, { defaultValue: e })}</li>
+                  ))}
+                </ul>
+              </Callout>
             )}
 
             {failed && auto && (
-              <div className="space-y-2 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-300">
+              <Callout tone="red" icon="error" className="w-full text-left">
                 <p>{t(auto.generation === 'timeout' ? 'builder.genTimeout' : 'builder.genFailed')}</p>
                 {auto.blockers && auto.blockers.length > 0 && (
                   <>
-                    <p className="font-medium">{t('builder.blockersTitle')}</p>
+                    <p className="mt-1 font-bold">{t('builder.blockersTitle')}</p>
                     <ul className="list-disc space-y-0.5 pl-5">
                       {auto.blockers.map((b) => (
                         <li key={b.code}>{t(`builder.blockers.${b.code}`, { ...b.args, species: data.species[spec.species - 1]?.text })}</li>
@@ -219,28 +218,30 @@ export default function BuilderPage() {
                     </ul>
                   </>
                 )}
-              </div>
+              </Callout>
             )}
 
             {mode === 'advanced' && advanced?.derived && (
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-800">
-                <dt className="col-span-2 font-semibold text-slate-500">{t('builder.derived')}</dt>
-                <dt className="text-slate-500">{t('builder.fields.nature')}</dt>
-                <dd>{data.natures[advanced.derived.nature]?.text}</dd>
-                <dt className="text-slate-500">{t('builder.fields.gender')}</dt>
-                <dd>{advanced.derived.gender === 'M' ? '♂' : advanced.derived.gender === 'F' ? '♀' : '—'}</dd>
-                <dt className="text-slate-500">{t('builder.fields.ability')}</dt>
-                <dd>{advanced.derived.ability}</dd>
-                <dt className="text-slate-500">{t('builder.fields.shiny')}</dt>
-                <dd>{advanced.derived.shiny ? '★' : '—'}</dd>
-                <dt className="text-slate-500">{t('builder.method')}</dt>
-                <dd>{advanced.derived.pidIvMethod}</dd>
-              </dl>
+              <div className="flex w-full flex-col gap-[3px] rounded-lg bg-surface2 px-3 py-2.5 text-left">
+                <div className="mb-0.5 text-[11.5px] font-bold tracking-[.6px] text-muted uppercase">{t('builder.derived')}</div>
+                {[
+                  [t('builder.fields.nature'), data.natures[advanced.derived.nature]?.text],
+                  [t('builder.fields.gender'), advanced.derived.gender === 'M' ? '♂' : advanced.derived.gender === 'F' ? '♀' : '—'],
+                  [t('builder.fields.ability'), advanced.derived.ability],
+                  [t('builder.fields.shiny'), advanced.derived.shiny ? '★' : '—'],
+                  [t('builder.method'), advanced.derived.pidIvMethod],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex text-[13px]">
+                    <span className="flex-1 text-muted">{k}</span>
+                    <b>{v}</b>
+                  </div>
+                ))}
+              </div>
             )}
 
             {mode === 'auto' && auto && !failed && auto.differences.length > 0 && (
-              <div className="rounded-lg bg-sky-50 p-3 text-sm dark:bg-sky-950/40">
-                <p className="mb-1 font-medium">{t('builder.differencesTitle')}</p>
+              <Callout tone="sky" icon="info" className="w-full text-left">
+                <p className="mb-1 font-bold">{t('builder.differencesTitle')}</p>
                 <ul className="space-y-0.5">
                   {auto.differences.map((d) => (
                     <li key={d.field}>
@@ -249,26 +250,29 @@ export default function BuilderPage() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </Callout>
             )}
 
-            <Button className="w-full" disabled={!canSave} onClick={() => void save()}>
+            <Button size="lg" icon="inventory_2" className="h-12 w-full" disabled={!canSave} onClick={() => void save()}>
               {t('builder.save')}
             </Button>
-            {saveMessage && (
-              <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                {saveMessage}{' '}
-                <Link to="/pokemon" className="underline">
-                  {t('nav.pokemon')}
-                </Link>
-              </p>
-            )}
-          </Card>
+            <Link to="/pokemon" className="text-[13px] font-semibold text-accent">
+              {t('ui.home.vault')}
+            </Link>
+          </div>
 
-          {!failed && current?.legality && (
-            <Card>
-              <LegalityPanel report={current.legality} busy={busy} />
-            </Card>
+          {!failed && (
+            <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface px-[18px] py-4">
+              <div className="flex items-center gap-2">
+                <span className={`flex h-[26px] items-center gap-1 rounded-full px-2.5 text-[13px] font-bold ${legalLook.cls}`}>
+                  <Icon name={legalLook.icon} className="text-base" />
+                  {legalLook.label}
+                </span>
+                <span className="flex-1" />
+                <HelpTip>{t('ui.builder.legalTip', { version: legality?.pkhexVersion ?? '' })}</HelpTip>
+              </div>
+              {legality && <LegalityPanel report={legality} busy={busy} />}
+            </div>
           )}
         </div>
       </div>
@@ -305,6 +309,7 @@ function ShowdownDialog({ game, onClose, onPick }: { game: PokemonSpec['game']; 
 
   return (
     <Modal
+      wide
       title={t('builder.importShowdown')}
       actions={
         <>
@@ -318,20 +323,20 @@ function ShowdownDialog({ game, onClose, onPick }: { game: PokemonSpec['game']; 
       }
     >
       <textarea
-        className={`${inputClass} h-48 font-mono text-xs`}
+        className={`${inputClass} h-48! py-2! font-mono text-[13px]!`}
         placeholder={t('builder.showdownPlaceholder')}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      {error && <p className="mt-2 text-red-700">{error}</p>}
+      {error && <p className="mt-2 text-bad">{error}</p>}
       {items && (
         <ul className="mt-3 max-h-60 space-y-2 overflow-y-auto">
           {items.map((item, i) => (
-            <li key={i} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+            <li key={i} className="flex items-center justify-between gap-2 rounded-lg border border-line p-2">
               <span className="text-sm">
                 {item.text.split('\n')[0]}
                 {item.problems.length > 0 && (
-                  <span className="block text-xs text-amber-700 dark:text-amber-400">
+                  <span className="block text-xs text-warn">
                     {t('builder.showdownProblems')} {item.problems.map((p) => t(`builder.errors.${p}`, { defaultValue: p })).join(', ')}
                   </span>
                 )}

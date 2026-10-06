@@ -22,7 +22,8 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "optional": "optional",
-    "learnMore": "Learn more"
+    "learnMore": "Learn more",
+    "close": "Close"
   },
   "demo": {
     "badge": "Demo mode",
@@ -202,8 +203,8 @@
     "busy": "a trade is already in progress",
     "illegal_pokemon": "a Pokémon marked for the Switch is illegal. Fix it in the builder or enable advanced mode in Settings.",
     "illegal_needs_confirmation": "confirm that you want to send an illegal Pokémon",
-    "setup_simulated": "the setup wizard is on a simulated scenario (development). Switch back to \"Real system\" to trade for real.",
-    "setup_incomplete": "setup isn't complete yet. Open the setup wizard in Settings and fix the essential items."
+    "setup_simulated": "the connection setup is on a simulated scenario (development). Switch back to \"Real system\" to trade for real.",
+    "setup_incomplete": "setup isn't complete yet. Open Settings → Connection and fix the essential items."
   },
   "failures": {
     "no_network_found": "The Switch's room was not found. Check that the Direct Corner is open as Leader and the Switch is close by.",
@@ -221,12 +222,12 @@
     "internal_error": "TradeRock internal error.",
     "unknown": "Unknown failure.",
     "join_not_approved": "The Switch saw the join request, but it wasn't approved in time. Approve the request on the Switch screen.",
-    "radio_rx_failed": "The join authenticated, but the card stopped receiving the Switch's advertisements. Set up NetworkManager in the setup wizard and try again.",
+    "radio_rx_failed": "The join authenticated, but the card stopped receiving the Switch's advertisements. Set up NetworkManager in Settings → Connection and try again.",
     "engine_broken": "The trade engine is incomplete in this install. Reinstall TradeRock.",
     "trade_incomplete": "Only some of the trades were completed.",
     "engine_error": "The trade engine stopped with an error.",
     "invalid_request": "The trade request has data the engine doesn't accept.",
-    "missing_tools": "System programs the engine uses are missing. See the setup wizard.",
+    "missing_tools": "System programs the engine uses are missing. See Settings → Connection.",
     "phy_not_found": "The chosen Wi-Fi card is no longer in the PC. Was it unplugged?",
     "not_root": "The network component is not running as administrator.",
     "worker_missing": "The network component is not installed.",
@@ -239,19 +240,19 @@
     "worker_timeout": "The network component didn't answer in time.",
     "worker_version": "The installed network component belongs to another TradeRock version. Reinstall it.",
     "worker_start_failed": "Couldn't start the network component.",
-    "wifi_not_configured": "Pick the Wi-Fi card in the setup wizard.",
+    "wifi_not_configured": "Pick the Wi-Fi card in Settings → Connection.",
     "keys_missing": "prod.keys hasn't been uploaded.",
     "card_test_crashed": "The card test stopped with an error.",
     "busy": "The network component is still finishing the previous operation. Try again in a few seconds.",
     "beacon_test_crashed": "The Switch test stopped with an error. Try again; if it keeps happening, export the report in the summary.",
     "worker_install_failed": "Installing the network component failed. Try again; if it keeps happening, export the report in the summary.",
     "worker_not_bundled": "This TradeRock version does not ship the network component to install.",
-    "esp32_not_configured": "Set up the ESP32 in the setup wizard (board and port).",
-    "esp32_firmware_missing": "No TradeRock firmware answered on the ESP32. Flash the firmware in the setup wizard.",
-    "esp32_firmware_incompatible": "The ESP32 firmware is old or different. Flash the firmware in the setup wizard.",
+    "esp32_not_configured": "Set up the ESP32 in Settings → Connection (board and port).",
+    "esp32_firmware_missing": "No TradeRock firmware answered on the ESP32. Flash the firmware in Settings → Connection.",
+    "esp32_firmware_incompatible": "The ESP32 firmware is old or different. Flash the firmware in Settings → Connection.",
     "esp32_no_response": "The ESP32 stopped answering.",
     "esp32_error": "Error talking to the ESP32.",
-    "serial_permission": "No permission to use the serial port. See the group item in the setup wizard.",
+    "serial_permission": "No permission to use the serial port. See the group item in Settings → Connection.",
     "serial_busy": "The serial port is in use by another program.",
     "serial_port_missing": "The ESP32 port is gone. Was it unplugged?",
     "serial_not_chosen": "Pick the ESP32 port.",
@@ -287,7 +288,7 @@
     "themeDark": "Dark",
     "language": "Language",
     "engineTitle": "Trade engine",
-    "engineHelp": "The engine is what talks to the Switch. The Wi-Fi card and the ESP32 become available once set up in the wizard.",
+    "engineHelp": "The engine is what talks to the Switch. The Wi-Fi card and the ESP32 become available once set up in Settings → Connection.",
     "engines": {
       "fake": "Simulation (demo mode)",
       "python-ldn": "PC Wi-Fi card",
@@ -312,8 +313,8 @@
     "engineReasons": {
       "not_linux": "Linux only",
       "worker_missing": "network component not installed",
-      "wifi_not_configured": "set up the card in the wizard",
-      "esp32_not_configured": "set up the ESP32 in the wizard"
+      "wifi_not_configured": "set up the card in Settings → Connection",
+      "esp32_not_configured": "set up the ESP32 in Settings → Connection"
     },
     "engineErrors": {
       "server_mode_on_radio": "Server mode is using the Wi-Fi card that does the trades. Turn server mode off or pick another interface first.",
@@ -545,7 +546,9 @@
       "tag_exists": "a tag with this name already exists",
       "pokemon_in_trash": "the Pokémon is in the trash",
       "too_many_boxes": "box limit reached",
-      "color_invalid": "invalid color"
+      "color_invalid": "invalid color",
+      "pokemon_duplicate": "the result is the same as another Pokémon in the vault",
+      "pokemon_not_found": "the Pokémon is no longer in the vault"
     }
   },
   "inject": {
@@ -594,7 +597,7 @@
     "next": "Continue",
     "finish": "Finish",
     "redo": "Redo this step",
-    "restart": "Restart the assistant",
+    "restart": "Start the setup over",
     "needTitle": "What you'll need",
     "detecting": "Checking your PC…",
     "preview": {
@@ -733,7 +736,7 @@
       "udev_rule_optional": "Optional: udev rule so the port is always named {{path}}.",
       "switch_test_ok": "Switch test passed: the room was found on channel {{channel}} and decrypted. Radio and prod.keys confirmed.",
       "switch_test_pending": "Switch test (room found and decrypted).",
-      "worker_missing": "Network component not installed. It ships with the TradeRock package (.deb); with the AppImage, the wizard offers to install it. If you built the app yourself, run scripts/dev-host.sh.",
+      "worker_missing": "Network component not installed. It ships with the TradeRock package (.deb); with the AppImage, Settings → Connection offers to install it. If you built the app yourself, run scripts/dev-host.sh.",
       "pkexec_missing": "pkexec is missing (the system uses it to ask for the administrator password).",
       "worker_unsafe": "The network component install ({{path}}) can be changed without administrator rights. For safety, TradeRock won't use it. Reinstall it.",
       "worker_policy_missing": "The network component permission (polkit policy) is not installed. Reinstall TradeRock.",
@@ -746,8 +749,8 @@
       "card_test_passed_some_channels": "The card works but didn't tune to every channel (1, 6 and 11). Trading may fail if the Switch uses one of them.",
       "network_manager_ok": "NetworkManager set up so it doesn't interfere with trading.",
       "network_manager_unconfigured": "NetworkManager may interfere with trading. Set it up below (recommended).",
-      "switch_test_needs_radio": "Choose and prepare the radio (steps 3 and 4) before the Switch test.",
-      "switch_test_needs_keys": "Upload a valid prod.keys (step 2) before the Switch test.",
+      "switch_test_needs_radio": "Choose and prepare the radio (Radio and Network component items) before the Switch test.",
+      "switch_test_needs_keys": "Upload a valid prod.keys (Keys item) before the Switch test.",
       "switch_test_not_run": "Run the Switch test below: it is what confirms the radio and the prod.keys.",
       "switch_test_failed": "The Switch test did not pass. See the result below.",
       "worker_appimage_missing": "The network component has not been installed from the AppImage yet. Use the button below.",
@@ -822,8 +825,8 @@
       "stepNear": "keep the Switch close to the PC (within about 2 meters).",
       "noJoin": "TradeRock only listens: it does not join the room, and the Switch gets no join request.",
       "offline": "During the test (up to {{seconds}} seconds), this card's normal Wi-Fi is turned off. It comes back on its own at the end.",
-      "needsCard": "First pass the card test (step 4).",
-      "needsKeys": "First upload the prod.keys (step 2).",
+      "needsCard": "First pass the card test (Network component item).",
+      "needsKeys": "First upload the prod.keys (Keys item).",
       "run": "Look for the room",
       "again": "Look again",
       "running": "Looking for the room… {{seconds}} s",
@@ -845,7 +848,7 @@
         "found_not_decrypted": "The room was found but could not be decrypted: the prod.keys is not right.",
         "other_session": "The prod.keys works (a session from another game was decrypted), but the FireRed/LeafGreen room did not show up.",
         "not_found": "No room found.",
-        "monitor_failed": "The card did not enter monitor mode. Run the card test again (step 4).",
+        "monitor_failed": "The card did not enter monitor mode. Run the card test again (Network component item).",
         "channel_failed": "The card could not tune any channel. Another program may be using the card.",
         "scan_failed": "The search stopped with an error. Try again; if it keeps happening, export the report in the summary.",
         "engine_error": "The network component could not start the search. Try again; if it keeps happening, export the report in the summary.",
@@ -854,7 +857,7 @@
       "tips": {
         "found_not_decrypted": [
           "Use the prod.keys dumped from your own Switch, with the system up to date. Keys from another console or an old version do not work.",
-          "Upload the file again in step 2 and repeat the test."
+          "Upload the file again in the Keys item and repeat the test."
         ],
         "other_session": [
           "Check that you opened the Direct Corner as the Leader and are still on the waiting screen.",
@@ -864,14 +867,14 @@
           "Check that the Switch is in the Direct Corner as the Leader, on the waiting screen (the room disappears when you leave it).",
           "Move the Switch closer to the PC.",
           "Check that the Switch is not in airplane mode.",
-          "If it keeps happening, run the card test again (step 4): reception may be the problem."
+          "If it keeps happening, run the card test again (Network component item): reception may be the problem."
         ]
       },
       "hints": {
         "missing_master_key_12": "Your prod.keys does not have the key for the newer LDN protocol (master_key_12). Updated consoles use that protocol: dump the keys again with the system up to date."
       },
       "esp32Band": "The ESP32 only sees rooms on 2.4 GHz (channels 1 to 11). If the Switch is connected to a 5 GHz network, the room may not show up: disconnect the Switch from the internet and open the room again.",
-      "needsFirmware": "First check the ESP32 firmware in step 4."
+      "needsFirmware": "First check the ESP32 firmware in the ESP32: firmware and USB port item."
     },
     "esp32fw": {
       "title": "ESP32 firmware",
@@ -989,7 +992,7 @@
   },
   "accounts": {
     "title": "Accounts",
-    "intro": "Each account has its own vault, history and \"My trainer\", and starts with the demo Pokémon. The setup wizard, prod.keys and the radio stay in this PC window only.",
+    "intro": "Each account has its own vault, history and \"My trainer\", and starts with the demo Pokémon. The connection setup, prod.keys and the radio stay in this PC window only.",
     "owner": "PC owner",
     "ownerNoName": "You (this PC)",
     "ownerHint": "No network access",
@@ -1039,5 +1042,317 @@
     "ahead_other": "There are {{count}} trades ahead of you. You join the queue and yours starts by itself when it's your turn.",
     "join": "Join the queue",
     "removed": "An administrator removed you from the queue. You can join again whenever you want."
+  },
+  "ui": {
+    "status": {
+      "ready": "Ready to trade",
+      "demo": "Demo mode",
+      "tested": "Connection tested",
+      "ownerPc": "The connection is on the owner's PC",
+      "missing_one": "{{count}} item missing",
+      "missing_other": "{{count}} items missing",
+      "readyShort": "Ready",
+      "demoShort": "Demo",
+      "activate": "Real trades still need to be turned on"
+    },
+    "theme": {
+      "darkOn": "Dark theme",
+      "lightOn": "Light theme",
+      "toggle": "Light / dark"
+    },
+    "mobileNav": {
+      "home": "Home",
+      "swap_horiz": "Trade",
+      "inventory_2": "Vault",
+      "add_circle": "Create",
+      "more": "More"
+    },
+    "logoutAs": "Sign out of {{name}}",
+    "login": {
+      "homeOnly": "Only works on your home network"
+    },
+    "home": {
+      "hello": "Hello, trainer!",
+      "helloUser": "Hello, {{name}}!",
+      "intro": "Send Pokémon from your PC to FireRed / LeafGreen and keep the ones you receive.",
+      "tradeSub": "Pick up to 6 Pokémon and send them to the Switch.",
+      "vault": "Open the vault",
+      "vaultSub": "View, organize and edit your Pokémon.",
+      "createSub": "Build a legal Pokémon in a few clicks.",
+      "allReady": "All set to trade",
+      "readySub": "Open the Direct Corner on the Switch and start.",
+      "missing_one": "{{count}} item missing for real trades",
+      "missing_other": "{{count}} items missing for real trades",
+      "demoSub": "Meanwhile, you can use everything in demo mode.",
+      "fixNow": "Fix it now",
+      "tryDemo": "Try a trade (demo)",
+      "lastTrade": "Last trade",
+      "seeHistory": "See history",
+      "inVault_one": "{{count}} Pokémon in the vault",
+      "inVault_other": "{{count}} Pokémon in the vault",
+      "activateTitle": "All tested: just turn real trades on"
+    },
+    "conn": {
+      "short": {
+        "system": "System",
+        "keys": "Keys",
+        "radio": "Radio",
+        "driver": "Network / USB",
+        "switch": "Switch test"
+      },
+      "state": {
+        "ok": "OK",
+        "warn": "Attention",
+        "missing": "Missing",
+        "blocked": "Waiting",
+        "idle": "Not tested",
+        "guide": "Guide",
+        "testing": "Testing…"
+      },
+      "title": {
+        "system": "Compatible system",
+        "keys": "Switch keys (prod.keys)",
+        "radio": "Radio to talk to the Switch",
+        "driver": "Network component",
+        "driverEsp32": "ESP32: firmware and USB port",
+        "game": "Game ready on the Switch",
+        "switch": "Switch test"
+      },
+      "what": {
+        "system": "With the Wi-Fi card, TradeRock controls the card directly, which only works with Linux installed on the PC (not a virtual machine or WSL). With an ESP32, any system works.",
+        "keys": "Switches talk in encrypted form. The prod.keys file has the keys to understand that conversation. It is unique to your console and comes from it.",
+        "radio": "It is what talks “over the air” with the Switch: your PC's Wi-Fi card or a small ESP32 board on USB. One of the two is enough.",
+        "driver": "A small program that lets the Wi-Fi card speak the Switch's “language”. Installed once; it asks for the administrator password when used.",
+        "usb": "The ESP32 needs the right firmware and the PC needs permission to talk to it over the USB port.",
+        "game": "In FireRed/LeafGreen, wireless trading happens at the Direct Corner (2nd floor of the Pokémon Center). You create the room as Leader and TradeRock joins as if it were another Switch.",
+        "switch": "A quick test that trades nothing: TradeRock looks for your Switch's room and checks that it can understand the conversation."
+      },
+      "desc": {
+        "systemOk": "Linux installed for real",
+        "systemWindows": "Windows: trades use an ESP32 over USB",
+        "systemWarn": "The Wi-Fi card does not work here. Use an ESP32.",
+        "system_wsl": "You are on WSL: the Wi-Fi card does not work here. Use an ESP32 or real Linux.",
+        "system_vm": "Virtual machine: the Wi-Fi card does not work here. Use an ESP32.",
+        "system_windows": "Windows: trades use an ESP32 over USB",
+        "keysOk": "File stored safely",
+        "keysSkipped": "Skipped: trades stay in demo mode",
+        "keysMissing": "File extracted from your own Switch",
+        "radioNone": "Choose the Wi-Fi card or an ESP32",
+        "radioWifi": "Wi-Fi card: choose which card to use",
+        "radioWifiCard": "Wi-Fi card: {{model}}",
+        "radioEsp32": "ESP32 over USB: choose the board and port",
+        "radioEsp32Board": "ESP32 over USB: {{model}}",
+        "driverNoRadio": "Choose the radio first.",
+        "driverWifiOk": "Installed and tested",
+        "driverEspOk": "Firmware answering on the chosen port",
+        "game": "Direct Corner unlocked (about 20–40 min of play)",
+        "switchOk": "Room found and decrypted. Real trades unlocked!",
+        "switchIdle": "Open the room as Leader on the Switch and click Test. Takes up to {{seconds}} s."
+      },
+      "radio": {
+        "wifi": "PC Wi-Fi card",
+        "wifiSub": "Uses your PC's card. Needs real Linux.",
+        "esp32": "ESP32 over USB",
+        "esp32Sub": "Cheap little board. Works on any PC and keeps your internet up."
+      },
+      "cardsFound": "Cards found on your PC",
+      "esp32Guide": "How to choose and connect the ESP32",
+      "test": "Test",
+      "testNow": "Test now",
+      "checkAll": "Check everything",
+      "checking": "Checking…",
+      "checked": "Check finished",
+      "summarySub": "Each item shows what is missing and how to fix it.",
+      "reportHint": "Report without keys, names or personal paths",
+      "activate": "Use for real trades",
+      "activateHelp": "Everything tested. Just turn the radio on for trades.",
+      "activated": "Real trades turned on",
+      "keysNote": "Only use the keys from your own console. Do not download them or share them. TradeRock keeps the file just for you and never sends it over the network.",
+      "remote": "The connection is set up on the owner's PC. Here you only follow the status.",
+      "fullText": "Full explanation",
+      "keysSteps": [
+        "On your unlocked Switch, run Lockpick_RCM.",
+        "Copy the prod.keys file from the SD card to the PC.",
+        "Click Upload prod.keys below."
+      ]
+    },
+    "settings": {
+      "tabs": {
+        "conexao": "Connection",
+        "preferencias": "Preferences",
+        "avancado": "Advanced"
+      },
+      "unitTimes": "times",
+      "unitS": "s",
+      "unitMin": "min",
+      "trainerSub": "Your save's data. Created Pokémon arrive as yours and always obey.",
+      "trainerTip": "Name and ID appear on the in-game trainer card. The secret ID does not: send one of your Pokémon in a trade and use “Take from a received Pokémon”.",
+      "nameHint": "Up to 7 letters",
+      "gender": "Gender",
+      "badgeN": "Badge {{n}}",
+      "themeSub": "Light, dark or same as the system.",
+      "allowIllegal": "Allow trading illegal Pokémon",
+      "illegalSub": "Each trade with an illegal one still asks for confirmation.",
+      "illegalTip": "“Illegal” means PKHeX thinks this Pokémon could not exist in the original game (impossible stats, moves or origin). The game may refuse the trade. Leave it off if unsure.",
+      "defaultsOk": "The default values work for almost everyone.",
+      "tempos": "Trade timings",
+      "tempoTip": "Only change these if trades fail. Attempts: how many times it looks for the room. Approve the join: how long you have to say Yes on the Switch. Idle in the room and maximum time: after that the trade is cancelled.",
+      "undo": "Undo",
+      "fields": {
+        "maxAttempts": "Connection attempts",
+        "retryDelaySeconds": "Wait between attempts",
+        "approvalTimeoutSeconds": "Time to approve the join",
+        "phaseTimeoutSeconds": "Idle time in the room",
+        "totalTimeoutMinutes": "Maximum trade time"
+      },
+      "engineTip": "The engine is what talks to the Switch. The simulation fakes a Switch so you can learn the steps. The Wi-Fi card and the ESP32 show up after they are set up in Connection.",
+      "server": "Server mode",
+      "serverTip": "Turns this PC into a small home server. Anyone on the same Wi-Fi opens the address in their phone's browser and uses their own vault. Trades use this PC's radio, one at a time.",
+      "accountsTip": "Each person has their own vault, history and trainer. A user only trades and organizes their own vault. An administrator also creates accounts and can remove people from the queue.",
+      "dev": "Connection setup",
+      "devTip": "Starting over clears the connection choices (radio, card, port and tests) so you can set it up again. prod.keys stays stored. In development, you can also simulate another kind of PC without changing anything for real.",
+      "devSub": "Simulate another kind of PC (development only) or start the setup over.",
+      "restartSub": "Start the connection setup from scratch.",
+      "restartConfirm": "Yes, start over",
+      "restarted": "Setup started over"
+    },
+    "lv": "Lv. {{level}}",
+    "stats": {
+      "hp": "HP",
+      "atk": "Atk",
+      "def": "Def",
+      "spa": "SpA",
+      "spd": "SpD",
+      "spe": "Spe"
+    },
+    "trade": {
+      "title": "Trade with the Switch",
+      "steps": {
+        "party": "Team",
+        "trainer": "Game and trainer",
+        "reminder": "Prepare the Switch",
+        "queue": "Queue"
+      },
+      "demoBanner": "Everything works, but trades are simulated until the connection is ready.",
+      "setupConnection": "Set up connection",
+      "teamTip": "TradeRock pretends to be another Switch with this team. Mark who goes to your game. The team needs 2 or more Pokémon because the game does not let you trade the last one. All of them are stored in the vault before starting.",
+      "empty": "Empty",
+      "send": "Send",
+      "stays": "Stays",
+      "atLeastTwo": "At least 2 in the team",
+      "goingCount_one": "{{count}} goes to the Switch",
+      "goingCount_other": "{{count}} go to the Switch",
+      "fromVault": "Pick from the vault",
+      "searchVault": "Search the vault",
+      "whichGame": "Which game is on the Switch?",
+      "nameOnSwitch": "Name shown on the Switch",
+      "nameTip": "It is the name you will approve in the request to join the room. Up to 7 characters, no accents (the game has no “ã” or “ç”). You can use . - ! ?",
+      "moreOptions": "More options (secret ID)",
+      "lessOptions": "Fewer options",
+      "saveTrainer": "Save this trainer",
+      "prepSub": "Do this in the game before clicking Start.",
+      "prep": [
+        {
+          "title": "Pokémon Center",
+          "sub": "Go up to the 2nd floor."
+        },
+        {
+          "title": "Direct Corner",
+          "sub": "Talk to the attendant on the left and choose trade."
+        },
+        {
+          "title": "Be the Leader",
+          "sub": "Create the room. The Switch waits."
+        },
+        {
+          "title": "Near the PC",
+          "sub": "Keep the Switch close to the PC or the ESP32."
+        }
+      ],
+      "learnMore": "Learn more",
+      "prepMore": "The Direct Corner unlocks after about 20 to 40 minutes of play. The Switch creates a local wireless network and TradeRock joins it as if it were a second Switch. The connection sometimes needs a few attempts: TradeRock retries on its own.",
+      "queueNote": "You are on the network: the trade goes into the PC's queue.",
+      "sending": "Sending {{names}}",
+      "nothingToSend": "Nothing to send",
+      "trainerLabel": "trainer",
+      "continue": "Continue"
+    },
+    "live": {
+      "running": "Trade in progress",
+      "savedInbox": "The received Pokémon was stored in the Inbox.",
+      "seeInVault": "See in the vault",
+      "techDetails": "Technical details"
+    },
+    "vault": {
+      "import": "Import",
+      "importFile": "Pokémon file",
+      "importFileSub": ".pk3 or .ek3 from your PC",
+      "importSaveSub": "Pick Pokémon from a .sav",
+      "injectSub": "Puts vault Pokémon into a .sav",
+      "select": "Select",
+      "search": "Search by name, number, nickname or trainer",
+      "to": "to",
+      "clear": "Clear",
+      "count_one": "{{count}} Pokémon",
+      "count_other": "{{count}} Pokémon",
+      "all": "All",
+      "nothingHere": "No Pokémon here.",
+      "tabs": {
+        "resumo": "Summary",
+        "golpes": "Moves",
+        "status": "Stats",
+        "origem": "Origin"
+      },
+      "none": "None",
+      "ot": "Original trainer",
+      "ivEv": "IV (0–31) · EV (0–255)",
+      "ivEvTip": "IVs are the Pokémon's “genes” (0 to 31), already set. EVs are training (up to 255 per stat and 510 in total). Both raise the stats.",
+      "originLabel": "How it arrived",
+      "hatched": "Egg",
+      "file": "File",
+      "added": "Stored on",
+      "removeTag": "Remove the {{name}} tag",
+      "newTag": "+ tag",
+      "tagColor": "Tag color",
+      "edit": "Edit",
+      "useInTrade": "Use in a trade",
+      "exportPk3": "Export .pk3",
+      "natureTip": "In the 3rd generation the nature comes from an internal number (PID). Changing the nature generates the Pokémon again, like in Create.",
+      "natureRegenerates": "With another nature, TradeRock generates the Pokémon again (like in Create) so it stays possible in the game. IVs may change.",
+      "moveN": "Move {{n}}",
+      "saveChanges": "Save changes",
+      "saved": "Changes saved",
+      "savedIllegal": "Saved, but PKHeX reports legality problems",
+      "errors": {
+        "pokemon_duplicate": "The result is the same as another Pokémon in the vault."
+      }
+    },
+    "builder": {
+      "forGame": "For the game",
+      "movesHint": "Leave empty to use the moves it would know at this level.",
+      "moreOptions": "More options (item, IVs, EVs, origin, trainer)",
+      "lessOptions": "Fewer options",
+      "ivTip": "IVs are the Pokémon's “genes” (0 to 31). EVs are training (up to 255 per stat and 510 in total). With “any”, TradeRock picks possible values.",
+      "advancedBanner": "Raw data, like in PKHeX. Nothing is fixed automatically: the panel on the side shows what is wrong.",
+      "howItWorks": "How it works",
+      "legalAttention": "Legal, with notes",
+      "legalTip": "Checked by PKHeX {{version}}. “Notes” do not make the Pokémon illegal."
+    },
+    "history": {
+      "events": "Events",
+      "notReceived": "{{names}} (nothing received)"
+    },
+    "about": {
+      "intro": "Trades Pokémon with FireRed and LeafGreen on the Switch using the game's local wireless. Your PC (or an ESP32) pretends to be a second Switch in the Direct Corner room.",
+      "keysTitle": "Your keys stay with you",
+      "keysSub": "Never downloads, shows or sends prod.keys.",
+      "offlineTitle": "Works offline",
+      "offlineSub": "Sends no data anywhere.",
+      "freeTitle": "Free software",
+      "freeSub": "AGPL-3.0: use, study and modify it.",
+      "license": "License, source code and trademarks",
+      "projects_one": "{{count}} project",
+      "projects_other": "{{count}} projects"
+    }
   }
 }

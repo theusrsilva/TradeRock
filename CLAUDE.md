@@ -47,7 +47,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Testes E2E | Só pela API |
 | Construtor | Modo automático (AutoMod) por padrão e modo avançado. OT padrão = perfil "Meu treinador". Mensagens do PKHeX traduzidas só as da Gen 3. Nomes de golpes e itens em inglês |
 | Cofre | Caixas de 30 posições com Caixa de entrada. Lixeira recuperável. Injeção em `.sav` sobrescreve, com backup. Exportação padrão: .pk3 de 100 bytes |
-| Assistente | RTL8821CE também recomendada. Seletor de simulação só em desenvolvimento |
+| Assistente | RTL8821CE também recomendada. Seletor de simulação só em desenvolvimento. Desde a Entrega 12 é a lista de Configurações → Conexão (`/configurar` redireciona) |
 | Worker | Em Python (runtime embutido). Canal por stdin/stdout em vez de socket Unix. Polkit `auth_admin_keep`. Patches do FRLG-LDN-Trade-Console aplicados. `iw` e `ip` estáticos embutidos (o autor não quer mandar a pessoa instalar pré-requisitos) |
 | Pacotes | .deb e AppImage. Sem verificação de atualizações (a pessoa baixa o Release). Tag `v*` publica o Release direto. Tela Sobre com créditos e oferta do código-fonte |
 | Teste com o Switch | Até 30 s. Sessão de outro jogo decifrada não aprova. Vale até mudar a placa ou o prod.keys (não expira) |
@@ -69,6 +69,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | feita, **sem placa real** |
 | 10 | Modo servidor na rede (contas, cofre por conta, fila) | feita, **sem celular real** |
 | 11 | Build e instalador Windows (só ESP32) | feita, **sem ESP32 real no Windows** |
+| 12 | Nova interface (protótipo "TradeRock v2" do Claude Design, visual A claro/escuro, celular). O assistente de 7 etapas virou a lista de Configurações → Conexão; edição no painel do cofre (`POST /api/vault/pokemon/{id}/replace`) | em PR |
 
 Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-lançamento é a tag `v0.00.01`. As branches das entregas foram apagadas depois do merge.
 
@@ -101,7 +102,7 @@ Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-l
 | `app/TradeRock.Core` | Domínio: `Trading/`, `Engines/` (Fake, PythonLdn, Esp32Serial, `Worker/`), `Esp32/` (firmware, serial, esptool), `Pokemon/`, `Builder/`, `Storage/` (EF Core + SQLite), `Saves/`, `Setup/` (catálogo, probe do Linux, verificações, prod.keys) |
 | `app/TradeRock.Tests` | xUnit v3; worker falso em `FakeWorker.cs`, ESP32 falso em `fake_esp32.py` (pseudo-terminal) |
 | `worker/` | Worker Python: `traderock_worker/` (server, radio, trade_child, card_child, beacon_child, esp32_flash, events, protocol) e `tests/` (dublês de trio/ldn em `fake_ldn`) |
-| `frontend/` | React + Vite + TS + Tailwind; o build vai para `app/TradeRock.App/wwwroot` |
+| `frontend/` | React + Vite + TS + Tailwind; o build vai para `app/TradeRock.App/wwwroot`. Cores do tema em `src/index.css` (tokens `bg-surface`, `text-muted`, `bg-accent`...); componentes base em `src/components/ui.tsx`; fontes e ícones embutidos (`src/assets/fonts`) |
 | `catalog/hardware-catalog.json` | Catálogo de placas |
 | `engines/` | Submódulos (frlg-ldn-trade, frlg-ldn-trade-esp32, PKHeX-Plugins) e `patches/` |
 | `scripts/` | `ci.sh`, `dev-host.sh`, `build-worker.sh`, `build-nettools.sh`, `install-worker.sh`, `package-linux.sh`, `smoke-linux.sh`, `package-windows.sh`, `smoke-windows.ps1` |

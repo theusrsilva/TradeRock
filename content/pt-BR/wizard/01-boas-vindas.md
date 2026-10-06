@@ -1,7 +1,7 @@
 O **TradeRock** faz o seu PC (ou uma plaquinha ESP32) **fingir ser um segundo Switch** na sala de troca
 do FireRed e LeafGreen. Assim você manda Pokémon do PC para o seu jogo e guarda os que recebe.
 
-Este assistente confere, passo a passo, se está tudo pronto. Leva uns **10 a 20 minutos**, sem contar
+Esta lista confere, item por item, se está tudo pronto. Leva uns **10 a 20 minutos**, sem contar
 o tempo de comprar alguma peça, se precisar.
 
 <details><summary>Saiba mais</summary>
