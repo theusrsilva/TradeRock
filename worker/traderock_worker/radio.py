@@ -196,6 +196,9 @@ class NetworkConfig:
             os.makedirs(os.path.dirname(target), mode=0o755, exist_ok=True)
             tmp = target + ".traderock-tmp"
             fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
+            # O worker roda com umask 077 (server.main), que deixaria 600; o app, sem root, precisa
+            # ler os arquivos para saber se a configuração está feita (LinuxProbe).
+            os.fchmod(fd, 0o644)
             with os.fdopen(fd, "w") as f:
                 f.write(content)
             os.replace(tmp, target)

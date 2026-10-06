@@ -246,6 +246,18 @@ class RadioTests(unittest.TestCase):
             self.assertEqual(mode & 0o022, 0)
             self.assertIn("interface-name:ldn*", radio.NM_CONF)
 
+    def test_network_config_legivel_com_umask_do_worker(self):
+        # O worker roda com umask 077; os arquivos precisam continuar legíveis para o app sem root.
+        old = os.umask(0o077)
+        try:
+            with tempfile.TemporaryDirectory() as root:
+                radio.NetworkConfig(root, FakeRunner()).install()
+                for path in (radio.NM_CONF_PATH, radio.LINK_PATH):
+                    mode = os.stat(os.path.join(root, path.lstrip("/"))).st_mode & 0o777
+                    self.assertEqual(mode, 0o644, path)
+        finally:
+            os.umask(old)
+
     IW_SO_24GHZ = ("Wiphy phy0\n\tBand 1:\n\t\tFrequencies:\n"
                    "\t\t\t* 2412.0 MHz [1] (20.0 dBm)\n\t\t\t* 2437.0 MHz [6] (20.0 dBm)\n"
                    "\t\t\t* 2462.0 MHz [11] (20.0 dBm)\n\t\t\t* 2484.0 MHz [14] (20.0 dBm) (no IR)\n")
