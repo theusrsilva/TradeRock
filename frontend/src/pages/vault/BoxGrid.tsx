@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Icon } from '../../components/ui'
 import { spriteUrl } from '../../lib/api'
 import type { VaultPokemon } from '../../lib/types'
 import { acceptsPokemon, draggedPokemon, startDrag } from './dnd'
@@ -24,37 +25,61 @@ export function PokemonTile({
   showCheckbox: boolean
   subtitle?: string
 }) {
-  const legality = pokemon.legality
+  const { t } = useTranslation()
+  const name = (pokemon.nickname || pokemon.speciesName).toUpperCase()
+  const warn =
+    pokemon.legality === 'illegal'
+      ? t('legality.illegal')
+      : pokemon.warnings[0]
+        ? t(`warnings.${pokemon.warnings[0].code}`, pokemon.warnings[0].args)
+        : pokemon.possibleDuplicate
+          ? t('vault.duplicate')
+          : null
   return (
     <div
+      role="button"
+      tabIndex={0}
       draggable={!pokemon.deletedAt}
       onDragStart={(e) => startDrag(e, pokemon.id)}
       onClick={onClick}
-      title={`${pokemon.nickname || pokemon.speciesName} · Nv. ${pokemon.level}`}
-      className={`relative flex h-full cursor-pointer flex-col items-center justify-center rounded-lg border p-1 text-center text-[11px] leading-tight ${
-        focused ? 'border-sky-500 ring-2 ring-sky-400' : selected ? 'border-sky-400 bg-sky-50 dark:bg-sky-950/40' : 'border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900'
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick(e as unknown as React.MouseEvent)
+        }
+      }}
+      aria-pressed={showCheckbox ? selected : undefined}
+      title={`${name} · ${t('ui.lv', { level: pokemon.level })}${warn ? ` · ${warn}` : ''}`}
+      className={`relative flex h-full cursor-pointer flex-col items-center justify-center gap-px rounded-lg border-2 p-1 text-center leading-tight ${
+        focused || selected ? 'border-accent bg-accent-soft' : 'border-transparent bg-tile hover:border-accent'
       }`}
     >
       {showCheckbox && (
-        <input
-          type="checkbox"
-          className="absolute left-1 top-1"
-          checked={selected}
-          onClick={(e) => e.stopPropagation()}
-          onChange={onToggle}
-          aria-label={pokemon.nickname || pokemon.speciesName}
-        />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle()
+          }}
+          aria-label={name}
+          className={`absolute top-[5px] left-[5px] flex h-5 w-5 cursor-pointer items-center justify-center rounded-[5px] border-[1.5px] ${selected ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-surface'}`}
+        >
+          {selected && <Icon name="check" className="text-base" />}
+        </button>
       )}
-      <span className="absolute right-1 top-0.5 flex gap-0.5 text-[10px]">
-        {pokemon.isShiny && <span title="Shiny" className="text-amber-500">★</span>}
-        {legality === 'illegal' && <span className="text-red-600" title="Ilegal">✕</span>}
-        {legality === 'unverifiable' && <span className="text-amber-600">?</span>}
-        {pokemon.warnings.length > 0 && <span className="text-amber-600" title="Avisos">⚠</span>}
-        {pokemon.possibleDuplicate && <span className="text-violet-600" title="Possível duplicata">⧉</span>}
-      </span>
-      <img src={spriteUrl(pokemon.species)} alt="" draggable={false} className="h-12 w-12 [image-rendering:pixelated]" loading="lazy" />
-      <span className="w-full truncate font-medium">{pokemon.nickname || pokemon.speciesName}</span>
-      <span className="text-slate-500">{subtitle ?? `Nv. ${pokemon.level}`}</span>
+      {warn && (
+        <span title={warn} className={`absolute top-[5px] right-1.5 ${pokemon.legality === 'illegal' ? 'text-bad' : pokemon.warnings.length ? 'text-warn' : 'text-violet-500'}`}>
+          <Icon name={pokemon.legality === 'illegal' ? 'error' : pokemon.warnings.length ? 'warning' : 'content_copy'} className="text-[17px]" />
+        </span>
+      )}
+      {pokemon.isShiny && (
+        <span title={t('pokemon.shiny')} className="absolute right-2 bottom-[26px] text-[#e0a100]">
+          <Icon name="auto_awesome" className="text-base" />
+        </span>
+      )}
+      <img src={spriteUrl(pokemon.species)} alt="" draggable={false} className="pixelated h-12 w-12 md:h-16 md:w-16" loading="lazy" />
+      <span className="w-full truncate text-xs font-bold">{name}</span>
+      <span className="text-[11.5px] text-muted">{subtitle ?? (pokemon.isEgg ? t('pokemon.egg') : t('ui.lv', { level: pokemon.level }))}</span>
     </div>
   )
 }
@@ -64,6 +89,7 @@ export function BoxGrid({
   pokemon,
   selected,
   focused,
+  multi,
   onTileClick,
   onToggle,
   onDrop,
@@ -71,6 +97,7 @@ export function BoxGrid({
   pokemon: VaultPokemon[]
   selected: Set<string>
   focused: string | null
+  multi: boolean
   onTileClick: (p: VaultPokemon, e: React.MouseEvent) => void
   onToggle: (id: string) => void
   onDrop: (pokemonId: string, slot: number) => void
@@ -87,7 +114,7 @@ export function BoxGrid({
           return (
             <div
               key={slot}
-              className={`aspect-square rounded-lg ${over === slot ? 'ring-2 ring-sky-500' : ''} ${p ? '' : 'border border-dashed border-slate-300 dark:border-slate-700'}`}
+              className={`aspect-[1/1.08] rounded-lg ${over === slot ? 'ring-2 ring-accent' : ''} ${p ? '' : 'border-[1.5px] border-dashed border-line'}`}
               onDragOver={(e) => {
                 if (acceptsPokemon(e)) {
                   e.preventDefault()
@@ -108,14 +135,14 @@ export function BoxGrid({
                   focused={focused === p.id}
                   onClick={(e) => onTileClick(p, e)}
                   onToggle={() => onToggle(p.id)}
-                  showCheckbox={selected.size > 0}
+                  showCheckbox={multi}
                 />
               )}
             </div>
           )
         })}
       </div>
-      <p className="mt-2 text-xs text-slate-500">{t('vault.dragHint')}</p>
+      <p className="mt-2 text-xs text-muted">{t('vault.dragHint')}</p>
     </div>
   )
 }

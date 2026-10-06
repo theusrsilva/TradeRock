@@ -16,7 +16,7 @@ backups, exportações ou relatórios.
 
 Aqui conferimos só o **formato**: se o arquivo é legível e tem as chaves que a biblioteca LDN usa
 (`aes_kek_generation_source`, `aes_key_generation_source` e `master_key_00` ou `master_key_12`).
-Isso **não prova** que os valores estão certos. A prova vem no **teste com o Switch** (etapa 6): se
+Isso **não prova** que os valores estão certos. A prova vem no **teste com o Switch** (último item da lista): se
 o TradeRock conseguir decifrar a sala do seu jogo, as chaves estão certas.
 
 </details>

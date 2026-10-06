@@ -1,243 +1,419 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Card, Field, inputClass } from '../components/ui'
+import { useSearchParams } from 'react-router'
+import { Badge, Button, Callout, Field, HelpTip, Icon, Segmented, Toggle, inputClass, selectClass, useToast } from '../components/ui'
 import { ApiError, api } from '../lib/api'
 import { languages } from '../i18n'
-import { ContentFile } from '../components/Markdown'
 import { trainerNameErrors } from '../lib/trainer'
-import type { Engine, MyTrainer, Pokemon, TradeSettings } from '../lib/types'
-import { Link } from 'react-router'
+import type { MyTrainer, Pokemon, SetupStatus, TradeSettings } from '../lib/types'
 import { useTheme, type ThemeChoice } from '../theme'
 import { AppImageWorkerSettings } from './setup/AppImageWorker'
 import { AccountsCard, ServerModeCard } from './settings/ServerSettings'
+import { ConnectionChecklist } from './settings/ConnectionChecklist'
 import { useAuth } from '../lib/auth'
+import { useConnection } from '../lib/connection'
+import { useConnectionSummary } from '../components/Layout'
 
 type NumberSetting = Exclude<keyof TradeSettings, 'allowIllegal'>
 
-const numberFields: { key: NumberSetting; min: number; max: number; step?: number; help?: string }[] = [
-  { key: 'maxAttempts', min: 1, max: 20, help: 'settings.maxAttemptsHelp' },
-  { key: 'retryDelaySeconds', min: 0, max: 60 },
-  { key: 'approvalTimeoutSeconds', min: 1, max: 900 },
-  { key: 'phaseTimeoutSeconds', min: 1, max: 1800 },
-  { key: 'totalTimeoutMinutes', min: 1, max: 180 },
+const numberFields: { key: NumberSetting; min: number; max: number; unit: string }[] = [
+  { key: 'maxAttempts', min: 1, max: 20, unit: 'ui.settings.unitTimes' },
+  { key: 'retryDelaySeconds', min: 0, max: 60, unit: 'ui.settings.unitS' },
+  { key: 'approvalTimeoutSeconds', min: 1, max: 900, unit: 'ui.settings.unitS' },
+  { key: 'phaseTimeoutSeconds', min: 1, max: 1800, unit: 'ui.settings.unitS' },
+  { key: 'totalTimeoutMinutes', min: 1, max: 180, unit: 'ui.settings.unitMin' },
 ]
 
+type Tab = 'conexao' | 'treinador' | 'preferencias' | 'avancado' | 'contas'
+
 export default function SettingsPage() {
-  const { t, i18n } = useTranslation()
-  const [theme, setTheme] = useTheme()
-  const [settings, setSettings] = useState<TradeSettings | null>(null)
-  const [engines, setEngines] = useState<Engine[]>([])
-  const [saved, setSaved] = useState(false)
-  const [me, setMe] = useState<MyTrainer>({ name: '', tid: 0, sid: null, gender: 0, badges: 8, hasNationalDex: true })
-  const [meSaved, setMeSaved] = useState(false)
-  const [meErrors, setMeErrors] = useState<string[]>([])
-  const [received, setReceived] = useState<Pokemon[]>([])
-  const [pickOpen, setPickOpen] = useState(false)
-  const [engineError, setEngineError] = useState<string | null>(null)
+  const { t } = useTranslation()
+  const [params, setParams] = useSearchParams()
   const { me: caller } = useAuth()
-  // Pela rede: só aparência, "Meu treinador" e (administradores) as contas. O resto é da janela do PC.
+  // Pela rede: status da conexão, "Meu treinador", preferências e (administradores) as contas.
   const local = caller?.local !== false
+  const status = useConnectionSummary()
+  const [settings, setSettings] = useState<TradeSettings | null>(null)
 
   useEffect(() => {
-    if (local) {
-      api.get<TradeSettings>('/api/settings/trade').then(setSettings).catch(() => undefined)
-      api.get<Engine[]>('/api/engines').then(setEngines).catch(() => undefined)
-    }
-    api.get<MyTrainer | undefined>('/api/settings/my-trainer').then((m) => m && setMe(m)).catch(() => undefined)
-    api.get<Pokemon[]>('/api/pokemon').then((list) => setReceived(list.filter((p) => p.origin === 'received'))).catch(() => undefined)
+    if (local) api.get<TradeSettings>('/api/settings/trade').then(setSettings).catch(() => undefined)
   }, [local])
 
-  async function saveMe(next: MyTrainer = me) {
-    const errors = trainerNameErrors(next.name)
-    setMeErrors(errors)
-    if (errors.length > 0) return
-    setMe(await api.put<MyTrainer>('/api/settings/my-trainer', next))
-    setMeSaved(true)
-    setTimeout(() => setMeSaved(false), 2000)
+  const tabs: { key: Tab; label: string; icon: string; badge?: number }[] = [
+    { key: 'conexao', label: t('ui.settings.tabs.conexao'), icon: 'cable', badge: status.missing || undefined },
+    { key: 'treinador', label: t('settings.myTrainerTitle'), icon: 'badge' },
+    { key: 'preferencias', label: t('ui.settings.tabs.preferencias'), icon: 'palette' },
+    ...(local ? [{ key: 'avancado' as Tab, label: t('ui.settings.tabs.avancado'), icon: 'tune' }] : []),
+    ...(!local && caller?.role === 'admin' ? [{ key: 'contas' as Tab, label: t('accounts.title'), icon: 'group' }] : []),
+  ]
+  const asked = params.get('aba') as Tab | null
+  const tab: Tab = tabs.some((x) => x.key === asked) ? asked! : 'conexao'
+
+  // Links antigos para o modo servidor (#servidor) caem na aba Avançado.
+  useEffect(() => {
+    if (window.location.hash === '#servidor') document.getElementById('servidor')?.scrollIntoView()
+  }, [tab])
+
+  async function saveSettings(next: TradeSettings) {
+    const saved = await api.put<TradeSettings>('/api/settings/trade', next)
+    setSettings(saved)
+    return saved
+  }
+
+  return (
+    <div className="flex flex-col gap-[18px]">
+      <h1 className="font-display text-[23px] font-bold md:text-[28px]">{t('settings.title')}</h1>
+      <div className="flex gap-1 overflow-x-auto border-b border-line" role="tablist">
+        {tabs.map((x) => (
+          <button
+            key={x.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === x.key}
+            onClick={() => setParams({ aba: x.key })}
+            className={`-mb-px flex h-[42px] shrink-0 cursor-pointer items-center gap-1.5 border-b-[2.5px] px-3.5 text-[14.5px] font-bold whitespace-nowrap ${tab === x.key ? 'border-accent text-ink' : 'border-transparent text-muted'}`}
+          >
+            <Icon name={x.icon} className="text-[19px]" />
+            {x.label}
+            {x.badge && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-bad px-1.5 text-[11.5px] text-white">{x.badge}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'conexao' && <ConnectionChecklist />}
+      {tab === 'treinador' && <TrainerTab />}
+      {tab === 'preferencias' && <PreferencesTab settings={settings} onSave={saveSettings} />}
+      {tab === 'avancado' && local && <AdvancedTab settings={settings} onSave={saveSettings} />}
+      {tab === 'contas' && <AccountsCard />}
+    </div>
+  )
+}
+
+function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`flex flex-col gap-3.5 rounded-xl border border-line bg-surface px-[22px] py-5 ${className}`}>{children}</div>
+}
+
+function PanelTitle({ children, tip, sub, right }: { children: ReactNode; tip?: ReactNode; sub?: ReactNode; right?: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <div className="text-base font-extrabold">{children}</div>
+          {tip && <HelpTip>{tip}</HelpTip>}
+        </div>
+        {sub && <div className="text-[13.5px] text-muted">{sub}</div>}
+      </div>
+      {right}
+    </div>
+  )
+}
+
+function TrainerTab() {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const [me, setMe] = useState<MyTrainer>({ name: '', tid: 0, sid: null, gender: 0, badges: 8, hasNationalDex: true })
+  const [errors, setErrors] = useState<string[]>([])
+  const [received, setReceived] = useState<Pokemon[]>([])
+  const [pickOpen, setPickOpen] = useState(false)
+
+  useEffect(() => {
+    api.get<MyTrainer | undefined>('/api/settings/my-trainer').then((m) => m && setMe(m)).catch(() => undefined)
+    api.get<Pokemon[]>('/api/pokemon').then((list) => setReceived(list.filter((p) => p.origin === 'received'))).catch(() => undefined)
+  }, [])
+
+  async function save() {
+    const errs = trainerNameErrors(me.name)
+    setErrors(errs)
+    if (errs.length > 0) return
+    setMe(await api.put<MyTrainer>('/api/settings/my-trainer', me))
+    toast(t('common.saved'))
   }
 
   async function fromPokemon(id: string) {
     setMe(await api.post<MyTrainer>(`/api/settings/my-trainer/from-pokemon/${id}`))
     setPickOpen(false)
-    setMeSaved(true)
-    setTimeout(() => setMeSaved(false), 2000)
+    toast(t('common.saved'))
   }
 
-  async function save() {
-    if (!settings) return
-    setSettings(await api.put<TradeSettings>('/api/settings/trade', settings))
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const idValue = (v: string) => Math.max(0, Math.min(65535, Number(v.replace(/\D/g, '')) || 0))
+
+  return (
+    <Panel className="max-w-[760px] gap-4">
+      <PanelTitle tip={t('ui.settings.trainerTip')} sub={t('ui.settings.trainerSub')}>
+        {t('settings.myTrainerTitle')}
+      </PanelTitle>
+      <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
+        <Field label={t('trade.trainer.name')}>
+          <input className={inputClass} maxLength={7} placeholder={t('ui.settings.nameHint')} value={me.name} onChange={(e) => setMe({ ...me, name: e.target.value })} />
+        </Field>
+        <Field label={t('trade.trainer.tid')}>
+          <input className={inputClass} inputMode="numeric" value={me.tid} onChange={(e) => setMe({ ...me, tid: idValue(e.target.value) })} />
+        </Field>
+        <Field label={t('trade.trainer.sid')}>
+          <input
+            className={inputClass}
+            inputMode="numeric"
+            placeholder={t('common.optional')}
+            value={me.sid ?? ''}
+            onChange={(e) => setMe({ ...me, sid: e.target.value.trim() === '' ? null : idValue(e.target.value) })}
+          />
+        </Field>
+        <Field label={t('ui.settings.gender')}>
+          <select className={selectClass} value={me.gender} onChange={(e) => setMe({ ...me, gender: Number(e.target.value) })}>
+            <option value={0}>♂</option>
+            <option value={1}>♀</option>
+          </select>
+        </Field>
+      </div>
+      <div className="flex flex-wrap items-center gap-6">
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm font-bold">{t('settings.badges')}</span>
+          <div className="flex gap-1">
+            {Array.from({ length: 8 }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={t('ui.settings.badgeN', { n: i + 1 })}
+                onClick={() => setMe({ ...me, badges: me.badges === i + 1 ? i : i + 1 })}
+                className={`h-[22px] w-[22px] cursor-pointer rounded-full border-[1.5px] ${i < me.badges ? 'border-accent bg-accent' : 'border-line bg-transparent'}`}
+              />
+            ))}
+          </div>
+          <span className="text-[13px] text-muted">{me.badges}/8</span>
+        </div>
+        <Toggle small on={me.hasNationalDex} onChange={(on) => setMe({ ...me, hasNationalDex: on })} label={t('settings.nationalDex')} />
+      </div>
+      {errors.length > 0 && (
+        <ul className="text-sm text-bad">
+          {errors.map((e) => (
+            <li key={e}>{t(`errors.${e}`)}</li>
+          ))}
+        </ul>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={() => void save()}>{t('common.save')}</Button>
+        <Button variant="secondary" icon="download" disabled={received.length === 0} onClick={() => setPickOpen(!pickOpen)}>
+          {t('settings.fromPokemon')}
+        </Button>
+      </div>
+      {pickOpen && (
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-muted">{t('settings.choosePokemon')}</p>
+          {received.map((p) => (
+            <button key={p.id} type="button" className="cursor-pointer rounded-lg px-3 py-2 text-left text-sm hover:bg-surface2" onClick={() => void fromPokemon(p.id)}>
+              {p.nickname || p.speciesName} · {p.otName} · {p.tid}:{p.sid}
+            </button>
+          ))}
+        </div>
+      )}
+    </Panel>
+  )
+}
+
+function PreferencesTab({ settings, onSave }: { settings: TradeSettings | null; onSave: (s: TradeSettings) => Promise<TradeSettings> }) {
+  const { t, i18n } = useTranslation()
+  const [theme, setTheme] = useTheme()
+  const toast = useToast()
+  const row = 'flex flex-wrap items-center gap-3.5 py-4'
+  return (
+    <div className="flex max-w-[760px] flex-col rounded-xl border border-line bg-surface px-[22px] py-1.5">
+      <div className={`${row} border-b border-line`}>
+        <div className="flex-1">
+          <div className="font-bold">{t('settings.theme')}</div>
+          <div className="text-[13px] text-muted">{t('ui.settings.themeSub')}</div>
+        </div>
+        <Segmented<ThemeChoice>
+          value={theme}
+          onChange={setTheme}
+          options={[
+            { value: 'system', label: t('settings.themeSystem') },
+            { value: 'light', label: t('settings.themeLight') },
+            { value: 'dark', label: t('settings.themeDark') },
+          ]}
+        />
+      </div>
+      <div className={`${row} ${settings ? 'border-b border-line' : ''}`}>
+        <div className="flex-1 font-bold">{t('settings.language')}</div>
+        <select className={`${selectClass} h-10! w-auto!`} value={i18n.language} onChange={(e) => void i18n.changeLanguage(e.target.value)}>
+          {languages.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {settings && (
+        <div className={row}>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <div className="font-bold">{t('ui.settings.allowIllegal')}</div>
+              <HelpTip>{t('ui.settings.illegalTip')}</HelpTip>
+            </div>
+            <div className="text-[13px] text-muted">{t('ui.settings.illegalSub')}</div>
+          </div>
+          <Toggle
+            on={settings.allowIllegal}
+            onChange={(on) => void onSave({ ...settings, allowIllegal: on }).then(() => toast(t('common.saved')))}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AdvancedTab({ settings, onSave }: { settings: TradeSettings | null; onSave: (s: TradeSettings) => Promise<TradeSettings> }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { engines, reloadEngines, setSetup, reload } = useConnection()
+  const [draft, setDraft] = useState<TradeSettings | null>(settings)
+  const [engineError, setEngineError] = useState<string | null>(null)
+  const [scenarios, setScenarios] = useState<{ scenarios: string[]; current: string | null } | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const isAdmin = useAuth().me?.role === 'admin'
+
+  useEffect(() => setDraft(settings), [settings])
+  useEffect(() => {
+    // Só existe em desenvolvimento (404 no app final).
+    api.get<{ scenarios: string[]; current: string | null }>('/api/setup/scenarios').then(setScenarios).catch(() => undefined)
+  }, [])
+
+  async function selectEngine(id: string) {
+    try {
+      await api.put('/api/engines/selected', { id })
+      setEngineError(null)
+      await reloadEngines()
+    } catch (e) {
+      setEngineError(e instanceof ApiError && e.code ? e.code : 'unknown')
+    }
+  }
+
+  async function restart() {
+    setSetup(await api.post<SetupStatus>('/api/setup/reset'))
+    setConfirmReset(false)
+    toast(t('ui.settings.restarted'))
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">{t('settings.title')}</h1>
+    <div className="flex max-w-[860px] flex-col gap-3.5">
+      <Callout tone="sky" icon="info">
+        {t('ui.settings.defaultsOk')}
+      </Callout>
 
-      {local && (
-        <Card className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-semibold">{t('wizard.title')}</span>
-          <Link to="/configurar" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
-            {t('wizard.bannerAction')}
-          </Link>
-        </Card>
+      {draft && (
+        <Panel>
+          <PanelTitle tip={t('ui.settings.tempoTip')}>{t('ui.settings.tempos')}</PanelTitle>
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+            {numberFields.map((f) => (
+              <label key={f.key} className="flex flex-col gap-1.5">
+                <span className="text-[13.5px] font-semibold">{t(`ui.settings.fields.${f.key}`)}</span>
+                <span className="flex h-[42px] items-center rounded-lg border border-line bg-bg px-3 focus-within:border-accent">
+                  <input
+                    inputMode="numeric"
+                    className="min-w-0 flex-1 bg-transparent font-bold outline-none"
+                    value={draft[f.key]}
+                    onChange={(e) => setDraft({ ...draft, [f.key]: Math.min(f.max, Number(e.target.value.replace(/\D/g, '')) || 0) })}
+                  />
+                  <span className="text-[12.5px] text-muted">{t(f.unit)}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() =>
+                void onSave({
+                  ...draft,
+                  ...Object.fromEntries(numberFields.map((f) => [f.key, Math.max(f.min, draft[f.key])])),
+                }).then(() => toast(t('common.saved')))
+              }
+            >
+              {t('common.save')}
+            </Button>
+            <Button variant="secondary" onClick={() => settings && setDraft(settings)}>
+              {t('ui.settings.undo')}
+            </Button>
+          </div>
+        </Panel>
       )}
 
-      <Card className="space-y-3">
-        <h2 className="font-semibold">{t('settings.appearance')}</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t('settings.theme')}>
-            <select className={inputClass} value={theme} onChange={(e) => setTheme(e.target.value as ThemeChoice)}>
-              <option value="system">{t('settings.themeSystem')}</option>
-              <option value="light">{t('settings.themeLight')}</option>
-              <option value="dark">{t('settings.themeDark')}</option>
-            </select>
-          </Field>
-          <Field label={t('settings.language')}>
-            <select className={inputClass} value={i18n.language} onChange={(e) => void i18n.changeLanguage(e.target.value)}>
-              {languages.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.label}
+      <Panel>
+        <PanelTitle tip={t('ui.settings.engineTip')} sub={t('settings.engineHelp')}>
+          {t('settings.engineTitle')}
+        </PanelTitle>
+        <div className="flex flex-col gap-1.5">
+          {engines.map((engine) => (
+            <button
+              key={engine.id}
+              type="button"
+              disabled={!engine.available}
+              onClick={() => void selectEngine(engine.id)}
+              aria-pressed={engine.selected}
+              className={`flex min-h-12 cursor-pointer flex-wrap items-center gap-2.5 rounded-lg border-[1.5px] bg-bg px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-55 ${engine.selected ? 'border-accent' : 'border-line'}`}
+            >
+              <Icon name={engine.selected ? 'radio_button_checked' : 'radio_button_unchecked'} className={engine.selected ? 'text-accent' : 'text-muted'} />
+              <span className="flex-1 text-sm font-semibold">{t(`settings.engines.${engine.id}`, { defaultValue: engine.id })}</span>
+              {engine.isSimulation && <Badge tone="amber">{t('demo.badge')}</Badge>}
+              {!engine.available && engine.reasonCode && (
+                <span className="text-xs text-muted">{t(`settings.engineReasons.${engine.reasonCode}`, { defaultValue: engine.reasonCode })}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        {engineError && (
+          <p role="alert" className="text-sm text-bad">
+            {t(`settings.engineErrors.${engineError}`, { defaultValue: t('common.error') })}
+          </p>
+        )}
+        <AppImageWorkerSettings />
+      </Panel>
+
+      <ServerModeCard />
+      {isAdmin && <AccountsCard />}
+
+      <Panel>
+        <div className="flex flex-wrap items-center gap-3.5">
+          <div className="min-w-[220px] flex-1">
+            <div className="flex items-center gap-2">
+              <div className="text-base font-extrabold">{t('ui.settings.dev')}</div>
+              <HelpTip>{t('ui.settings.devTip')}</HelpTip>
+            </div>
+            <div className="text-[13.5px] text-muted">{scenarios ? t('ui.settings.devSub') : t('ui.settings.restartSub')}</div>
+          </div>
+          {scenarios && (
+            <select
+              className={`${selectClass} h-10! w-auto!`}
+              value={scenarios.current ?? ''}
+              onChange={async (e) => {
+                const scenario = e.target.value || null
+                setSetup(await api.put<SetupStatus>('/api/setup/simulation', { scenario }))
+                setScenarios({ ...scenarios, current: scenario })
+                void reload()
+              }}
+            >
+              <option value="">{t('wizard.simulationNone')}</option>
+              {scenarios.scenarios.map((s) => (
+                <option key={s} value={s}>
+                  {s}
                 </option>
               ))}
             </select>
-          </Field>
-        </div>
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="font-semibold">{t('settings.myTrainerTitle')}</h2>
-        <ContentFile name="builder/meu-treinador" />
-        <div className="grid gap-3 sm:grid-cols-4">
-          <Field label={t('trade.trainer.name')}>
-            <input className={inputClass} maxLength={7} value={me.name} onChange={(e) => setMe({ ...me, name: e.target.value })} />
-          </Field>
-          <Field label={t('trade.trainer.tid')}>
-            <input type="number" min={0} max={65535} className={inputClass} value={me.tid} onChange={(e) => setMe({ ...me, tid: Number(e.target.value) || 0 })} />
-          </Field>
-          <Field label={`${t('trade.trainer.sid')} (${t('common.optional')})`}>
-            <input
-              type="number"
-              min={0}
-              max={65535}
-              className={inputClass}
-              value={me.sid ?? ''}
-              onChange={(e) => setMe({ ...me, sid: e.target.value === '' ? null : Number(e.target.value) })}
-            />
-          </Field>
-          <Field label={t('settings.trainerGender')}>
-            <select className={inputClass} value={me.gender} onChange={(e) => setMe({ ...me, gender: Number(e.target.value) })}>
-              <option value={0}>♂</option>
-              <option value={1}>♀</option>
-            </select>
-          </Field>
-          <Field label={t('settings.badges')}>
-            <input type="number" min={0} max={8} className={inputClass} value={me.badges} onChange={(e) => setMe({ ...me, badges: Math.max(0, Math.min(8, Number(e.target.value) || 0)) })} />
-          </Field>
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={me.hasNationalDex} onChange={(e) => setMe({ ...me, hasNationalDex: e.target.checked })} />
-          {t('settings.nationalDex')}
-        </label>
-        {meErrors.length > 0 && (
-          <ul className="text-sm text-red-700 dark:text-red-400">
-            {meErrors.map((e) => (
-              <li key={e}>{t(`errors.${e}`)}</li>
-            ))}
-          </ul>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => void saveMe()}>{meSaved ? t('common.saved') : t('common.save')}</Button>
-          <Button variant="secondary" disabled={received.length === 0} onClick={() => setPickOpen(!pickOpen)}>
-            {t('settings.fromPokemon')}
-          </Button>
-        </div>
-        {pickOpen && (
-          <div className="space-y-1">
-            <p className="text-sm text-slate-500">{t('settings.choosePokemon')}</p>
-            {received.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className="block w-full rounded-lg px-3 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-                onClick={() => void fromPokemon(p.id)}
-              >
-                {p.nickname || p.speciesName} · {p.otName} · {p.tid}:{p.sid}
-              </button>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {local && (
-        <Card className="space-y-3">
-          <h2 className="font-semibold">{t('settings.engineTitle')}</h2>
-          <p className="text-sm text-slate-500">{t('settings.engineHelp')}</p>
-          <ul className="space-y-2">
-            {engines.map((engine) => (
-              <li key={engine.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="engine"
-                  checked={engine.selected}
-                  disabled={!engine.available}
-                  onChange={() =>
-                    void api
-                      .put('/api/engines/selected', { id: engine.id })
-                      .then(() => {
-                        setEngineError(null)
-                        setEngines((list) => list.map((e) => ({ ...e, selected: e.id === engine.id })))
-                      })
-                      .catch((e: unknown) => setEngineError(e instanceof ApiError && e.code ? e.code : 'unknown'))
-                  }
-                />
-                {t(`settings.engines.${engine.id}`, { defaultValue: engine.id })}
-                {!engine.available && engine.reasonCode && (
-                  <span className="text-xs text-slate-500">({t(`settings.engineReasons.${engine.reasonCode}`, { defaultValue: engine.reasonCode })})</span>
-                )}
-              </li>
-            ))}
-          </ul>
-          {engineError && (
-            <p role="alert" className="text-sm text-red-700 dark:text-red-400">
-              {t(`settings.engineErrors.${engineError}`, { defaultValue: t('common.error') })}
-            </p>
           )}
-          <AppImageWorkerSettings />
-        </Card>
-      )}
-
-      {settings && (
-        <Card className="space-y-3">
-          <h2 className="font-semibold">{t('settings.tradeTitle')}</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {numberFields.map((f) => (
-              <Field key={f.key} label={t(`settings.${f.key}`)} help={f.help ? t(f.help) : undefined}>
-                <input
-                  type="number"
-                  className={inputClass}
-                  min={f.min}
-                  max={f.max}
-                  value={settings[f.key]}
-                  onChange={(e) => setSettings({ ...settings, [f.key]: Number(e.target.value) })}
-                />
-              </Field>
-            ))}
-          </div>
-          <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-700">
-            <h3 className="text-sm font-semibold">{t('settings.illegalTitle')}</h3>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={settings.allowIllegal} onChange={(e) => setSettings({ ...settings, allowIllegal: e.target.checked })} />
-              {t('settings.allowIllegal')}
-            </label>
-            <p className="text-xs text-slate-500">{t('settings.allowIllegalHelp')}</p>
-          </div>
-          <Button onClick={() => void save()}>{saved ? t('common.saved') : t('common.save')}</Button>
-        </Card>
-      )}
-
-      {local && <ServerModeCard />}
-      {caller?.role === 'admin' && <AccountsCard />}
+          {confirmReset ? (
+            <>
+              <Button variant="danger" onClick={() => void restart()}>
+                {t('ui.settings.restartConfirm')}
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirmReset(false)}>
+                {t('common.cancel')}
+              </Button>
+            </>
+          ) : (
+            <Button variant="secondary" onClick={() => setConfirmReset(true)}>
+              {t('wizard.restart')}
+            </Button>
+          )}
+        </div>
+      </Panel>
     </div>
   )
 }

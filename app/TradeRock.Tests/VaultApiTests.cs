@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -185,5 +186,53 @@ public sealed class VaultApiTests : IAsyncLifetime
         var imported = await Post($"/api/pokemon/sav/{read.GetProperty("token").GetGuid()}/import",
             new { indices = new[] { entry.GetProperty("index").GetInt32() } });
         Assert.False(imported[0].GetProperty("created").GetBoolean()); // já era o Mewtwo de demonstração
+    }
+
+    [Fact]
+    public async Task Editar_no_painel_substitui_os_dados_e_mantem_o_lugar()
+    {
+        var ids = await DemoIds();
+        var box = await Post("/api/vault/boxes", new { name = "Time" });
+        var boxId = box.GetProperty("id").GetGuid();
+        await Post($"/api/vault/pokemon/{ids[0]}/move", new { boxId, slot = 3 });
+        var tag = await Post("/api/vault/tags", new { name = "Favorito", color = "amber" });
+        await Post("/api/vault/tags/assign", new { pokemonIds = new[] { ids[0] }, add = new[] { tag.GetProperty("id").GetGuid() } });
+
+        // Como o painel faz: abre os dados brutos, muda nível e apelido e monta pelo editor avançado.
+        var from = await Get($"/api/builder/from/{ids[0]}");
+        var raw = JsonNode.Parse(from.GetProperty("raw").GetRawText())!.AsObject();
+        var pid = raw["pid"]!.GetValue<uint>();
+        raw["level"] = 80;
+        raw["nickname"] = "CAMPEAO";
+        var built = await Json(await _client.PostAsJsonAsync("/api/builder/advanced", new { raw, language = "pt-BR" }));
+        var data = built.GetProperty("data").GetString();
+
+        var replaced = await Post($"/api/vault/pokemon/{ids[0]}/replace", new { data });
+        Assert.Equal(ids[0], replaced.GetProperty("id").GetGuid());
+        Assert.Equal(80, replaced.GetProperty("level").GetInt32());
+        Assert.Equal("CAMPEAO", replaced.GetProperty("nickname").GetString());
+
+        // Mesmo lugar, mesma etiqueta, mesmo PID; o arquivo novo é o que vai para a troca e a exportação.
+        var inBox = Assert.Single((await Get($"/api/vault/pokemon?scope={boxId}")).EnumerateArray());
+        Assert.Equal(ids[0], inBox.GetProperty("id").GetGuid());
+        Assert.Equal(3, inBox.GetProperty("slot").GetInt32());
+        Assert.Single(inBox.GetProperty("tagIds").EnumerateArray());
+        var reopened = await Get($"/api/builder/from/{ids[0]}");
+        Assert.Equal(80, reopened.GetProperty("raw").GetProperty("level").GetInt32());
+        Assert.Equal(pid, reopened.GetProperty("raw").GetProperty("pid").GetUInt32());
+        Assert.Equal(2, (await DemoIds()).Length);
+
+        // Virar uma cópia de outro Pokémon do cofre não pode.
+        var other = await Get($"/api/builder/from/{ids[1]}");
+        var otherData = (await Json(await _client.PostAsJsonAsync("/api/builder/advanced",
+            new { raw = JsonNode.Parse(other.GetProperty("raw").GetRawText()), language = "pt-BR" }))).GetProperty("data").GetString();
+        var duplicate = await _client.PostAsJsonAsync($"/api/vault/pokemon/{ids[0]}/replace", new { data = otherData });
+        Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+        Assert.Contains("pokemon_duplicate", await duplicate.Content.ReadAsStringAsync());
+
+        // Na lixeira, não edita.
+        await Post("/api/vault/trash", new { ids = new[] { ids[1] } });
+        var trashed = await _client.PostAsJsonAsync($"/api/vault/pokemon/{ids[1]}/replace", new { data });
+        Assert.Contains("pokemon_in_trash", await trashed.Content.ReadAsStringAsync());
     }
 }

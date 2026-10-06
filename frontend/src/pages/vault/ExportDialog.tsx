@@ -67,7 +67,7 @@ export function ExportDialog({ ids, onClose }: { ids: string[]; onClose: () => v
           </label>
         ))}
       </fieldset>
-      {message && <p className="mt-3 text-emerald-700 dark:text-emerald-400">{message}</p>}
+      {message && <p className="mt-3 text-ok">{message}</p>}
     </Modal>
   )
 }

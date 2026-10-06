@@ -60,27 +60,27 @@ export function WifiActions({
   if (!card) return null
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+    <div className="space-y-3 rounded-xl border border-line p-4">
       <h3 className="font-semibold">{t('wizard.cardTest.title', { phy: card.card.phy })}</h3>
       <p className="text-sm">{t('wizard.cardTest.help')}</p>
-      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
+      <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
         <li>{t('wizard.cardTest.password')}</li>
         <li>{card.card.isInternetConnection ? t('wizard.cardTest.offlineInternet') : t('wizard.cardTest.offline')}</li>
       </ul>
 
-      {!workerOk && <p className="text-sm text-amber-700 dark:text-amber-300">{t('wizard.cardTest.needsWorker')}</p>}
+      {!workerOk && <p className="text-sm text-warn">{t('wizard.cardTest.needsWorker')}</p>}
       <AppImageWorkerInstall status={status} onStatus={onStatus} />
-      {workerOk && !toolsOk && <p className="text-sm text-amber-700 dark:text-amber-300">{t('wizard.cardTest.needsTools')}</p>}
+      {workerOk && !toolsOk && <p className="text-sm text-warn">{t('wizard.cardTest.needsTools')}</p>}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={() => void runTest()} disabled={!canTest}>
           {busy === 'test' ? t('wizard.cardTest.running') : test ? t('wizard.cardTest.again') : t('wizard.cardTest.run')}
         </Button>
-        {busy === 'test' && <span className="text-sm text-slate-500">{t('wizard.cardTest.waitPassword')}</span>}
+        {busy === 'test' && <span className="text-sm text-muted">{t('wizard.cardTest.waitPassword')}</span>}
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
+        <p role="alert" className="rounded-lg bg-bad-soft p-3 text-sm text-bad">
           {t(`failures.${error}`, { defaultValue: t('failures.unknown') })}
         </p>
       )}
@@ -88,7 +88,7 @@ export function WifiActions({
       {test && <CardTestView test={test} />}
 
       {test && !test.passed && (
-        <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-900">
+        <div className="space-y-2 rounded-lg bg-surface2 p-3 text-sm">
           <p className="font-medium">{t('wizard.cardTest.whatNow')}</p>
           <p>{advice.cards.length > 1 ? t('wizard.cardTest.optionsMany') : t('wizard.cardTest.optionsOne')}</p>
           <div className="flex flex-wrap gap-2">
@@ -103,7 +103,7 @@ export function WifiActions({
       )}
 
       {system.networkManagerRunning && !system.ldnNetwork?.complete && (
-        <div className="space-y-2 border-t border-slate-200 pt-3 text-sm dark:border-slate-800">
+        <div className="space-y-2 border-t border-line pt-3 text-sm">
           <h4 className="font-semibold">{t('wizard.network.title')}</h4>
           <p>{t('wizard.network.help')}</p>
           {!confirmNetwork ? (
@@ -111,7 +111,7 @@ export function WifiActions({
               {t('wizard.network.configure')}
             </Button>
           ) : (
-            <div className="space-y-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-950/40">
+            <div className="space-y-2 rounded-lg bg-warn-soft p-3">
               <p>{t('wizard.network.confirmText')}</p>
               <ul className="list-disc pl-5 font-mono text-xs">
                 <li>/etc/NetworkManager/conf.d/zz-ldn-unmanaged.conf</li>
@@ -138,7 +138,7 @@ function CardTestView({ test }: { test: CardTestResult }) {
   return (
     <div
       className={`space-y-2 rounded-lg p-3 text-sm ${
-        test.passed ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100' : 'bg-red-50 text-red-900 dark:bg-red-950/40 dark:text-red-100'
+        test.passed ? 'bg-ok-soft text-ok' : 'bg-bad-soft text-bad'
       }`}
     >
       <p className="font-medium">

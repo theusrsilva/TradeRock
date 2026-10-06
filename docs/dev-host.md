@@ -45,23 +45,23 @@ Opções:
 
 ## Roteiro de teste
 
-1. **Configurações → Abrir o assistente.**
-   - Na etapa 2, envie o `prod.keys`.
-   - Na etapa 3, escolha a placa Wi-Fi.
-2. **Etapa 4 → Testar a placa.**
+1. **Configurações → Conexão.**
+   - No item Chaves, envie o `prod.keys`.
+   - No item Rádio, escolha a placa Wi-Fi.
+2. **Componente de rede → Testar a placa.**
    - O sistema pede a senha de administrador, uma vez por sessão do app.
    - Durante uns 10 s, o Wi-Fi da placa cai e volta sozinho.
    - Anote o resultado por canal (enviados e recebidos).
-3. **Etapa 4 → Configurar o NetworkManager** (recomendado).
-4. **Etapa 6 → Procurar a sala**, com o Switch no Direct Corner como Leader, na tela de espera:
+3. **Componente de rede → Configurar o NetworkManager** (recomendado).
+4. **Teste com o Switch → Procurar a sala**, com o Switch no Direct Corner como Leader, na tela de espera:
    - o teste escuta por até 30 s e para ao achar a sala; o Wi-Fi da placa cai e volta sozinho;
    - anote o resultado e abra **Detalhes** (canal, protocolo LDN, anúncios que não decifraram,
      canais que a placa não sintonizou);
    - repita com a sala fechada (deve dar "nenhuma sala") e, se tiver, com um prod.keys de outra
      versão (deve dar "encontrada, mas não decifrada");
    - confira que o Switch **não** recebe pedido de entrada durante o teste.
-5. **Configurações → Motor de troca → Placa Wi-Fi do PC.** Concluir o assistente já seleciona esse
-   motor.
+5. **Usar nas trocas de verdade** (no topo da lista, quando tudo passa) seleciona o motor da placa.
+   Também dá em **Configurações → Avançado → Motor de troca → Placa Wi-Fi do PC**.
 6. **Trocar**, com o Switch no Direct Corner como Leader:
    - aprove o pedido de entrada ("EMU", ou o nome que você escolheu);
    - sente na cadeira da esquerda;

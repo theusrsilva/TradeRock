@@ -6,8 +6,8 @@ sala de troca do Direct Corner.
 
 > **Estado:** em desenvolvimento (Entrega 9 de 11). Já dá para **criar Pokémon legais** no app,
 > organizá-los no **cofre** (caixas, tags, busca, exportação, injeção em `.sav` de GBA), fazer o
-> assistente de troca de ponta a ponta em **modo demonstração** (motor simulado) e seguir o
-> **assistente de configuração**, que confere o sistema, a placa Wi-Fi ou o ESP32 e o `prod.keys`.
+> assistente de troca de ponta a ponta em **modo demonstração** (motor simulado) e conferir em
+> **Configurações → Conexão** uma lista que confere o sistema, a placa Wi-Fi ou o ESP32 e o `prod.keys`.
 > O motor com a **placa Wi-Fi** (worker + polkit + frlg-ldn-trade) e o **teste com o Switch** (a sala é
 > encontrada e decifrada, sem entrar nela) estão prontos, mas **ainda não foram testados com um Switch
 > de verdade**. O motor com o **ESP32** (firmware gravado pelo próprio app, conferência do chip e teste
@@ -42,12 +42,12 @@ chmod +x TradeRock-<versão>-x86_64.AppImage
 ```
 
 Precisa do WebKitGTK 4.1 e do libnotify do sistema (o app mostra o comando se faltarem) e do
-`pkexec` (polkit). Para usar a placa Wi-Fi, o assistente oferece **instalar o componente de rede**
-na etapa 4. Depois da sua confirmação e da senha de administrador, ele é copiado para
+`pkexec` (polkit). Para usar a placa Wi-Fi, **Configurações → Conexão** oferece **instalar o
+componente de rede** no item "Componente de rede". Depois da sua confirmação e da senha de administrador, ele é copiado para
 `/usr/local/lib/traderock`, com uma política própria do polkit, porque o sistema não deixa rodar
 como administrador um programa de dentro do AppImage. Quando uma versão nova do AppImage traz outro
-componente, o assistente oferece atualizar. Para remover: **Configurações → Motor de troca →
-Remover o componente de rede**. Sistemas com `/usr` somente leitura (Fedora Silverblue e parecidos)
+componente, a mesma lista oferece atualizar. Para remover: **Configurações → Avançado → Motor de
+troca → Remover o componente de rede**. Sistemas com `/usr` somente leitura (Fedora Silverblue e parecidos)
 não aceitam essa instalação.
 
 Cada Release traz também o `SHA256SUMS` e o código-fonte completo (com os submódulos) e o das
@@ -77,7 +77,7 @@ usuário. Para remover: **Configurações do Windows → Aplicativos → TradeRo
 dados continuam na pasta acima (apague-a se não for mais usar).
 
 Conversores USB **CH340** ou **CP210x** podem precisar de driver: o Windows Update costuma
-instalar sozinho; se não, o assistente mostra o link do fabricante.
+instalar sozinho; se não, Configurações → Conexão mostra o link do fabricante.
 
 ## Plataformas
 
@@ -242,11 +242,14 @@ a cada mudança. Quando algo não é possível, a tela mostra o que mudou ou o q
   Na janela do app, o arquivo é alterado no mesmo lugar. No navegador, você baixa o save novo.
 - Solte `.pk3`/`.ek3`/`.sav` em qualquer lugar da janela para importar.
 
-### Assistente de configuração
+### Configuração da conexão
 
-Na primeira execução, a tela inicial leva ao assistente (`/configurar`, também em Configurações).
-São 7 etapas: boas-vindas, `prod.keys`, escolha do rádio, preparo do rádio, preparo do jogo,
-teste com o Switch e resumo. O app lê o sistema sem pedir senha:
+A tela inicial mostra quantos itens faltam e leva a **Configurações → Conexão** (o antigo endereço
+`/configurar` também abre ali). É uma lista com seis itens, cada um com o status (OK, Atenção, Falta,
+Esperando), uma explicação curta no (?) e o "como resolver" ao abrir: sistema, chaves (`prod.keys`),
+rádio (placa Wi-Fi ou ESP32, com a escolha da placa, da porta e do modelo), componente de rede ou
+firmware e porta USB do ESP32, jogo pronto no Switch (guia) e teste com o Switch. O app lê o sistema
+sem pedir senha:
 - distribuição, WSL ou máquina virtual;
 - placas Wi-Fi (`/sys/class/ieee80211`) e qual delas leva a internet;
 - portas seriais e o conversor USB de cada uma;
@@ -257,15 +260,15 @@ Depois compara com o [catálogo](catalog/hardware-catalog.json). Cada item do ca
 "não testado". Quando falta algo, o app mostra o comando para resolver, mas nunca o executa com
 privilégios.
 
-O **relatório** exportado no resumo serve para pedir ajuda. Ele não inclui chaves, nome de
+O **relatório** exportado no topo da lista serve para pedir ajuda. Ele não inclui chaves, nome de
 usuário nem caminhos pessoais.
 
-Com a placa Wi-Fi, a etapa 4 faz o **teste real da placa**: modo monitor e transmissão de quadros de
+Com a placa Wi-Fi, o item "Componente de rede" faz o **teste real da placa**: modo monitor e transmissão de quadros de
 ação nos canais 1, 6 e 11, pela mesma biblioteca LDN da troca, sem Switch nem prod.keys. Ela também
 oferece **configurar o NetworkManager**, que cria `/etc/NetworkManager/conf.d/zz-ldn-unmanaged.conf`
 e `/etc/systemd/network/10-traderock-ldn.link`, sempre com confirmação.
 
-A etapa 6 faz o **teste com o Switch**: com a sala do Direct Corner aberta como Leader, o app escuta
+O último item faz o **teste com o Switch**: com a sala do Direct Corner aberta como Leader, o app escuta
 os anúncios da sala por até 30 segundos e tenta decifrá-los com o `prod.keys`, sem entrar na sala.
 O resultado diz se a sala foi encontrada e decifrada (rádio e chaves confirmados), encontrada mas
 não decifrada (chaves erradas), se só apareceu outro jogo ou se nada foi encontrado. Com a placa
@@ -273,7 +276,10 @@ Wi-Fi, esse teste é **essencial**: a troca só é liberada depois dele, e ele p
 a placa ou o `prod.keys` mudam. Com o ESP32, o teste chega junto com o motor, na Entrega 9, e até lá
 aparece como "em breve".
 
-Em desenvolvimento (`ASPNETCORE_ENVIRONMENT=Development`), um seletor no topo do assistente simula
+Quando tudo passa, o botão **Usar nas trocas de verdade** liga o motor do rádio escolhido (antes
+era o "Concluir" do assistente).
+
+Em desenvolvimento (`ASPNETCORE_ENVIRONMENT=Development`), um seletor em **Configurações → Avançado** simula
 9 cenários: Linux com placa compatível, instável, desconhecida ou problemática, sem Wi-Fi, WSL,
 máquina virtual, Linux com ESP32 e Windows com ESP32.
 
@@ -295,7 +301,8 @@ enquanto o app estiver aberto. Escolha a interface de rede (nunca a placa Wi-Fi 
 e entre com a conta.
 
 - Cada conta tem o próprio cofre, histórico e "Meu treinador".
-- Assistente, prod.keys, motor e worker ficam só na janela do PC.
+- Configuração da conexão, prod.keys, motor e worker ficam só na janela do PC (pela rede, a aba
+  Conexão só mostra o status).
 - As trocas entram numa fila, com a posição visível para todos, e cada uma começa sozinha quando chega
   a vez.
 - É **http, só para a rede de casa**: nunca libere a porta no roteador.
@@ -326,15 +333,15 @@ Migrações do banco: `dotnet tool restore && dotnet ef migrations add <Nome> --
 **"Não foi possível abrir a janela do TradeRock: faltam bibliotecas do sistema"**
 Instale o WebKitGTK 4.1 e o libnotify (o comando aparece na mensagem) ou rode com `--no-window`.
 
-**Minha placa Wi-Fi serve?** Abra o assistente em Configurações. A etapa "Escolher o rádio"
+**Minha placa Wi-Fi serve?** Abra Configurações → Conexão. O item "Rádio para falar com o Switch"
 mostra a sua placa e a tabela de placas conhecidas. No WSL ou numa máquina virtual, a placa Wi-Fi
 não fica acessível: use um ESP32 ou o Linux instalado de verdade.
 
 **O ESP32 não aparece / "permissão negada" na porta.** Use um cabo USB de dados e adicione o seu
 usuário ao grupo `dialout` (Arch: `uucp`), depois saia e entre de novo na sessão. Se o `brltty`
-estiver rodando e você não usa display braile, desative-o. O assistente mostra os comandos exatos.
+estiver rodando e você não usa display braile, desative-o. Configurações → Conexão mostra os comandos exatos.
 
-**ESP32: "nenhum firmware do TradeRock respondeu".** Use "Gravar o firmware" na etapa 4 do assistente:
+**ESP32: "nenhum firmware do TradeRock respondeu".** Use "Gravar o firmware" no item "ESP32: firmware e porta USB" de Configurações → Conexão:
 o app identifica o chip, escolhe o firmware certo e grava pelo USB. Se a placa não entrar no modo de
 gravação, segure o botão BOOT, aperte e solte RESET, solte o BOOT e tente de novo. Feche monitores
 seriais (Arduino IDE etc.) antes: a porta não pode estar em uso.
@@ -342,7 +349,7 @@ seriais (Arduino IDE etc.) antes: a porta não pode estar em uso.
 **ESP32: a sala do Switch não aparece.** O ESP32 só enxerga salas em 2,4 GHz (canais 1 a 11). Se o
 Switch estiver ligado a uma rede de 5 GHz, desconecte-o da internet e abra a sala de novo.
 
-**AppImage: "o componente de rede não foi instalado".** Use o botão da etapa 4 do assistente. Se o
+**AppImage: "o componente de rede não foi instalado".** Use o botão do item "Componente de rede" em Configurações → Conexão. Se o
 diálogo de senha não aparecer, falta um agente do polkit na sessão (GNOME e KDE já trazem um).
 
 ## Pacotes

@@ -73,7 +73,7 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
   const percent = job && job.total > 0 ? Math.round((job.done / job.total) * 100) : null
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+    <div className="space-y-3 rounded-xl border border-line p-4">
       <h3 className="font-semibold">{t('wizard.esp32fw.title')}</h3>
       <p className="text-sm">{t('wizard.esp32fw.help')}</p>
 
@@ -91,7 +91,7 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
           {t('wizard.esp32fw.flash')}
         </Button>
       </div>
-      <p className="text-xs text-slate-500">{t('wizard.esp32fw.identifyHelp')}</p>
+      <p className="text-xs text-muted">{t('wizard.esp32fw.identifyHelp')}</p>
 
       {chip && (
         <p className="text-sm">
@@ -99,10 +99,10 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
           {chip.simulated && ` · ${t('wizard.esp32fw.simulated')}`}
         </p>
       )}
-      {probe && !probe.ok && !flashing && <p className="text-sm text-amber-700 dark:text-amber-300">{t(`wizard.checks.esp32_probe_${probe.code}`)}</p>}
+      {probe && !probe.ok && !flashing && <p className="text-sm text-warn">{t(`wizard.checks.esp32_probe_${probe.code}`)}</p>}
 
       {confirmFlash && (
-        <div className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm dark:bg-amber-950/40">
+        <div className="space-y-2 rounded-lg bg-warn-soft p-3 text-sm">
           <p className="font-medium">{t('wizard.esp32fw.flashConfirmTitle')}</p>
           <p>{t('wizard.esp32fw.flashConfirmText')}</p>
           <div className="flex gap-2">
@@ -116,20 +116,20 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
 
       {job && (
         <div className="space-y-1 text-sm" aria-live="polite">
-          <p className={job.stage === 'error' ? 'text-red-700 dark:text-red-300' : job.stage === 'done' ? 'text-emerald-700 dark:text-emerald-300' : ''}>
+          <p className={job.stage === 'error' ? 'text-bad' : job.stage === 'done' ? 'text-ok' : ''}>
             {t(`wizard.esp32fw.stages.${job.stage}`)}
             {percent !== null && job.stage === 'write' && ` ${percent}%`}
           </p>
           {flashing && (
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800" aria-hidden>
-              <div className="h-full bg-sky-600 transition-all" style={{ width: `${percent ?? 5}%` }} />
+            <div className="h-1.5 overflow-hidden rounded-full bg-surface2" aria-hidden>
+              <div className="h-full bg-accent transition-all" style={{ width: `${percent ?? 5}%` }} />
             </div>
           )}
         </div>
       )}
 
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
+        <p role="alert" className="rounded-lg bg-bad-soft p-3 text-sm text-bad">
           {t(`failures.${error}`, { defaultValue: t('failures.unknown') })}
         </p>
       )}

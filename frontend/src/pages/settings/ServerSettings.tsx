@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Badge, Button, Card, Field, inputClass, Modal } from '../../components/ui'
+import { Badge, Button, Callout, Card, Field, HelpTip, inputClass, Modal } from '../../components/ui'
 import { ApiError, api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { useAppInfo } from '../../lib/appInfo'
@@ -51,26 +51,27 @@ export function ServerModeCard() {
   const blockedRadio = status.interfaces.some((i) => i.blocked)
 
   return (
-    <Card className="space-y-3">
+    <Card className="space-y-3.5 px-[22px]">
       <div id="servidor" className="flex flex-wrap items-center gap-2">
-        <h2 className="font-semibold">{t('server.title')}</h2>
+        <h2 className="text-base font-extrabold">{t('ui.settings.server')}</h2>
+        <HelpTip>{t('ui.settings.serverTip')}</HelpTip>
         {status.enabled ? <Badge tone="emerald">{t('server.on')}</Badge> : <Badge>{t('server.off')}</Badge>}
       </div>
-      <p className="text-sm text-slate-600 dark:text-slate-300">{t('server.intro')}</p>
-      <div className="space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-        <p className="font-semibold">{t('server.warningTitle')}</p>
+      <p className="text-[13.5px] text-muted">{t('server.intro')}</p>
+      <Callout tone="amber" icon="home">
+        <p className="font-bold">{t('server.warningTitle')}</p>
         <p>{t('server.warningInternet')}</p>
         <p>{t('server.warningHttp')}</p>
-      </div>
-      {info?.os === 'windows' && <p className="text-sm text-slate-600 dark:text-slate-300">{t('server.windowsFirewall')}</p>}
+      </Callout>
+      {info?.os === 'windows' && <p className="text-sm text-muted">{t('server.windowsFirewall')}</p>}
 
       {status.enabled && status.url ? (
         <div className="flex flex-wrap items-center gap-4">
-          <img src={`/api/server/qr?u=${encodeURIComponent(status.url)}`} alt={t('server.qrAlt')} className="h-40 w-40 rounded-lg bg-white p-1" />
+          <img src={`/api/server/qr?u=${encodeURIComponent(status.url)}`} alt={t('server.qrAlt')} className="h-40 w-40 rounded-lg bg-surface p-1" />
           <div className="space-y-2 text-sm">
             <p>{t('server.openOnPhone')}</p>
             <p className="select-all break-all font-mono text-lg">{status.url}</p>
-            <p className="text-slate-500">
+            <p className="text-muted">
               {t('server.interfaceUsed', { name: status.interface })} · {t('server.sessions', { count: status.sessions })}
             </p>
             <Button variant="secondary" disabled={busy} onClick={() => void toggle(false)}>
@@ -82,7 +83,7 @@ export function ServerModeCard() {
         <>
           {status.radio === 'wifi' && blockedRadio && <p className="text-sm">{t('server.radioWifi')}</p>}
           {usable.length === 0 ? (
-            <p className="rounded-lg bg-slate-100 p-3 text-sm dark:bg-slate-800">
+            <p className="rounded-lg bg-surface2 p-3 text-sm">
               {status.radio === 'wifi' ? t('server.noInterfaceWifi') : t('server.noInterface')}
             </p>
           ) : (
@@ -105,11 +106,11 @@ export function ServerModeCard() {
           <Button disabled={busy || !choice || usable.length === 0} onClick={() => void toggle(true)}>
             {busy ? t('common.loading') : t('server.turnOn')}
           </Button>
-          <p className="text-xs text-slate-500">{t('server.offOnStart')}</p>
+          <p className="text-xs text-muted">{t('server.offOnStart')}</p>
         </>
       )}
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
+        <p role="alert" className="rounded-lg bg-bad-soft p-3 text-sm text-bad">
           {t(`server.errors.${error}`, { defaultValue: t('common.error') })}
         </p>
       )}
@@ -161,11 +162,14 @@ export function AccountsCard() {
   const name = (a: Account) => a.username ?? t('accounts.ownerNoName')
 
   return (
-    <Card className="space-y-3">
-      <h2 className="font-semibold">{t('accounts.title')}</h2>
-      <p className="text-sm text-slate-600 dark:text-slate-300">{t('accounts.intro')}</p>
+    <Card className="space-y-3 px-[22px]">
+      <div className="flex items-center gap-2">
+        <h2 className="text-base font-extrabold">{t('accounts.title')}</h2>
+        <HelpTip>{t('ui.settings.accountsTip')}</HelpTip>
+      </div>
+      <p className="text-[13.5px] text-muted">{t('accounts.intro')}</p>
 
-      <ul className="divide-y divide-slate-200 text-sm dark:divide-slate-800">
+      <ul className="divide-y divide-line text-sm">
         {accounts.map((a) => (
           <li key={a.id} className="space-y-2 py-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -174,22 +178,22 @@ export function AccountsCard() {
               <Badge tone={a.role === 'admin' ? 'amber' : 'slate'}>{t(`accounts.roles.${a.role}`)}</Badge>
               {a.disabled && <Badge tone="red">{t('accounts.disabled')}</Badge>}
               {a.id === me?.id && !me.local && <Badge tone="emerald">{t('accounts.you')}</Badge>}
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted">
                 {a.lastLoginAt ? t('accounts.lastLogin', { date: new Date(a.lastLoginAt).toLocaleString() }) : a.isOwner && !a.canLogin ? t('accounts.ownerHint') : ''}
               </span>
               <div className="ml-auto flex flex-wrap gap-1">
-                <Button variant="ghost" className="px-2 py-1" onClick={() => setEditing({ id: a.id, username: a.username ?? '', password: '' })}>
+                <Button variant="ghost" size="sm" onClick={() => setEditing({ id: a.id, username: a.username ?? '', password: '' })}>
                   {a.isOwner && !a.canLogin ? t('accounts.ownerSetup') : t('accounts.edit')}
                 </Button>
                 {!a.isOwner && (
                   <>
-                    <Button variant="ghost" className="px-2 py-1" onClick={() => void run(() => api.put(`/api/accounts/${a.id}`, { role: a.role === 'admin' ? 'user' : 'admin' }))}>
+                    <Button variant="ghost" size="sm" onClick={() => void run(() => api.put(`/api/accounts/${a.id}`, { role: a.role === 'admin' ? 'user' : 'admin' }))}>
                       {a.role === 'admin' ? t('accounts.makeUser') : t('accounts.makeAdmin')}
                     </Button>
-                    <Button variant="ghost" className="px-2 py-1" onClick={() => void run(() => api.put(`/api/accounts/${a.id}`, { disabled: !a.disabled }))}>
+                    <Button variant="ghost" size="sm" onClick={() => void run(() => api.put(`/api/accounts/${a.id}`, { disabled: !a.disabled }))}>
                       {a.disabled ? t('accounts.enable') : t('accounts.disable')}
                     </Button>
-                    <Button variant="ghost" className="px-2 py-1 text-red-700 dark:text-red-400" onClick={() => setDeleting(a)}>
+                    <Button variant="ghost" size="sm" className="text-bad" onClick={() => setDeleting(a)}>
                       {t('common.delete')}
                     </Button>
                   </>
@@ -197,7 +201,7 @@ export function AccountsCard() {
               </div>
             </div>
             {editing?.id === a.id && (
-              <div className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_auto] dark:bg-slate-800/50">
+              <div className="grid gap-2 rounded-lg bg-surface2 p-3 sm:grid-cols-[1fr_1fr_auto]">
                 <Field label={t('login.username')}>
                   <input className={inputClass} autoCapitalize="none" value={editing.username} onChange={(e) => setEditing({ ...editing, username: e.target.value })} />
                 </Field>
@@ -216,7 +220,7 @@ export function AccountsCard() {
         ))}
       </ul>
 
-      <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700">
+      <div className="space-y-2 border-t border-line pt-3">
         <h3 className="text-sm font-semibold">{t('accounts.create')}</h3>
         <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
           <Field label={t('login.username')} help={t('accounts.usernameHelp')}>
@@ -231,17 +235,17 @@ export function AccountsCard() {
               <option value="admin">{t('accounts.roles.admin')}</option>
             </select>
           </Field>
-          <div className="flex items-start pt-6">
+          <div className="flex items-start sm:pt-[26px]">
             <Button disabled={!form.username || !form.password} onClick={() => void create()}>
               {t('accounts.createButton')}
             </Button>
           </div>
         </div>
-        <p className="text-xs text-slate-500">{t('accounts.rolesHelp')}</p>
+        <p className="text-xs text-muted">{t('accounts.rolesHelp')}</p>
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
+        <p role="alert" className="rounded-lg bg-bad-soft p-3 text-sm text-bad">
           {t(`accounts.errors.${error}`, { defaultValue: t('common.error') })}
         </p>
       )}

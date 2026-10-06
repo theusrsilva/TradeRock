@@ -95,7 +95,7 @@ export function InjectDialog({ pokemon, onClose }: { pokemon: VaultPokemon[]; on
     >
       <div className="space-y-3">
         <p>{t('inject.intro')}</p>
-        {pokemon.length === 0 && <p className="text-amber-700 dark:text-amber-400">{t('inject.noneSelected')}</p>}
+        {pokemon.length === 0 && <p className="text-warn">{t('inject.noneSelected')}</p>}
 
         {!save && (
           <>
@@ -110,7 +110,7 @@ export function InjectDialog({ pokemon, onClose }: { pokemon: VaultPokemon[]; on
           <>
             <p className="font-medium">{t('inject.header', { file: save.fileName, game: save.layout.game, trainer: save.layout.trainerName })}</p>
             <p className="text-xs">{save.inPlace ? t('inject.inPlace') : t('inject.downloadMode')}</p>
-            <p className="text-xs text-amber-700 dark:text-amber-400">⚠ {t('inject.emulatorWarning')}</p>
+            <p className="text-xs text-warn">⚠ {t('inject.emulatorWarning')}</p>
             <label className="block">
               <span className="text-xs font-medium">{t('inject.box')}</span>
               <select className={inputClass} value={box} disabled={!!result} onChange={(e) => setBox(Number(e.target.value))}>
@@ -124,7 +124,7 @@ export function InjectDialog({ pokemon, onClose }: { pokemon: VaultPokemon[]; on
             <p className="text-xs">
               {t('inject.free', { count: freeSlots.length })} · {t('inject.pokemonToInject', { count: pokemon.length })} · {t('inject.autoPlace')}
             </p>
-            {pokemon.length > freeSlots.length && <p className="text-red-700 dark:text-red-400">{t('inject.notEnough')}</p>}
+            {pokemon.length > freeSlots.length && <p className="text-bad">{t('inject.notEnough')}</p>}
             <div className="grid grid-cols-6 gap-1">
               {Array.from({ length: save.layout.slotsPerBox }, (_, slot) => {
                 const there = save.layout.occupied.find((o) => o.box === box && o.slot === slot)
@@ -135,7 +135,7 @@ export function InjectDialog({ pokemon, onClose }: { pokemon: VaultPokemon[]; on
                     key={slot}
                     title={there ? `${there.nickname} (${there.speciesName})` : planned ? planned.nickname || planned.speciesName : ''}
                     className={`flex aspect-square items-center justify-center rounded border text-[10px] ${
-                      planned ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40' : there ? 'border-slate-300 bg-slate-100 dark:border-slate-600 dark:bg-slate-800' : 'border-dashed border-slate-300 dark:border-slate-700'
+                      planned ? 'border-accent bg-accent-soft' : there ? 'border-line bg-surface2' : 'border-dashed border-line'
                     }`}
                   >
                     {species ? <img src={spriteUrl(species)} alt="" className={`h-8 w-8 [image-rendering:pixelated] ${there ? 'opacity-60' : ''}`} /> : slot + 1}
@@ -146,9 +146,9 @@ export function InjectDialog({ pokemon, onClose }: { pokemon: VaultPokemon[]; on
           </>
         )}
 
-        {error && <p className="text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-bad">{error}</p>}
         {result && (
-          <div className="space-y-1 rounded-lg bg-emerald-50 p-3 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+          <div className="space-y-1 rounded-lg bg-ok-soft p-3 text-ok">
             <p className="font-medium">{t('inject.done', { count: result.count })}</p>
             <p className="break-all text-xs">{t('inject.backup', { path: result.backup })}</p>
             {result.written && <p className="break-all text-xs">{t('inject.written', { path: result.written })}</p>}

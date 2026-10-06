@@ -5,7 +5,7 @@ import type { UploadResult } from '../lib/types'
 import { Button } from './ui'
 
 /** Importar .pk3/.ek3 por botão ou arrastando para a área. */
-export function UploadArea({ onImported }: { onImported: () => void }) {
+export function UploadArea({ onImported, compact = false }: { onImported: () => void; compact?: boolean }) {
   const { t } = useTranslation()
   const input = useRef<HTMLInputElement>(null)
   const [messages, setMessages] = useState<{ text: string; ok: boolean }[]>([])
@@ -39,6 +39,41 @@ export function UploadArea({ onImported }: { onImported: () => void }) {
     }
   }
 
+  const fileInput = (
+    <input
+      ref={input}
+      type="file"
+      accept=".pk3,.ek3"
+      multiple
+      hidden
+      onChange={(e) => {
+        if (e.target.files) void upload(e.target.files)
+        e.target.value = ''
+      }}
+    />
+  )
+  const messageList = messages.length > 0 && (
+    <ul className="mt-2 space-y-1 text-left text-[13px]">
+      {messages.map((m, i) => (
+        <li key={i} className={m.ok ? 'text-ok' : 'text-bad'}>
+          {m.text}
+        </li>
+      ))}
+    </ul>
+  )
+
+  // Só o botão (o arrastar e soltar vale para a janela toda).
+  if (compact)
+    return (
+      <div>
+        {fileInput}
+        <Button variant="secondary" size="sm" icon="upload_file" disabled={busy} onClick={() => input.current?.click()}>
+          {t('pokemon.import')}
+        </Button>
+        {messageList}
+      </div>
+    )
+
   function onDrop(e: DragEvent) {
     e.preventDefault()
     setDragging(false)
@@ -54,33 +89,15 @@ export function UploadArea({ onImported }: { onImported: () => void }) {
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
       className={`rounded-xl border-2 border-dashed p-4 text-center text-sm transition ${
-        dragging ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/30' : 'border-slate-300 dark:border-slate-700'
+        dragging ? 'border-accent bg-accent-soft' : 'border-line'
       }`}
     >
-      <input
-        ref={input}
-        type="file"
-        accept=".pk3,.ek3"
-        multiple
-        hidden
-        onChange={(e) => {
-          if (e.target.files) void upload(e.target.files)
-          e.target.value = ''
-        }}
-      />
-      <Button variant="secondary" disabled={busy} onClick={() => input.current?.click()}>
+      {fileInput}
+      <Button variant="secondary" icon="upload_file" disabled={busy} onClick={() => input.current?.click()}>
         {t('pokemon.import')}
       </Button>
-      <p className="mt-2 text-slate-500 dark:text-slate-400">{t('pokemon.dropHint')}</p>
-      {messages.length > 0 && (
-        <ul className="mt-3 space-y-1 text-left">
-          {messages.map((m, i) => (
-            <li key={i} className={m.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}>
-              {m.text}
-            </li>
-          ))}
-        </ul>
-      )}
+      <p className="mt-2 text-muted">{t('pokemon.dropHint')}</p>
+      {messageList}
     </div>
   )
 }

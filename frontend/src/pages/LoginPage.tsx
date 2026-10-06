@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Card, Field, inputClass } from '../components/ui'
+import { Button, Icon, Logo, inputClass } from '../components/ui'
 import { ApiError, api } from '../lib/api'
 
 /** Entrada pela rede (modo servidor). A janela do próprio PC nunca vê esta tela. */
@@ -27,31 +27,37 @@ export default function LoginPage({ onLogin }: { onLogin: () => Promise<void> })
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-slate-50 p-4 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <Card className="w-full max-w-sm space-y-4">
-        <div className="flex items-center gap-2">
-          <img src="/icon.svg" alt="" className="h-8 w-8" />
-          <h1 className="text-lg font-semibold">{t('login.title')}</h1>
+    <div className="flex min-h-full items-center justify-center bg-bg p-5 text-ink">
+      <div className="flex w-full max-w-[380px] flex-col gap-4">
+        <div className="flex flex-col items-center gap-2.5 text-center">
+          <Logo size={56} />
+          <h1 className="font-display text-[26px] font-bold">{t('app.name')}</h1>
+          <p className="text-sm text-muted">{t('login.intro')}</p>
         </div>
-        <p className="text-sm text-slate-600 dark:text-slate-300">{t('login.intro')}</p>
-        <form className="space-y-3" onSubmit={(e) => void submit(e)}>
-          <Field label={t('login.username')}>
-            <input className={inputClass} autoComplete="username" autoCapitalize="none" value={username} onChange={(e) => setUsername(e.target.value)} />
-          </Field>
-          <Field label={t('login.password')}>
-            <input type="password" className={inputClass} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </Field>
+        <form className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5" onSubmit={(e) => void submit(e)}>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-bold">{t('login.username')}</span>
+            <input className={`${inputClass} h-12! text-base!`} autoComplete="username" autoCapitalize="none" value={username} onChange={(e) => setUsername(e.target.value)} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-bold">{t('login.password')}</span>
+            <input type="password" className={`${inputClass} h-12! text-base!`} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
           {error && (
-            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
+            <p role="alert" className="text-[13px] text-bad">
               {t(`login.errors.${error}`, { defaultValue: t('common.error') })}
             </p>
           )}
-          <Button type="submit" className="w-full" disabled={busy || !username || !password}>
+          <Button type="submit" size="lg" className="h-[50px] w-full text-base font-extrabold" disabled={busy || !username || !password}>
             {busy ? t('common.loading') : t('login.submit')}
           </Button>
         </form>
-        <p className="text-xs text-slate-500">{t('login.noAccount')}</p>
-      </Card>
+        <p className="text-center text-[12.5px] text-muted">{t('login.noAccount')}</p>
+        <p className="flex items-center justify-center gap-2 text-[12.5px] text-muted">
+          <Icon name="home" className="text-base" />
+          {t('ui.login.homeOnly')}
+        </p>
+      </div>
     </div>
   )
 }

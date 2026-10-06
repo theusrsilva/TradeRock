@@ -53,7 +53,7 @@ export function SearchSelect({
 
   return (
     <div ref={box} className="relative">
-      <div className={`flex items-center gap-2 ${inputClass} ${invalid ? 'ring-2 ring-red-500' : ''} p-0 pl-2`}>
+      <div className={`flex items-center gap-2 ${inputClass} ${invalid ? 'ring-2 ring-bad' : ''} p-0! pl-2!`}>
         {selected && renderIcon?.(selected.value)}
         <input
           id={id}
@@ -80,10 +80,10 @@ export function SearchSelect({
         />
       </div>
       {open && (
-        <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800">
+        <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-line bg-surface py-1 text-sm shadow-lg">
           {emptyLabel !== undefined && (
             <li>
-              <button type="button" className="w-full px-3 py-1.5 text-left text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" onMouseDown={() => choose(null)}>
+              <button type="button" className="w-full px-3 py-1.5 text-left text-muted hover:bg-surface2" onMouseDown={() => choose(null)}>
                 {emptyLabel}
               </button>
             </li>
@@ -92,8 +92,8 @@ export function SearchSelect({
             <li key={o.value}>
               <button
                 type="button"
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700 ${
-                  i === active ? 'bg-slate-100 dark:bg-slate-700' : ''
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface2 ${
+                  i === active ? 'bg-surface2' : ''
                 } ${o.value === value ? 'font-semibold' : ''}`}
                 onMouseDown={() => choose(o.value)}
               >

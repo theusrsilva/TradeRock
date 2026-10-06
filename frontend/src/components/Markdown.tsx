@@ -23,9 +23,9 @@ export function ContentFile({ name }: { name: string }) {
         block.type === 'markdown' ? (
           <MarkdownText key={i} text={block.text} />
         ) : (
-          <details key={i} className="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
-            <summary className="cursor-pointer text-sm font-medium text-sky-700 dark:text-sky-400">{block.summary}</summary>
-            <MarkdownText text={block.text} className="mt-2 text-slate-600 dark:text-slate-300" />
+          <details key={i} className="rounded-lg border border-line px-3 py-2">
+            <summary className="cursor-pointer text-sm font-medium text-accent">{block.summary}</summary>
+            <MarkdownText text={block.text} className="mt-2 text-muted" />
           </details>
         ),
       )}

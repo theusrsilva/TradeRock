@@ -87,15 +87,15 @@ export function GlobalDrop() {
   return (
     <>
       {active && (
-        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-sky-600/20 backdrop-blur-sm">
-          <div className="rounded-2xl border-2 border-dashed border-sky-500 bg-white px-8 py-6 text-center shadow-xl dark:bg-slate-900">
-            <p className="text-lg font-semibold">{t('vault.dropToImport')}</p>
-            <p className="text-sm text-slate-500">{t('vault.dropHint')}</p>
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-accent/20 backdrop-blur-sm">
+          <div className="rounded-2xl border-2 border-dashed border-accent bg-surface px-8 py-6 text-center shadow-xl">
+            <p className="font-display text-xl font-bold">{t('vault.dropToImport')}</p>
+            <p className="text-sm text-muted">{t('vault.dropHint')}</p>
           </div>
         </div>
       )}
       {message && (
-        <div className="fixed bottom-4 right-4 z-40 rounded-lg bg-slate-900 px-4 py-2 text-sm text-white shadow-lg dark:bg-slate-100 dark:text-slate-900" role="status">
+        <div className="fixed right-4 bottom-[84px] z-40 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-bg shadow-lg md:bottom-4" role="status">
           {message}
         </div>
       )}

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ContentFile } from '../../components/Markdown'
-import { Badge, Button, Card, Field, inputClass } from '../../components/ui'
+import { Badge, Button, Field, HelpTip, Icon, inputClass, selectClass } from '../../components/ui'
 import { api } from '../../lib/api'
 import { TRAINER_NAME_MAX, trainerNameErrors } from '../../lib/trainer'
 import type { SimulationScenario, TradeGame, Trainer, TrainerPreset } from '../../lib/types'
@@ -24,6 +23,8 @@ const scenarios: SimulationScenario[] = [
   'connection_lost_mid_trade',
 ]
 
+export const gameDot: Record<TradeGame, string> = { fire_red: '#d8443a', leaf_green: '#3f9a4e' }
+
 const parseId = (value: string): number | null => {
   if (value.trim() === '') return null
   const n = Number(value)
@@ -41,9 +42,10 @@ export function TrainerStep({
 }) {
   const { t } = useTranslation()
   const [presets, setPresets] = useState<TrainerPreset[]>([])
-  const [label, setLabel] = useState('')
+  const [label, setLabel] = useState<string | null>(null)
   const [tidText, setTidText] = useState(String(state.trainer.tid))
   const [sidText, setSidText] = useState(state.trainer.sid === null ? '' : String(state.trainer.sid))
+  const [more, setMore] = useState(false)
 
   const loadPresets = () => api.get<TrainerPreset[]>('/api/trainer-presets').then(setPresets).catch(() => undefined)
   useEffect(() => {
@@ -60,56 +62,69 @@ export function TrainerStep({
   }
 
   async function savePreset() {
-    await api.post('/api/trainer-presets', { label, ...state.trainer, game: state.game })
-    setLabel('')
+    if (!label?.trim()) return
+    await api.post('/api/trainer-presets', { label: label.trim(), ...state.trainer, game: state.game })
+    setLabel(null)
     await loadPresets()
   }
 
+  const isCurrent = (p: TrainerPreset) =>
+    p.name === state.trainer.name && p.tid === state.trainer.tid && p.sid === state.trainer.sid && p.game === state.game
+
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="space-y-4">
-        <h2 className="font-semibold">{t('trade.trainer.title')}</h2>
-        <ContentFile name="trade/treinador" />
-
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">{t('trade.trainer.game')}</legend>
-          <div className="flex gap-2">
-            {(['fire_red', 'leaf_green'] as const).map((game) => (
-              <label
-                key={game}
-                className={`flex-1 cursor-pointer rounded-lg border px-3 py-2 text-center text-sm font-medium ${
-                  state.game === game
-                    ? game === 'fire_red'
-                      ? 'border-red-500 bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-300'
-                      : 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                    : 'border-slate-300 dark:border-slate-600'
-                }`}
-              >
-                <input type="radio" name="game" className="sr-only" checked={state.game === game} onChange={() => onChange({ ...state, game })} />
-                {t(`trade.trainer.${game}`)}
-              </label>
-            ))}
+    <div className="grid items-start gap-[18px] [grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))]">
+      <div className="flex flex-col gap-[18px] rounded-xl border border-line bg-surface p-[22px]">
+        <div className="flex flex-col gap-2">
+          <div className="font-bold">{t('ui.trade.whichGame')}</div>
+          <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr))]" role="radiogroup">
+            {(['fire_red', 'leaf_green'] as const).map((game) => {
+              const on = state.game === game
+              return (
+                <button
+                  key={game}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => onChange({ ...state, game })}
+                  className={`flex h-16 cursor-pointer items-center gap-3 rounded-lg border-2 px-4 text-left ${on ? 'border-accent bg-accent-soft' : 'border-line bg-bg'}`}
+                >
+                  <span className="h-[18px] w-[18px] rounded-full" style={{ background: gameDot[game] }} />
+                  <span className="flex-1 text-base font-bold">{t(`trade.trainer.${game}`)}</span>
+                  {on && <Icon name="check_circle" className="text-[22px] text-accent" />}
+                </button>
+              )
+            })}
           </div>
-        </fieldset>
+        </div>
 
-        <Field label={t('trade.trainer.name')} help={t('trade.trainer.nameHelp')}>
-          <input
-            className={inputClass}
-            value={state.trainer.name}
-            maxLength={TRAINER_NAME_MAX + 3}
-            onChange={(e) => setTrainer({ name: e.target.value })}
-            aria-invalid={nameErrors.length > 0}
-          />
-        </Field>
-        {nameErrors.length > 0 && (
-          <ul className="text-sm text-red-700 dark:text-red-400">
-            {nameErrors.map((e) => (
-              <li key={e}>{t(`errors.${e}`)}</li>
-            ))}
-          </ul>
-        )}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="trainer-name" className="flex-1 font-bold">
+              {t('ui.trade.nameOnSwitch')}
+            </label>
+            <HelpTip>{t('ui.trade.nameTip')}</HelpTip>
+          </div>
+          <div className={`flex h-[46px] items-center rounded-lg border-[1.5px] bg-bg px-3.5 ${nameErrors.length > 0 ? 'border-bad' : 'border-line focus-within:border-accent'}`}>
+            <input
+              id="trainer-name"
+              className="min-w-0 flex-1 bg-transparent text-[17px] font-bold tracking-[1px] outline-none"
+              value={state.trainer.name}
+              maxLength={TRAINER_NAME_MAX + 3}
+              onChange={(e) => setTrainer({ name: e.target.value })}
+              aria-invalid={nameErrors.length > 0}
+            />
+            <span className="text-[13px] text-muted">
+              {[...state.trainer.name].length}/{TRAINER_NAME_MAX}
+            </span>
+          </div>
+          {nameErrors.map((e) => (
+            <div key={e} className="text-[13px] text-bad">
+              {t(`errors.${e}`)}
+            </div>
+          ))}
+        </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr))]">
           <Field label={t('trade.trainer.tid')}>
             <input
               className={inputClass}
@@ -122,59 +137,93 @@ export function TrainerStep({
               }}
             />
           </Field>
-          <Field label={`${t('trade.trainer.sid')} (${t('common.optional')})`}>
-            <input
-              className={inputClass}
-              inputMode="numeric"
-              value={sidText}
-              onChange={(e) => {
-                setSidText(e.target.value)
-                setTrainer({ sid: parseId(e.target.value) })
-              }}
-            />
-          </Field>
+          {more && (
+            <Field label={<>{t('trade.trainer.sid')} <span className="font-normal text-muted">({t('common.optional')})</span></>}>
+              <input
+                className={inputClass}
+                inputMode="numeric"
+                value={sidText}
+                onChange={(e) => {
+                  setSidText(e.target.value)
+                  setTrainer({ sid: parseId(e.target.value) })
+                }}
+              />
+            </Field>
+          )}
         </div>
-      </Card>
+        <button type="button" onClick={() => setMore(!more)} className="flex cursor-pointer items-center gap-1 self-start font-semibold text-accent">
+          <Icon name={more ? 'expand_less' : 'expand_more'} />
+          {more ? t('ui.trade.lessOptions') : t('ui.trade.moreOptions')}
+        </button>
+      </div>
 
-      <div className="space-y-4">
-        <Card className="space-y-3">
-          <h2 className="font-semibold">{t('trade.trainer.presets')}</h2>
-          {presets.length === 0 && <p className="text-sm text-slate-500">{t('trade.trainer.noPresets')}</p>}
-          <ul className="space-y-2">
+      <div className="flex flex-col gap-[18px]">
+        <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+          <div className="font-bold">{t('trade.trainer.presets')}</div>
+          {presets.length === 0 && <p className="text-sm text-muted">{t('trade.trainer.noPresets')}</p>}
+          <div className="flex flex-wrap gap-2">
             {presets.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
-                <span>
-                  <strong>{p.label}</strong> · {p.name} · {p.tid}
-                  {p.sid !== null && `:${p.sid}`} · {t(`trade.trainer.${p.game}`)}
-                </span>
-                <span className="flex gap-1">
-                  <Button variant="secondary" onClick={() => applyPreset(p)}>
-                    {t('trade.trainer.use')}
-                  </Button>
-                  <Button variant="ghost" onClick={() => void api.delete(`/api/trainer-presets/${p.id}`).then(loadPresets)}>
-                    {t('common.delete')}
-                  </Button>
-                </span>
-              </li>
+              <span
+                key={p.id}
+                className={`flex h-9 items-center gap-1 rounded-full border pr-1 pl-3.5 text-[13.5px] font-semibold ${isCurrent(p) ? 'border-accent bg-accent-soft' : 'border-line bg-surface'}`}
+              >
+                <button type="button" onClick={() => applyPreset(p)} className="flex cursor-pointer items-center gap-2" title={`${p.name} · ${p.tid}${p.sid !== null ? `:${p.sid}` : ''}`}>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: gameDot[p.game] }} />
+                  {p.label} · {t(`trade.trainer.${p.game}`)}
+                </button>
+                <button
+                  type="button"
+                  aria-label={t('common.delete')}
+                  title={t('common.delete')}
+                  onClick={() => void api.delete(`/api/trainer-presets/${p.id}`).then(loadPresets)}
+                  className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-surface2"
+                >
+                  <Icon name="close" className="text-base" />
+                </button>
+              </span>
             ))}
-          </ul>
-          <div className="flex gap-2">
-            <input className={inputClass} placeholder={t('trade.trainer.presetLabel')} value={label} maxLength={40} onChange={(e) => setLabel(e.target.value)} />
-            <Button variant="secondary" disabled={!label.trim() || nameErrors.length > 0} onClick={() => void savePreset()}>
-              {t('trade.trainer.savePreset')}
-            </Button>
           </div>
-        </Card>
+          {label === null ? (
+            <button
+              type="button"
+              disabled={nameErrors.length > 0}
+              onClick={() => setLabel(state.trainer.name)}
+              className="flex h-[34px] cursor-pointer items-center gap-1.5 self-start rounded-lg border border-dashed border-line px-3 text-[13px] font-semibold text-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Icon name="bookmark_add" className="text-[18px]" />
+              {t('ui.trade.saveTrainer')}
+            </button>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <input
+                autoFocus
+                className={`${inputClass} h-10! flex-1`}
+                placeholder={t('trade.trainer.presetLabel')}
+                value={label}
+                maxLength={40}
+                onChange={(e) => setLabel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void savePreset()}
+              />
+              <Button disabled={!label.trim()} onClick={() => void savePreset()}>
+                {t('common.save')}
+              </Button>
+              <Button variant="ghost" onClick={() => setLabel(null)}>
+                {t('common.cancel')}
+              </Button>
+            </div>
+          )}
+        </div>
 
         {simulation && (
-          <Card className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold">{t('trade.simulation.title')}</h2>
+          <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-5">
+            <div className="flex items-center gap-2 font-bold">
+              <Icon name="science" className="text-warn" />
+              {t('trade.simulation.title')}
               <Badge tone="amber">{t('demo.badge')}</Badge>
             </div>
-            <p className="text-sm text-slate-500">{t('trade.simulation.help')}</p>
+            <div className="text-[13.5px] text-muted">{t('trade.simulation.help')}</div>
             <select
-              className={inputClass}
+              className={selectClass}
               value={state.scenario}
               onChange={(e) => onChange({ ...state, scenario: e.target.value as SimulationScenario })}
             >
@@ -196,7 +245,7 @@ export function TrainerStep({
                 />
               </Field>
             )}
-          </Card>
+          </div>
         )}
       </div>
     </div>

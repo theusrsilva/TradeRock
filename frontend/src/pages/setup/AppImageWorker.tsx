@@ -30,7 +30,7 @@ export function AppImageWorkerInstall({ status, onStatus }: { status: SetupStatu
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-sky-50 p-3 text-sm dark:bg-sky-950/40">
+    <div className="space-y-2 rounded-lg bg-accent-soft p-3 text-sm">
       <p className="font-medium">{outdated ? t('workerInstall.outdatedTitle') : t('workerInstall.title')}</p>
       <p>{t('workerInstall.why')}</p>
       <ul className="list-disc space-y-1 pl-5">
@@ -44,7 +44,7 @@ export function AppImageWorkerInstall({ status, onStatus }: { status: SetupStatu
         {busy ? t('workerInstall.installing') : outdated ? t('workerInstall.update') : t('workerInstall.install')}
       </Button>
       {error && (
-        <p role="alert" className="text-red-800 dark:text-red-200">
+        <p role="alert" className="text-bad">
           {t(`failures.${error}`, { defaultValue: t('failures.unknown') })}
         </p>
       )}
@@ -107,9 +107,9 @@ export function AppImageWorkerSettings() {
             </Button>
           ))}
       </div>
-      {confirmRemove && <p className="text-xs text-slate-500">{t('workerInstall.removeHelp')}</p>}
+      {confirmRemove && <p className="text-xs text-muted">{t('workerInstall.removeHelp')}</p>}
       {error && (
-        <p role="alert" className="text-sm text-red-800 dark:text-red-200">
+        <p role="alert" className="text-sm text-bad">
           {t(`failures.${error}`, { defaultValue: t('failures.unknown') })}
         </p>
       )}

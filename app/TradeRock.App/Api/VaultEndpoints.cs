@@ -14,6 +14,7 @@ public static class VaultEndpoints
     public sealed record IdsDto(IReadOnlyList<Guid> Ids);
     public sealed record TagDto(string Name, string Color);
     public sealed record AssignTagsDto(IReadOnlyList<Guid> PokemonIds, IReadOnlyList<Guid>? Add, IReadOnlyList<Guid>? Remove);
+    public sealed record ReplaceDto(byte[] Data);
     public sealed record ExportDto(IReadOnlyList<Guid> Ids, string Format = "pk3", int Size = 100);
 
     public static void MapVault(this IEndpointRouteBuilder api)
@@ -58,6 +59,28 @@ public static class VaultEndpoints
 
         vault.MapPost("/pokemon/{id:guid}/move", (Guid id, MoveDto body, VaultStore store, CancellationToken ct) =>
             Run(() => store.MoveAsync(id, body.BoxId, body.Slot, ct)));
+
+        // Edição no painel do cofre: os dados novos (gerados pelo construtor) substituem os do Pokémon.
+        vault.MapPost("/pokemon/{id:guid}/replace", async (Guid id, ReplaceDto body, PokemonStore store, SettingsStore settings,
+            CancellationToken ct) =>
+        {
+            if (body.Data is not { Length: > 0 })
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "missing_fields" } });
+            try
+            {
+                var replaced = await store.ReplaceAsync(id, body.Data, ct);
+                var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(BuilderEndpoints.MyTrainerKey), null, ct);
+                return Results.Ok(PokemonEndpoints.PokemonDto.From(replaced, me));
+            }
+            catch (VaultException ex)
+            {
+                return Results.BadRequest(new { error = ex.Code });
+            }
+            catch (InvalidPokemonFileException ex)
+            {
+                return Results.BadRequest(new { error = "invalid", errors = new[] { ex.Code } });
+            }
+        });
 
         vault.MapPost("/trash", (IdsDto body, VaultStore store, CancellationToken ct) => Run(() => store.TrashAsync(body.Ids, ct)));
         vault.MapPost("/restore", (IdsDto body, VaultStore store, CancellationToken ct) => Run(() => store.RestoreAsync(body.Ids, ct)));

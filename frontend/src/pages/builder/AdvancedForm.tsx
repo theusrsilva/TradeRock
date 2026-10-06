@@ -32,7 +32,7 @@ export function AdvancedForm({
   }, [raw.version])
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       <div className="grid gap-3 sm:grid-cols-3">
         <FieldBox field="species" issue={issues.species}>
           <SearchSelect
@@ -68,8 +68,8 @@ export function AdvancedForm({
             </Button>
           </div>
         </FieldBox>
-        <label className="flex items-end gap-2 pb-2 text-sm">
-          <input type="checkbox" checked={raw.abilityBit} onChange={(e) => set({ abilityBit: e.target.checked })} /> {t('builder.fields.abilityBit')}
+        <label className="flex items-end gap-2 pb-3 text-sm font-semibold">
+          <input type="checkbox" className="accent-[var(--tr-accent)]" checked={raw.abilityBit} onChange={(e) => set({ abilityBit: e.target.checked })} /> {t('builder.fields.abilityBit')}
         </label>
       </div>
 
@@ -179,8 +179,8 @@ export function AdvancedForm({
         </FieldBox>
       </div>
 
-      <label className={`flex items-center gap-2 text-sm ${issues.fateful ? 'rounded-lg p-1 ring-2 ring-red-500' : ''}`}>
-        <input type="checkbox" checked={raw.fateful} onChange={(e) => set({ fateful: e.target.checked })} /> {t('builder.fields.fateful')}
+      <label className={`flex items-center gap-2 text-sm ${issues.fateful ? 'rounded-lg p-1 ring-2 ring-bad' : ''}`}>
+        <input type="checkbox" className="accent-[var(--tr-accent)]" checked={raw.fateful} onChange={(e) => set({ fateful: e.target.checked })} /> {t('builder.fields.fateful')}
       </label>
     </div>
   )

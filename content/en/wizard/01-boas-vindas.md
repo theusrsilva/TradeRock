@@ -2,7 +2,7 @@
 FireRed and LeafGreen trade room. That way you send Pokémon from your PC to your game and keep the
 ones you receive.
 
-This assistant checks, step by step, that everything is ready. It takes about **10 to 20 minutes**,
+This list checks, item by item, that everything is ready. It takes about **10 to 20 minutes**,
 not counting buying a part, if you need one.
 
 <details><summary>Learn more</summary>

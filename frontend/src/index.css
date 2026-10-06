@@ -1,9 +1,183 @@
 @import 'tailwindcss';
+@import '@fontsource/nunito/400.css';
+@import '@fontsource/nunito/600.css';
+@import '@fontsource/nunito/700.css';
+@import '@fontsource/nunito/800.css';
+@import '@fontsource/pixelify-sans/600.css';
+@import '@fontsource/pixelify-sans/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Ícones (Material Symbols Rounded, embutido: o app não usa a internet). */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./assets/fonts/material-symbols-rounded.woff2') format('woff2');
+}
+
+/* Visual "Caixa do PC": tons quentes, títulos em fonte pixel. Cores do tema claro e do escuro. */
+:root {
+  --tr-bg: #f3ebe0;
+  --tr-surface: #fbf7f1;
+  --tr-surface2: #f0e5d6;
+  --tr-line: #e2d3c0;
+  --tr-ink: #3a2a22;
+  --tr-muted: #7a6455;
+  --tr-accent: oklch(0.56 0.14 38);
+  --tr-accent-ink: #ffffff;
+  --tr-accent-soft: oklch(0.93 0.035 50);
+  --tr-side: #5b3a2c;
+  --tr-side-ink: #f6e9dc;
+  --tr-side-muted: #cdb19c;
+  --tr-side-active: rgba(255, 255, 255, 0.14);
+  --tr-side-line: rgba(255, 255, 255, 0.12);
+  --tr-side-card: rgba(0, 0, 0, 0.15);
+  --tr-tile: #efe2d1;
+  --tr-ok: #2b8452;
+  --tr-ok-soft: #e1f2e7;
+  --tr-warn: #9a5f06;
+  --tr-warn-soft: #fbefd8;
+  --tr-bad: #c0392f;
+  --tr-bad-soft: #fbe4e1;
+  --tr-info: #3566a8;
+  --tr-info-soft: #e3ecf8;
+}
+
+.dark {
+  --tr-bg: #211814;
+  --tr-surface: #2c211c;
+  --tr-surface2: #382b24;
+  --tr-line: #4a3a31;
+  --tr-ink: #f3e7dc;
+  --tr-muted: #b49e8e;
+  --tr-accent: oklch(0.7 0.13 45);
+  --tr-accent-ink: #1e140f;
+  --tr-accent-soft: oklch(0.34 0.05 40);
+  --tr-side: #18110e;
+  --tr-side-ink: #f3e7dc;
+  --tr-side-muted: #a48c7b;
+  --tr-side-active: rgba(255, 255, 255, 0.08);
+  --tr-side-line: rgba(255, 255, 255, 0.08);
+  --tr-side-card: rgba(255, 255, 255, 0.04);
+  --tr-tile: #382b24;
+  --tr-ok: #5cc58a;
+  --tr-ok-soft: #1b3326;
+  --tr-warn: #e8b45a;
+  --tr-warn-soft: #382c15;
+  --tr-bad: #f07b72;
+  --tr-bad-soft: #3c1e1c;
+  --tr-info: #7fb0f0;
+  --tr-info-soft: #1b2a3e;
+}
+
+@theme inline {
+  --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Pixelify Sans', 'Nunito', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-bg: var(--tr-bg);
+  --color-surface: var(--tr-surface);
+  --color-surface2: var(--tr-surface2);
+  --color-line: var(--tr-line);
+  --color-ink: var(--tr-ink);
+  --color-muted: var(--tr-muted);
+  --color-accent: var(--tr-accent);
+  --color-accent-ink: var(--tr-accent-ink);
+  --color-accent-soft: var(--tr-accent-soft);
+  --color-side: var(--tr-side);
+  --color-side-ink: var(--tr-side-ink);
+  --color-side-muted: var(--tr-side-muted);
+  --color-side-active: var(--tr-side-active);
+  --color-side-line: var(--tr-side-line);
+  --color-side-card: var(--tr-side-card);
+  --color-tile: var(--tr-tile);
+  --color-ok: var(--tr-ok);
+  --color-ok-soft: var(--tr-ok-soft);
+  --color-warn: var(--tr-warn);
+  --color-warn-soft: var(--tr-warn-soft);
+  --color-bad: var(--tr-bad);
+  --color-bad-soft: var(--tr-bad-soft);
+  --color-info: var(--tr-info);
+  --color-info-soft: var(--tr-info-soft);
+}
+
+/* Tons neutros (slate) e de destaque (sky) puxados para a paleta quente, para textos e detalhes menores. */
+@theme {
+  --color-slate-50: #fbf7f1;
+  --color-slate-100: #f0e5d6;
+  --color-slate-200: #e2d3c0;
+  --color-slate-300: #d3bfa8;
+  --color-slate-400: #b49e8e;
+  --color-slate-500: #8a7363;
+  --color-slate-600: #6b5547;
+  --color-slate-700: #4a3a31;
+  --color-slate-800: #382b24;
+  --color-slate-900: #2c211c;
+  --color-slate-950: #211814;
+  --color-sky-50: oklch(0.97 0.018 50);
+  --color-sky-100: oklch(0.93 0.035 50);
+  --color-sky-200: oklch(0.87 0.06 48);
+  --color-sky-300: oklch(0.78 0.1 45);
+  --color-sky-400: oklch(0.7 0.13 45);
+  --color-sky-500: oklch(0.62 0.14 40);
+  --color-sky-600: oklch(0.56 0.14 38);
+  --color-sky-700: oklch(0.49 0.13 38);
+  --color-sky-800: oklch(0.42 0.11 38);
+  --color-sky-900: oklch(0.34 0.08 40);
+  --color-sky-950: oklch(0.26 0.05 40);
+}
 
 html,
 body,
 #root {
   height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tr-bg);
+  color: var(--tr-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+@layer components {
+  .icon {
+    font-family: 'Material Symbols Rounded';
+    font-weight: 400;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+}
+
+.pixelated {
+  image-rendering: pixelated;
+}
+
+@keyframes tr-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.tr-pulse {
+  animation: tr-pulse 1.6s ease-out infinite;
 }

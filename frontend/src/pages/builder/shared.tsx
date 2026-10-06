@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { inputClass } from '../../components/ui'
+import { HelpTip, inputClass } from '../../components/ui'
 import type { LegalityReport, SpecDifference } from '../../lib/types'
 
 export type Issue = 'invalid' | 'fishy' | 'changed'
@@ -17,19 +17,36 @@ export function issuesFrom(report: LegalityReport | null | undefined, difference
 }
 
 const ring: Record<Issue, string> = {
-  invalid: 'ring-2 ring-red-500',
-  fishy: 'ring-2 ring-amber-400',
-  changed: 'ring-2 ring-sky-400',
+  invalid: 'ring-2 ring-bad',
+  fishy: 'ring-2 ring-warn',
+  changed: 'ring-2 ring-info',
 }
 
 /** Rótulo + campo, com anel colorido quando o resultado tem problema nesse campo. */
-export function FieldBox({ field, issue, children, help }: { field: string; issue?: Issue; children: ReactNode; help?: string }) {
+export function FieldBox({
+  field,
+  issue,
+  children,
+  help,
+  label,
+  tip,
+}: {
+  field: string
+  issue?: Issue
+  children: ReactNode
+  help?: string
+  label?: ReactNode
+  tip?: ReactNode
+}) {
   const { t } = useTranslation()
   return (
-    <div className="space-y-1 text-sm">
-      <span className="block font-medium">{t(`builder.fields.${field}`)}</span>
+    <div className="flex min-w-0 flex-col gap-1.5 text-sm">
+      <span className="flex items-center gap-1.5 font-bold">
+        {label ?? t(`builder.fields.${field}`)}
+        {tip && <HelpTip>{tip}</HelpTip>}
+      </span>
       <div className={`rounded-lg ${issue ? ring[issue] : ''}`}>{children}</div>
-      {help && <span className="block text-xs text-slate-500 dark:text-slate-400">{help}</span>}
+      {help && <span className="block text-[12.5px] text-muted">{help}</span>}
     </div>
   )
 }
@@ -38,16 +55,16 @@ export function StatInputs({ values, max, onChange, disabled = false }: { values
   const { t } = useTranslation()
   const labels = t('builder.stats', { returnObjects: true }) as string[]
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+    <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(56px,1fr))]">
       {values.map((v, i) => (
-        <label key={i} className="text-xs">
-          <span className="block text-center text-slate-500">{labels[i]}</span>
+        <label key={i} className="flex flex-col items-center gap-[3px] text-xs">
+          <span className="block text-center text-muted">{labels[i]}</span>
           <input
             type="number"
             min={0}
             max={max}
             disabled={disabled}
-            className={`${inputClass} px-2 text-center`}
+            className={`${inputClass} h-[38px]! px-1! text-center!`}
             value={v}
             onChange={(e) => {
               const next = [...values]

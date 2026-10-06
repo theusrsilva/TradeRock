@@ -22,7 +22,8 @@
     "delete": "Apagar",
     "cancel": "Cancelar",
     "optional": "opcional",
-    "learnMore": "Saiba mais"
+    "learnMore": "Saiba mais",
+    "close": "Fechar"
   },
   "demo": {
     "badge": "Modo demonstração",
@@ -47,7 +48,7 @@
   },
   "pokemon": {
     "title": "Meus Pokémon",
-    "subtitle": "Tudo o que você importou ou recebeu fica guardado aqui. (O cofre completo chega numa próxima etapa.)",
+    "subtitle": "Tudo o que você importou ou recebeu fica guardado aqui.",
     "level": "Nv. {{level}}",
     "shiny": "Shiny",
     "egg": "Ovo",
@@ -202,8 +203,8 @@
     "busy": "já existe uma troca em andamento",
     "illegal_pokemon": "um Pokémon marcado para o Switch é ilegal. Corrija no construtor ou ative o modo avançado nas Configurações.",
     "illegal_needs_confirmation": "confirme que quer mandar um Pokémon ilegal",
-    "setup_simulated": "o assistente está num cenário simulado (desenvolvimento). Volte para \"Sistema real\" para trocar de verdade.",
-    "setup_incomplete": "a configuração ainda não está completa. Abra o assistente em Configurações e resolva os itens essenciais."
+    "setup_simulated": "a configuração da conexão está num cenário simulado (desenvolvimento). Volte para \"Sistema real\" para trocar de verdade.",
+    "setup_incomplete": "a configuração ainda não está completa. Abra Configurações → Conexão e resolva os itens essenciais."
   },
   "failures": {
     "no_network_found": "A sala do Switch não foi encontrada. Confira se o Direct Corner está aberto como Leader e se o Switch está perto.",
@@ -221,12 +222,12 @@
     "internal_error": "Erro interno do TradeRock.",
     "unknown": "Falha desconhecida.",
     "join_not_approved": "O Switch viu o pedido de entrada, mas ele não foi aprovado a tempo. Aprove o pedido na tela do Switch.",
-    "radio_rx_failed": "A entrada autenticou, mas a placa parou de receber os anúncios do Switch. Configure o NetworkManager no assistente e tente de novo.",
+    "radio_rx_failed": "A entrada autenticou, mas a placa parou de receber os anúncios do Switch. Configure o NetworkManager em Configurações → Conexão e tente de novo.",
     "engine_broken": "O motor de troca está incompleto nesta instalação. Instale o TradeRock de novo.",
     "trade_incomplete": "Só parte das trocas foi concluída.",
     "engine_error": "O motor de troca parou com um erro.",
     "invalid_request": "O pedido de troca tem um dado que o motor não aceita.",
-    "missing_tools": "Faltam programas do sistema que o motor usa. Veja o assistente.",
+    "missing_tools": "Faltam programas do sistema que o motor usa. Veja Configurações → Conexão.",
     "phy_not_found": "A placa Wi-Fi escolhida não está mais no PC. Ela foi desconectada?",
     "not_root": "O componente de rede não está rodando como administrador.",
     "worker_missing": "O componente de rede não está instalado.",
@@ -239,19 +240,19 @@
     "worker_timeout": "O componente de rede não respondeu a tempo.",
     "worker_version": "O componente de rede instalado é de outra versão do TradeRock. Instale de novo.",
     "worker_start_failed": "Não foi possível iniciar o componente de rede.",
-    "wifi_not_configured": "Escolha a placa Wi-Fi no assistente de configuração.",
+    "wifi_not_configured": "Escolha a placa Wi-Fi em Configurações → Conexão.",
     "keys_missing": "O prod.keys não foi enviado.",
     "card_test_crashed": "O teste da placa parou com um erro.",
     "busy": "O componente de rede ainda está terminando a operação anterior. Tente de novo em alguns segundos.",
     "beacon_test_crashed": "O teste com o Switch parou com um erro. Tente de novo; se continuar, exporte o relatório no resumo.",
     "worker_install_failed": "A instalação do componente de rede falhou. Tente de novo; se continuar, exporte o relatório no resumo.",
     "worker_not_bundled": "Esta versão do TradeRock não traz o componente de rede para instalar.",
-    "esp32_not_configured": "Configure o ESP32 no assistente (placa e porta).",
-    "esp32_firmware_missing": "Nenhum firmware do TradeRock respondeu no ESP32. Grave o firmware no assistente.",
-    "esp32_firmware_incompatible": "O firmware do ESP32 é antigo ou diferente. Grave o firmware no assistente.",
+    "esp32_not_configured": "Configure o ESP32 em Configurações → Conexão (placa e porta).",
+    "esp32_firmware_missing": "Nenhum firmware do TradeRock respondeu no ESP32. Grave o firmware em Configurações → Conexão.",
+    "esp32_firmware_incompatible": "O firmware do ESP32 é antigo ou diferente. Grave o firmware em Configurações → Conexão.",
     "esp32_no_response": "O ESP32 parou de responder.",
     "esp32_error": "Erro ao falar com o ESP32.",
-    "serial_permission": "Sem permissão para usar a porta serial. Veja o item do grupo no assistente.",
+    "serial_permission": "Sem permissão para usar a porta serial. Veja o item do grupo em Configurações → Conexão.",
     "serial_busy": "A porta serial está em uso por outro programa.",
     "serial_port_missing": "A porta do ESP32 não existe mais. Ele foi desconectado?",
     "serial_not_chosen": "Escolha a porta do ESP32.",
@@ -287,7 +288,7 @@
     "themeDark": "Escuro",
     "language": "Idioma",
     "engineTitle": "Motor de troca",
-    "engineHelp": "O motor é quem conversa com o Switch. A placa Wi-Fi e o ESP32 ficam disponíveis depois de configurados no assistente.",
+    "engineHelp": "O motor é quem conversa com o Switch. A placa Wi-Fi e o ESP32 ficam disponíveis depois de configurados em Configurações → Conexão.",
     "engines": {
       "fake": "Simulação (modo demonstração)",
       "python-ldn": "Placa Wi-Fi do PC",
@@ -312,8 +313,8 @@
     "engineReasons": {
       "not_linux": "só no Linux",
       "worker_missing": "falta instalar o componente de rede",
-      "wifi_not_configured": "configure a placa no assistente",
-      "esp32_not_configured": "configure o ESP32 no assistente"
+      "wifi_not_configured": "configure a placa em Configurações → Conexão",
+      "esp32_not_configured": "configure o ESP32 em Configurações → Conexão"
     },
     "engineErrors": {
       "server_mode_on_radio": "O modo servidor está usando a placa Wi-Fi das trocas. Desligue o modo servidor ou escolha outra interface antes.",
@@ -545,7 +546,9 @@
       "tag_exists": "já existe uma tag com esse nome",
       "pokemon_in_trash": "o Pokémon está na lixeira",
       "too_many_boxes": "limite de caixas atingido",
-      "color_invalid": "cor inválida"
+      "color_invalid": "cor inválida",
+      "pokemon_duplicate": "o resultado é igual a outro Pokémon do cofre",
+      "pokemon_not_found": "o Pokémon não está mais no cofre"
     }
   },
   "inject": {
@@ -594,7 +597,7 @@
     "next": "Continuar",
     "finish": "Concluir",
     "redo": "Refazer esta etapa",
-    "restart": "Recomeçar o assistente",
+    "restart": "Recomeçar a configuração",
     "needTitle": "O que você vai precisar",
     "detecting": "Verificando o seu PC…",
     "preview": {
@@ -733,7 +736,7 @@
       "udev_rule_optional": "Opcional: regra udev para a porta ter sempre o nome {{path}}.",
       "switch_test_ok": "Teste com o Switch aprovado: a sala foi encontrada no canal {{channel}} e decifrada. Rádio e prod.keys confirmados.",
       "switch_test_pending": "Teste com o Switch (sala encontrada e decifrada).",
-      "worker_missing": "Componente de rede não instalado. Ele vem com o pacote do TradeRock (.deb); no AppImage, o assistente oferece instalar. Se você compilou o app, rode scripts/dev-host.sh.",
+      "worker_missing": "Componente de rede não instalado. Ele vem com o pacote do TradeRock (.deb); no AppImage, Configurações → Conexão oferece instalar. Se você compilou o app, rode scripts/dev-host.sh.",
       "pkexec_missing": "Falta o pkexec, que o sistema usa para pedir a senha de administrador.",
       "worker_unsafe": "A instalação do componente de rede ({{path}}) pode ser alterada sem ser administrador. Por segurança, o TradeRock não vai usá-la. Instale de novo.",
       "worker_policy_missing": "A permissão do componente de rede (política do polkit) não está instalada. Instale o TradeRock de novo.",
@@ -746,8 +749,8 @@
       "card_test_passed_some_channels": "A placa funcionou, mas não sintonizou todos os canais (1, 6 e 11). A troca pode falhar se o Switch usar um deles.",
       "network_manager_ok": "NetworkManager configurado para não atrapalhar a troca.",
       "network_manager_unconfigured": "O NetworkManager pode atrapalhar a troca. Configure abaixo (recomendado).",
-      "switch_test_needs_radio": "Escolha e prepare o rádio (etapas 3 e 4) antes do teste com o Switch.",
-      "switch_test_needs_keys": "Envie um prod.keys válido (etapa 2) antes do teste com o Switch.",
+      "switch_test_needs_radio": "Escolha e prepare o rádio (itens Rádio e Componente de rede) antes do teste com o Switch.",
+      "switch_test_needs_keys": "Envie um prod.keys válido (item Chaves) antes do teste com o Switch.",
       "switch_test_not_run": "Faça o teste com o Switch abaixo: é ele que confirma o rádio e o prod.keys.",
       "switch_test_failed": "O teste com o Switch não passou. Veja o resultado abaixo.",
       "worker_appimage_missing": "O componente de rede ainda não foi instalado a partir do AppImage. Use o botão abaixo.",
@@ -822,8 +825,8 @@
       "stepNear": "deixe o Switch perto do PC (até uns 2 metros).",
       "noJoin": "O TradeRock só escuta: ele não entra na sala, e o Switch não recebe nenhum pedido.",
       "offline": "Durante o teste (até {{seconds}} segundos), o Wi-Fi normal desta placa fica desligado. No fim ele volta sozinho.",
-      "needsCard": "Primeiro passe no teste da placa (etapa 4).",
-      "needsKeys": "Primeiro envie o prod.keys (etapa 2).",
+      "needsCard": "Primeiro passe no teste da placa (item Componente de rede).",
+      "needsKeys": "Primeiro envie o prod.keys (item Chaves).",
       "run": "Procurar a sala",
       "again": "Procurar de novo",
       "running": "Procurando a sala… {{seconds}} s",
@@ -845,7 +848,7 @@
         "found_not_decrypted": "A sala foi encontrada, mas não foi decifrada: o prod.keys não está certo.",
         "other_session": "O prod.keys funciona (uma sessão de outro jogo foi decifrada), mas a sala do FireRed/LeafGreen não apareceu.",
         "not_found": "Nenhuma sala encontrada.",
-        "monitor_failed": "A placa não entrou em modo monitor. Refaça o teste da placa (etapa 4).",
+        "monitor_failed": "A placa não entrou em modo monitor. Refaça o teste da placa (item Componente de rede).",
         "channel_failed": "A placa não sintonizou nenhum canal. Outro programa pode estar usando a placa.",
         "scan_failed": "A procura parou com um erro. Tente de novo; se continuar, exporte o relatório no resumo.",
         "engine_error": "O componente de rede não conseguiu iniciar a procura. Tente de novo; se continuar, exporte o relatório no resumo.",
@@ -854,7 +857,7 @@
       "tips": {
         "found_not_decrypted": [
           "Use o prod.keys extraído do seu próprio Switch, com o sistema atualizado. Chaves de outro console ou de uma versão antiga não servem.",
-          "Envie o arquivo de novo na etapa 2 e repita o teste."
+          "Envie o arquivo de novo no item Chaves e repita o teste."
         ],
         "other_session": [
           "Confira se você abriu o Direct Corner como Leader e se ainda está na tela de espera.",
@@ -864,14 +867,14 @@
           "Confira se o Switch está no Direct Corner como Leader, na tela de espera (a sala some quando você sai dela).",
           "Aproxime o Switch do PC.",
           "Confira se o Switch não está no modo avião.",
-          "Se continuar, refaça o teste da placa (etapa 4): a recepção pode ser o problema."
+          "Se continuar, refaça o teste da placa (item Componente de rede): a recepção pode ser o problema."
         ]
       },
       "hints": {
         "missing_master_key_12": "O seu prod.keys não tem a chave do protocolo mais novo do LDN (master_key_12). Consoles atualizados usam esse protocolo: extraia as chaves de novo com o sistema atualizado."
       },
       "esp32Band": "O ESP32 só enxerga salas em 2,4 GHz (canais 1 a 11). Se o Switch estiver ligado a uma rede de 5 GHz, a sala pode não aparecer: desconecte o Switch da internet e abra a sala de novo.",
-      "needsFirmware": "Primeiro confira o firmware do ESP32 na etapa 4."
+      "needsFirmware": "Primeiro confira o firmware do ESP32 no item ESP32: firmware e porta USB."
     },
     "esp32fw": {
       "title": "Firmware do ESP32",
@@ -989,7 +992,7 @@
   },
   "accounts": {
     "title": "Contas",
-    "intro": "Cada conta tem o próprio cofre, histórico e \"Meu treinador\", e começa com os Pokémon de demonstração. O assistente, o prod.keys e o rádio ficam só nesta janela do PC.",
+    "intro": "Cada conta tem o próprio cofre, histórico e \"Meu treinador\", e começa com os Pokémon de demonstração. A configuração da conexão, o prod.keys e o rádio ficam só nesta janela do PC.",
     "owner": "Dono do PC",
     "ownerNoName": "Você (este PC)",
     "ownerHint": "Sem acesso pela rede",
@@ -1039,5 +1042,317 @@
     "ahead_other": "Há {{count}} trocas na sua frente. Você entra na fila e a sua começa sozinha quando chegar a vez.",
     "join": "Entrar na fila",
     "removed": "Você foi tirado da fila por um administrador. Pode entrar de novo quando quiser."
+  },
+  "ui": {
+    "status": {
+      "ready": "Pronto para trocar",
+      "demo": "Modo demonstração",
+      "tested": "Conexão testada",
+      "ownerPc": "A conexão fica no PC do dono",
+      "missing_one": "Falta {{count}} item",
+      "missing_other": "Faltam {{count}} itens",
+      "readyShort": "Pronto",
+      "demoShort": "Demo",
+      "activate": "Falta ligar as trocas de verdade"
+    },
+    "theme": {
+      "darkOn": "Tema escuro",
+      "lightOn": "Tema claro",
+      "toggle": "Claro / escuro"
+    },
+    "mobileNav": {
+      "home": "Início",
+      "swap_horiz": "Trocar",
+      "inventory_2": "Cofre",
+      "add_circle": "Criar",
+      "more": "Mais"
+    },
+    "logoutAs": "Sair da conta {{name}}",
+    "login": {
+      "homeOnly": "Só funciona na rede da sua casa"
+    },
+    "home": {
+      "hello": "Olá, treinador!",
+      "helloUser": "Olá, {{name}}!",
+      "intro": "Mande Pokémon do PC para o seu FireRed / LeafGreen e guarde os que receber.",
+      "tradeSub": "Escolha até 6 Pokémon e mande para o Switch.",
+      "vault": "Abrir o cofre",
+      "vaultSub": "Veja, organize e edite seus Pokémon.",
+      "createSub": "Monte um Pokémon legal em poucos cliques.",
+      "allReady": "Tudo pronto para trocar",
+      "readySub": "Abra o Direct Corner no Switch e comece.",
+      "missing_one": "Falta {{count}} item para a troca de verdade",
+      "missing_other": "Faltam {{count}} itens para a troca de verdade",
+      "demoSub": "Enquanto isso, dá para usar tudo em modo demonstração.",
+      "fixNow": "Resolver agora",
+      "tryDemo": "Testar uma troca (demo)",
+      "lastTrade": "Última troca",
+      "seeHistory": "Ver histórico",
+      "inVault_one": "{{count}} Pokémon no cofre",
+      "inVault_other": "{{count}} Pokémon no cofre",
+      "activateTitle": "Tudo testado: falta ligar as trocas de verdade"
+    },
+    "conn": {
+      "short": {
+        "system": "Sistema",
+        "keys": "Chaves",
+        "radio": "Rádio",
+        "driver": "Rede / USB",
+        "switch": "Teste com Switch"
+      },
+      "state": {
+        "ok": "OK",
+        "warn": "Atenção",
+        "missing": "Falta",
+        "blocked": "Esperando",
+        "idle": "Não testado",
+        "guide": "Guia",
+        "testing": "Testando…"
+      },
+      "title": {
+        "system": "Sistema compatível",
+        "keys": "Chaves do Switch (prod.keys)",
+        "radio": "Rádio para falar com o Switch",
+        "driver": "Componente de rede",
+        "driverEsp32": "ESP32: firmware e porta USB",
+        "game": "Jogo pronto no Switch",
+        "switch": "Teste com o Switch"
+      },
+      "what": {
+        "system": "Com a placa Wi-Fi, o TradeRock controla a placa diretamente, e isso só funciona com Linux instalado no PC (não serve máquina virtual nem WSL). Com ESP32, qualquer sistema serve.",
+        "keys": "Os Switches conversam de forma criptografada. O arquivo prod.keys tem as chaves para entender essa conversa. Ele é único do seu console e sai dele.",
+        "radio": "É o que fala “pelo ar” com o Switch: a placa Wi-Fi do seu PC ou uma plaquinha ESP32 ligada no USB. Basta um dos dois.",
+        "driver": "Um programinha que deixa a placa Wi-Fi falar a “língua” do Switch. Instala uma vez só e pede a senha de administrador quando usado.",
+        "usb": "O ESP32 precisa do firmware certo e o PC precisa de permissão para conversar com ele pela porta USB.",
+        "game": "No FireRed/LeafGreen, a troca sem fio acontece no Direct Corner (2º andar do Centro Pokémon). Você cria a sala como Leader e o TradeRock entra nela como se fosse outro Switch.",
+        "switch": "Um teste rápido, sem trocar nada: o TradeRock procura a sala do seu Switch e confere se consegue entender a conversa."
+      },
+      "desc": {
+        "systemOk": "Linux instalado de verdade",
+        "systemWindows": "Windows: as trocas usam um ESP32 via USB",
+        "systemWarn": "A placa Wi-Fi não funciona aqui. Use um ESP32.",
+        "system_wsl": "Você está no WSL: a placa Wi-Fi não funciona aqui. Use um ESP32 ou o Linux de verdade.",
+        "system_vm": "Máquina virtual: a placa Wi-Fi não funciona aqui. Use um ESP32.",
+        "system_windows": "Windows: as trocas usam um ESP32 via USB",
+        "keysOk": "Arquivo guardado com segurança",
+        "keysSkipped": "Pulado: as trocas ficam só na demonstração",
+        "keysMissing": "Arquivo extraído do seu próprio Switch",
+        "radioNone": "Escolha a placa Wi-Fi ou um ESP32",
+        "radioWifi": "Placa Wi-Fi: escolha qual placa usar",
+        "radioWifiCard": "Placa Wi-Fi: {{model}}",
+        "radioEsp32": "ESP32 via USB: escolha a placa e a porta",
+        "radioEsp32Board": "ESP32 via USB: {{model}}",
+        "driverNoRadio": "Escolha o rádio primeiro.",
+        "driverWifiOk": "Instalado e testado",
+        "driverEspOk": "Firmware respondendo na porta escolhida",
+        "game": "Direct Corner liberado (cerca de 20–40 min de jogo)",
+        "switchOk": "Sala encontrada e decifrada. Troca de verdade liberada!",
+        "switchIdle": "Abra a sala como Leader no Switch e clique em Testar. Leva até {{seconds}} s."
+      },
+      "radio": {
+        "wifi": "Placa Wi-Fi do PC",
+        "wifiSub": "Usa a placa do seu PC. Precisa de Linux de verdade.",
+        "esp32": "ESP32 via USB",
+        "esp32Sub": "Plaquinha barata. Funciona em qualquer PC e não derruba a internet."
+      },
+      "cardsFound": "Placas encontradas no seu PC",
+      "esp32Guide": "Como escolher e ligar o ESP32",
+      "test": "Testar",
+      "testNow": "Testar agora",
+      "checkAll": "Verificar tudo",
+      "checking": "Verificando…",
+      "checked": "Verificação concluída",
+      "summarySub": "Cada item mostra o que falta e como resolver.",
+      "reportHint": "Relatório sem chaves, nomes ou caminhos pessoais",
+      "activate": "Usar nas trocas de verdade",
+      "activateHelp": "Tudo testado. Falta só ligar o rádio nas trocas.",
+      "activated": "Trocas de verdade ligadas",
+      "keysNote": "Use só as chaves do seu próprio console. Não baixe da internet nem compartilhe. O TradeRock guarda o arquivo só para você e nunca o envia pela rede.",
+      "remote": "A conexão é configurada no PC do dono. Aqui você só acompanha o status.",
+      "fullText": "Explicação completa",
+      "keysSteps": [
+        "No seu Switch desbloqueado, rode o Lockpick_RCM.",
+        "Copie o arquivo prod.keys do cartão SD para o PC.",
+        "Clique em Enviar prod.keys abaixo."
+      ]
+    },
+    "settings": {
+      "tabs": {
+        "conexao": "Conexão",
+        "preferencias": "Preferências",
+        "avancado": "Avançado"
+      },
+      "unitTimes": "vezes",
+      "unitS": "s",
+      "unitMin": "min",
+      "trainerSub": "Os dados do seu save. Pokémon criados chegam como seus e obedecem sempre.",
+      "trainerTip": "Nome e ID aparecem no cartão de treinador do jogo. O ID secreto não aparece: mande um Pokémon seu numa troca e use “Pegar de um Pokémon recebido”.",
+      "nameHint": "Até 7 letras",
+      "gender": "Gênero",
+      "badgeN": "Insígnia {{n}}",
+      "themeSub": "Claro, escuro ou igual ao sistema.",
+      "allowIllegal": "Permitir trocar Pokémon ilegais",
+      "illegalSub": "Cada troca com um ilegal ainda pede confirmação.",
+      "illegalTip": "“Ilegal” quer dizer que o PKHeX acha que esse Pokémon não poderia existir no jogo original (status, golpes ou origem impossíveis). O jogo pode recusar a troca. Deixe desligado se não tiver certeza.",
+      "defaultsOk": "Os valores padrão funcionam para quase todo mundo.",
+      "tempos": "Tempos da troca",
+      "tempoTip": "Só mexa se as trocas falharem. Tentativas: quantas vezes procura a sala. Aprovar a entrada: quanto tempo você tem para dizer Sim no Switch. Parado na sala e tempo máximo: depois disso a troca é cancelada.",
+      "undo": "Desfazer",
+      "fields": {
+        "maxAttempts": "Tentativas de conexão",
+        "retryDelaySeconds": "Espera entre tentativas",
+        "approvalTimeoutSeconds": "Tempo para aprovar a entrada",
+        "phaseTimeoutSeconds": "Tempo parado na sala",
+        "totalTimeoutMinutes": "Tempo máximo da troca"
+      },
+      "engineTip": "O motor é quem conversa com o Switch. A simulação finge um Switch para você conhecer o passo a passo. A placa Wi-Fi e o ESP32 aparecem depois de configurados em Conexão.",
+      "server": "Modo servidor",
+      "serverTip": "Transforma este PC num pequeno servidor da sua casa. Quem estiver no mesmo Wi-Fi abre o endereço no navegador do celular e usa o próprio cofre. As trocas usam o rádio deste PC, uma por vez.",
+      "accountsTip": "Cada pessoa tem o próprio cofre, histórico e treinador. Usuário só troca e organiza o próprio cofre. Administrador também cria contas e pode tirar pessoas da fila.",
+      "dev": "Configuração da conexão",
+      "devTip": "Recomeçar apaga as escolhas da conexão (rádio, placa, porta e testes) para configurar de novo. O prod.keys continua guardado. Em desenvolvimento, dá também para simular outro tipo de PC sem mudar nada de verdade.",
+      "devSub": "Simular outro tipo de PC (só em desenvolvimento) ou recomeçar a configuração.",
+      "restartSub": "Recomeçar a configuração da conexão do zero.",
+      "restartConfirm": "Sim, recomeçar",
+      "restarted": "Configuração recomeçada"
+    },
+    "lv": "Nv. {{level}}",
+    "stats": {
+      "hp": "PS",
+      "atk": "Atq",
+      "def": "Def",
+      "spa": "AtqE",
+      "spd": "DefE",
+      "spe": "Vel"
+    },
+    "trade": {
+      "title": "Trocar com o Switch",
+      "steps": {
+        "party": "Time",
+        "trainer": "Jogo e treinador",
+        "reminder": "Preparar o Switch",
+        "queue": "Fila"
+      },
+      "demoBanner": "Tudo funciona, mas as trocas são simuladas até a conexão ficar pronta.",
+      "setupConnection": "Configurar conexão",
+      "teamTip": "O TradeRock finge ser outro Switch com este time. Marque quem vai para o seu jogo. O time precisa de 2 ou mais Pokémon porque o jogo não deixa trocar o último. Todos ficam guardados no cofre antes de começar.",
+      "empty": "Vazio",
+      "send": "Enviar",
+      "stays": "Fica",
+      "atLeastTwo": "Pelo menos 2 no time",
+      "goingCount_one": "{{count}} vai para o Switch",
+      "goingCount_other": "{{count}} vão para o Switch",
+      "fromVault": "Escolha do cofre",
+      "searchVault": "Buscar no cofre",
+      "whichGame": "Qual jogo está no Switch?",
+      "nameOnSwitch": "Nome que vai aparecer no Switch",
+      "nameTip": "É o nome que você vai aprovar no pedido para entrar na sala. Até 7 caracteres, sem acento (o jogo não tem “ã” ou “ç”). Pode usar . - ! ?",
+      "moreOptions": "Mais opções (ID secreto)",
+      "lessOptions": "Menos opções",
+      "saveTrainer": "Salvar este treinador",
+      "prepSub": "Faça isso no jogo antes de clicar em Começar.",
+      "prep": [
+        {
+          "title": "Centro Pokémon",
+          "sub": "Suba para o 2º andar."
+        },
+        {
+          "title": "Direct Corner",
+          "sub": "Fale com a atendente da esquerda e escolha trocar."
+        },
+        {
+          "title": "Seja o Leader",
+          "sub": "Crie a sala. O Switch fica esperando."
+        },
+        {
+          "title": "Perto do PC",
+          "sub": "Deixe o Switch perto do PC ou do ESP32."
+        }
+      ],
+      "learnMore": "Saiba mais",
+      "prepMore": "O Direct Corner é liberado depois de uns 20 a 40 minutos de jogo. O Switch cria uma rede sem fio local e o TradeRock entra nela como se fosse um segundo Switch. A conexão às vezes precisa de algumas tentativas: o TradeRock tenta de novo sozinho.",
+      "queueNote": "Você está pela rede: a troca entra na fila do PC.",
+      "sending": "Enviando {{names}}",
+      "nothingToSend": "Nada para enviar",
+      "trainerLabel": "treinador",
+      "continue": "Continuar"
+    },
+    "live": {
+      "running": "Troca em andamento",
+      "savedInbox": "O Pokémon recebido foi guardado na Caixa de entrada.",
+      "seeInVault": "Ver no cofre",
+      "techDetails": "Detalhes técnicos"
+    },
+    "vault": {
+      "import": "Importar",
+      "importFile": "Arquivo de Pokémon",
+      "importFileSub": ".pk3 ou .ek3 do seu PC",
+      "importSaveSub": "Escolha os Pokémon de um .sav",
+      "injectSub": "Coloca Pokémon do cofre num .sav",
+      "select": "Selecionar",
+      "search": "Buscar por nome, número, apelido ou treinador",
+      "to": "a",
+      "clear": "Limpar",
+      "count_one": "{{count}} Pokémon",
+      "count_other": "{{count}} Pokémon",
+      "all": "Todos",
+      "nothingHere": "Nenhum Pokémon aqui.",
+      "tabs": {
+        "resumo": "Resumo",
+        "golpes": "Golpes",
+        "status": "Status",
+        "origem": "Origem"
+      },
+      "none": "Nenhum",
+      "ot": "Treinador original",
+      "ivEv": "IV (0–31) · EV (0–255)",
+      "ivEvTip": "IV é a “genética” do Pokémon (0 a 31), já vem definida. EV é o treino (até 255 por status e 510 no total). Os dois deixam os status mais altos.",
+      "originLabel": "Como chegou",
+      "hatched": "Ovo",
+      "file": "Arquivo",
+      "added": "Guardado em",
+      "removeTag": "Tirar a tag {{name}}",
+      "newTag": "+ tag",
+      "tagColor": "Cor da tag",
+      "edit": "Editar",
+      "useInTrade": "Usar na troca",
+      "exportPk3": "Exportar .pk3",
+      "natureTip": "Na 3ª geração a natureza sai de um número interno (PID). Mudar a natureza gera o Pokémon de novo, como no Criar.",
+      "natureRegenerates": "Com outra natureza, o TradeRock gera o Pokémon de novo (como no Criar) para ele continuar possível no jogo. Os IVs podem mudar.",
+      "moveN": "Golpe {{n}}",
+      "saveChanges": "Salvar alterações",
+      "saved": "Alterações salvas",
+      "savedIllegal": "Salvo, mas o PKHeX acusa problemas de legalidade",
+      "errors": {
+        "pokemon_duplicate": "O resultado é igual a outro Pokémon do cofre."
+      }
+    },
+    "builder": {
+      "forGame": "Para o jogo",
+      "movesHint": "Deixe vazio para usar os golpes que ele saberia nesse nível.",
+      "moreOptions": "Mais opções (item, IVs, EVs, origem, treinador)",
+      "lessOptions": "Menos opções",
+      "ivTip": "IV é a “genética” do Pokémon (0 a 31). EV é o treino (até 255 por status e 510 no total). Em “tanto faz”, o TradeRock escolhe valores possíveis.",
+      "advancedBanner": "Dados brutos, como no PKHeX. Nada é corrigido sozinho: o painel ao lado mostra o que ficou errado.",
+      "howItWorks": "Como funciona",
+      "legalAttention": "Legal, com atenção",
+      "legalTip": "Verificado pelo PKHeX {{version}}. “Atenção” não torna o Pokémon ilegal."
+    },
+    "history": {
+      "events": "Eventos",
+      "notReceived": "{{names}} (nada recebido)"
+    },
+    "about": {
+      "intro": "Troca Pokémon com o FireRed e LeafGreen do Switch usando o wireless local do jogo. O seu PC (ou um ESP32) finge ser um segundo Switch na sala do Direct Corner.",
+      "keysTitle": "Suas chaves ficam com você",
+      "keysSub": "Nunca baixa, mostra ou envia o prod.keys.",
+      "offlineTitle": "Funciona offline",
+      "offlineSub": "Não manda dados para lugar nenhum.",
+      "freeTitle": "Software livre",
+      "freeSub": "AGPL-3.0: use, estude e modifique.",
+      "license": "Licença, código-fonte e marcas",
+      "projects_one": "{{count}} projeto",
+      "projects_other": "{{count}} projetos"
+    }
   }
 }

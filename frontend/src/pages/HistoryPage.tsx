@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PokemonCard } from '../components/PokemonCard'
-import { Badge, Button, Card } from '../components/ui'
-import { api } from '../lib/api'
+import { Icon } from '../components/ui'
+import { api, spriteUrl } from '../lib/api'
 import type { Pokemon, TradeEvent, TradeHistoryItem } from '../lib/types'
 
-const tones = { running: 'sky', completed: 'emerald', partially_completed: 'amber', failed: 'red', cancelled: 'slate' } as const
+const statusLook = {
+  running: 'bg-info-soft text-info',
+  completed: 'bg-ok-soft text-ok',
+  partially_completed: 'bg-warn-soft text-warn',
+  failed: 'bg-bad-soft text-bad',
+  cancelled: 'bg-surface2 text-muted',
+} as const
 
 export default function HistoryPage() {
   const { t, i18n } = useTranslation()
@@ -21,6 +26,17 @@ export default function HistoryPage() {
       .catch(() => undefined)
   }, [])
 
+  // Os da lixeira não vêm em /api/pokemon: busca um por um.
+  useEffect(() => {
+    if (!items) return
+    const ids = items.flatMap((i) => i.entries.flatMap((e) => [e.sentPokemonId, e.receivedPokemonId])).filter((id): id is string => !!id && !pokemon[id])
+    for (const id of new Set(ids))
+      api
+        .get<Pokemon>(`/api/pokemon/${id}`)
+        .then((p) => setPokemon((m) => ({ ...m, [id]: p })))
+        .catch(() => undefined)
+  }, [items]) // só quando a lista chega
+
   async function toggle(id: string) {
     if (open[id]) {
       setOpen(({ [id]: _removed, ...rest }) => rest)
@@ -30,60 +46,83 @@ export default function HistoryPage() {
     setOpen((o) => ({ ...o, [id]: detail.events }))
   }
 
+  const tile = (id: string | null, received: boolean) => {
+    const p = id ? pokemon[id] : undefined
+    if (!id) return <div className="h-16 w-16 rounded-lg border-[1.5px] border-dashed border-line" />
+    return (
+      <div
+        title={p ? `${(p.nickname || p.speciesName).toUpperCase()} · ${t('ui.lv', { level: p.level })}` : undefined}
+        className={`flex h-16 w-16 items-center justify-center rounded-lg ${received ? 'bg-accent-soft' : 'bg-tile'}`}
+      >
+        {p && <img src={spriteUrl(p.species)} alt="" className="pixelated h-14 w-14" />}
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">{t('history.title')}</h1>
-      {items === null && <p className="text-slate-500">{t('common.loading')}</p>}
-      {items?.length === 0 && <p className="text-slate-500">{t('history.empty')}</p>}
-      {items?.map((item) => (
-        <Card key={item.id} className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">{new Date(item.startedAt).toLocaleString(i18n.language)}</span>
-            <Badge tone={tones[item.status]}>{t(`trade.result.${item.status === 'running' ? 'running' : item.status}`)}</Badge>
-            {item.isSimulation && <Badge tone="amber">{t('history.simulation')}</Badge>}
-            <span className="text-sm text-slate-500">
-              {t(`trade.trainer.${item.game}`)} · {item.trainerName} · {t('history.trades', { done: item.tradesCompleted, planned: item.tradesPlanned })}{' '}
-              · {t('history.attempts', { count: item.attempts })}
-            </span>
-          </div>
-          {item.failureCode && item.status !== 'completed' && (
-            <p className="text-sm text-slate-600 dark:text-slate-300">{t(`failures.${item.failureCode}`, { defaultValue: item.failureMessage ?? '' })}</p>
-          )}
-          <div className="space-y-2">
-            {item.entries.map((entry) => (
-              <div key={entry.tradeIndex} className="grid items-center gap-2 md:grid-cols-[1fr_auto_1fr]">
-                <div>
-                  <p className="mb-1 text-xs uppercase text-slate-500">{t('history.sent')}</p>
-                  {pokemon[entry.sentPokemonId] ? <PokemonCard pokemon={pokemon[entry.sentPokemonId]} compact /> : '—'}
-                </div>
-                <span className="hidden text-2xl text-slate-400 md:block" aria-hidden>
-                  ⇄
-                </span>
-                <div>
-                  <p className="mb-1 text-xs uppercase text-slate-500">{t('history.received')}</p>
-                  {entry.receivedPokemonId && pokemon[entry.receivedPokemonId] ? (
-                    <PokemonCard pokemon={pokemon[entry.receivedPokemonId]} compact />
-                  ) : (
-                    <p className="text-sm text-slate-400">{t('history.nothing')}</p>
-                  )}
-                </div>
+    <div className="flex flex-col gap-4">
+      <h1 className="font-display text-[23px] font-bold md:text-[28px]">{t('nav.history')}</h1>
+      {items === null && <p className="text-muted">{t('common.loading')}</p>}
+      {items?.length === 0 && (
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border border-line bg-surface p-10 text-center text-muted">
+          <Icon name="history" className="text-4xl" />
+          {t('history.empty')}
+        </div>
+      )}
+      {items?.map((item) => {
+        const sent = item.entries.map((e) => e.sentPokemonId)
+        const received = item.entries.map((e) => e.receivedPokemonId).filter((id): id is string => !!id)
+        const names = (ids: string[]) => ids.map((id) => (pokemon[id] ? (pokemon[id].nickname || pokemon[id].speciesName).toUpperCase() : '?')).join(', ')
+        const title =
+          received.length > 0 ? `${names(sent)} → ${names(received)}` : sent.length > 0 ? t('ui.history.notReceived', { names: names(sent) }) : t(`trade.result.${item.status}`)
+        return (
+          <div key={item.id} className="rounded-xl border border-line bg-surface">
+            <div className="flex flex-wrap items-center gap-[18px] px-[18px] py-4">
+              <div className="flex items-center gap-2">
+                {sent.slice(0, 3).map((id, i) => (
+                  <span key={`${id}-${i}`}>{tile(id, false)}</span>
+                ))}
+                <Icon name={received.length ? 'sync_alt' : 'east'} className="text-2xl text-muted" />
+                {received.length ? received.slice(0, 3).map((id, i) => <span key={`${id}-${i}`}>{tile(id, true)}</span>) : tile(null, true)}
               </div>
-            ))}
+              <div className="min-w-[200px] flex-1">
+                <div className="text-[15.5px] font-bold [overflow-wrap:anywhere]">{title}</div>
+                <div className="text-[13px] text-muted">
+                  {new Date(item.startedAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' })} · {t(`trade.trainer.${item.game}`)} · {item.trainerName} ·{' '}
+                  {t('history.trades', { done: item.tradesCompleted, planned: item.tradesPlanned })} · {t('history.attempts', { count: item.attempts })}
+                </div>
+                {item.failureCode && item.status !== 'completed' && (
+                  <div className="mt-0.5 text-[13px] text-muted">{t(`failures.${item.failureCode}`, { defaultValue: item.failureMessage ?? '' })}</div>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {item.isSimulation && <span className="flex h-6 items-center rounded-full bg-warn-soft px-2.5 text-xs font-bold text-warn">{t('demo.badge')}</span>}
+                <span className={`flex h-6 items-center rounded-full px-2.5 text-xs font-bold ${statusLook[item.status]}`}>
+                  {t(`trade.result.${item.status === 'running' ? 'running' : item.status}`)}
+                </span>
+                <button
+                  type="button"
+                  aria-expanded={!!open[item.id]}
+                  onClick={() => void toggle(item.id)}
+                  className="flex h-8 cursor-pointer items-center gap-0.5 rounded-lg bg-surface2 px-2.5 text-[13px] font-semibold"
+                >
+                  {t('ui.history.events')}
+                  <Icon name={open[item.id] ? 'expand_less' : 'expand_more'} className="text-lg" />
+                </button>
+              </div>
+            </div>
+            {open[item.id] && (
+              <ol className="flex max-h-64 flex-col gap-1 overflow-y-auto px-[18px] pb-4 font-mono text-[12.5px] text-muted">
+                {open[item.id].map((e) => (
+                  <li key={e.seq}>
+                    {new Date(e.at).toLocaleTimeString(i18n.language)} [{e.kind}] {e.message}
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
-          <Button variant="ghost" onClick={() => void toggle(item.id)}>
-            {open[item.id] ? t('history.hide') : t('history.details')}
-          </Button>
-          {open[item.id] && (
-            <ol className="max-h-64 space-y-1 overflow-y-auto font-mono text-xs text-slate-600 dark:text-slate-300">
-              {open[item.id].map((e) => (
-                <li key={e.seq}>
-                  <span className="text-slate-400">{new Date(e.at).toLocaleTimeString(i18n.language)}</span> [{e.kind}] {e.message}
-                </li>
-              ))}
-            </ol>
-          )}
-        </Card>
-      ))}
+        )
+      })}
     </div>
   )
 }

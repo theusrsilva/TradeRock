@@ -1,7 +1,7 @@
 /** Esquema: Centro Pokémon (2º andar) → balcão do Direct Corner → "ser Leader". Sem imagens do jogo. */
 export function SwitchReady({ labels }: { labels: [string, string, string] }) {
   return (
-    <svg viewBox="0 0 360 120" role="img" aria-label={labels.join(' → ')} className="w-full max-w-lg text-slate-700 dark:text-slate-200">
+    <svg viewBox="-34 0 428 120" role="img" aria-label={labels.join(' → ')} className="w-full max-w-lg text-slate-700 dark:text-slate-200">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
           <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
