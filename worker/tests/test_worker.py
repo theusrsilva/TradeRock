@@ -246,6 +246,36 @@ class RadioTests(unittest.TestCase):
             self.assertEqual(mode & 0o022, 0)
             self.assertIn("interface-name:ldn*", radio.NM_CONF)
 
+    IW_SO_24GHZ = ("Wiphy phy0\n\tBand 1:\n\t\tFrequencies:\n"
+                   "\t\t\t* 2412.0 MHz [1] (20.0 dBm)\n\t\t\t* 2437.0 MHz [6] (20.0 dBm)\n"
+                   "\t\t\t* 2462.0 MHz [11] (20.0 dBm)\n\t\t\t* 2484.0 MHz [14] (20.0 dBm) (no IR)\n")
+    IW_DUAS_BANDAS = IW_SO_24GHZ + ("\tBand 2:\n\t\tFrequencies:\n"
+                                    "\t\t\t* 5180.0 MHz [36] (23.0 dBm)\n"
+                                    "\t\t\t* 5200.0 MHz [40] (disabled)\n"
+                                    "\t\t\t* 5220.0 MHz [44] (23.0 dBm) (no IR)\n")
+    CANAIS = (1, 6, 11, 36, 40, 44, 48)
+
+    def test_canais_placa_so_24ghz(self):
+        # mt7601u: sem Band 2; a troca abortava no canal 36.
+        runner = lambda cmd: (0, self.IW_SO_24GHZ)  # noqa: E731
+        self.assertEqual(radio.supported_channels("phy0", self.CANAIS, runner), [1, 6, 11])
+
+    def test_canais_duas_bandas_sem_os_desligados(self):
+        calls = []
+
+        def runner(cmd):
+            calls.append(cmd)
+            return 0, self.IW_DUAS_BANDAS
+
+        self.assertEqual(radio.supported_channels("phy1", self.CANAIS, runner), [1, 6, 11, 36, 44])
+        self.assertEqual(calls, [["iw", "phy", "phy1", "info"]])
+
+    def test_canais_sem_iw_ou_sem_resposta_util(self):
+        self.assertEqual(radio.supported_channels("phy0", self.CANAIS, lambda cmd: (127, "")),
+                         list(self.CANAIS))
+        self.assertEqual(radio.supported_channels("phy0", self.CANAIS, lambda cmd: (0, "Wiphy phy0\n")),
+                         list(self.CANAIS))
+
 
 class BundledToolsTests(unittest.TestCase):
     def test_bin_embutido_vem_antes_do_sistema(self):
@@ -424,6 +454,12 @@ class TradeChildTests(unittest.TestCase):
                 self.assertEqual(out[-1]["outcome"], "failed")
                 self.assertEqual(out[-1]["code"], code)
                 self.assertEqual(out[-1]["retryable"], retryable)
+                if scenario == "no_network":
+                    # A causa, que vem na linha de baixo do erro do motor, chega ao app.
+                    self.assertEqual(out[-1]["message"], "LDN join failed after 1 attempt(s): "
+                                     "no joinable FRLG network (saw 0, 0 joinable)")
+                self.assertTrue(any(m["type"] == "debug" and m["text"].startswith("canais da varredura:")
+                                    for m in out))
 
     def test_nome_que_o_jogo_nao_aceita(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -16,7 +16,9 @@ import signal
 import sys
 import traceback
 
+from .beacon_child import CHANNELS
 from .events import classify, join_failure
+from .radio import supported_channels
 
 
 class Emitter:
@@ -135,6 +137,12 @@ def main(engine_dir):
         end("failed", "invalid_request", str(e))
         return 0
 
+    # Só os canais que a placa sintoniza: o ldn.scan aborta no primeiro canal recusado (placa sem
+    # 5 GHz), e o teste com o Switch já pula esses canais (beacon_child).
+    channels = supported_channels(params["phy"], CHANNELS)
+    os.environ["FRLG_CHANNELS"] = ",".join(str(c) for c in channels)
+    emit({"type": "debug", "text": f"canais da varredura: {os.environ['FRLG_CHANNELS']}"})
+
     lg = EventLog(False)
     try:
         engine = frlgtrade.run_live(run_config, lg)
@@ -147,7 +155,8 @@ def main(engine_dir):
         code, retryable = join_failure(text)
         if code == "no_network_found" and watch.undecryptable:
             code, retryable = "beacon_not_decrypted", False
-        end("failed", code, text.splitlines()[0][:300], retryable)
+        # A causa vem nas linhas de baixo ("LDN join failed after 1 attempt(s):\n<causa>").
+        end("failed", code, " ".join(text.split())[:300], retryable)
         return 0
     except Exception as e:  # noqa: BLE001 - qualquer outra falha do motor vira erro legível
         emit({"type": "debug", "text": traceback.format_exc()[-4000:]})
