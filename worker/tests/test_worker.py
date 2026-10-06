@@ -6,6 +6,7 @@ import glob
 import io
 import json
 import logging
+import shutil
 import os
 import subprocess
 import sys
@@ -135,6 +136,51 @@ class EventMapTests(unittest.TestCase):
         self.assertEqual(beacon_child.CHANNELS, (1, 6, 11, 36, 40, 44, 48))
         self.assertEqual(beacon_child.DWELL, 0.6)
 
+    def test_salvamento_sobrevive_a_evolucao_na_troca(self):
+        """Patch 0003: a cadeia de salvamento pós-troca aguenta a pausa de uma evolução e, se a rede de
+        segurança disparar, volta quando o host retoma as barreiras (antes, o Switch travava em "Saving...")."""
+        engine = os.path.join(REPO, "engines", "frlg-ldn-trade")
+        pk3 = os.path.join(REPO, "engines", "frlg-ldn-trade-esp32", "assets", "party", "mewtwo.pk3")
+        if not (os.path.isdir(os.path.join(engine, "frlgsim")) and os.path.exists(pk3)):
+            self.skipTest("submódulos ausentes")
+        with tempfile.TemporaryDirectory() as tmp:
+            shutil.copytree(os.path.join(engine, "frlgsim"), os.path.join(tmp, "frlgsim"))
+            shutil.copy(os.path.join(engine, "frlgtrade.py"), tmp)
+            for p in sorted(glob.glob(os.path.join(REPO, "engines", "patches", "frlg-ldn-trade", "*.patch"))):
+                with open(p, "rb") as f:
+                    subprocess.run(["patch", "--quiet", "-p0", "-d", tmp], stdin=f, check=True)
+            script = r"""
+import json, sys
+from frlgsim import mon, rfu, trade
+eng = trade.TradeEngine([mon.Mon.from_pk3(open(sys.argv[1], "rb").read())])
+eng.barrier.local_count = 5
+eng._save_barriers, eng.leaving = True, True      # logo depois do commit da última troca
+quiet = {"positional": []}
+slot = b"".join(w.to_bytes(2, "little") for w in rfu.exit_standby_words(5))
+def run(frames, f):
+    for _ in range(frames):
+        eng.feed_in_frame(f)
+        eng.tick()
+out = {}
+run(1200, quiet)                                 # ~20 s de evolução, sem barreira do host
+out["evolucao"] = eng._save_barriers
+run(3000, quiet)                                 # e mais (golpe novo): passa da rede de segurança
+out["rede"] = eng._save_barriers
+run(10, {"positional": [(0, slot)]})            # o host volta com a barreira count=5
+run(100, quiet)
+out["retomou"] = eng._save_barriers
+out["proxima"] = [eng.barrier.mode, eng.barrier.initiated, eng.barrier.local_count]
+print(json.dumps(out))
+"""
+            done = subprocess.run([sys.executable, "-c", script, pk3], cwd=tmp, capture_output=True,
+                                  text=True, timeout=120)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        out = json.loads(done.stdout)
+        self.assertTrue(out["evolucao"])                 # 20 s quieto não encerra mais a cadeia
+        self.assertFalse(out["rede"])                    # a rede de segurança ainda existe
+        self.assertTrue(out["retomou"])                  # e o host de volta reabre a cadeia
+        self.assertEqual(out["proxima"], ["STANDBY", True, 6])  # já iniciando a rodada seguinte
+
 
 class FakeRunner:
     def __init__(self, nm_output="wlp2s0:connected\n"):
@@ -211,6 +257,36 @@ class RadioTests(unittest.TestCase):
                     self.assertEqual(mode, 0o644, path)
         finally:
             os.umask(old)
+
+    IW_SO_24GHZ = ("Wiphy phy0\n\tBand 1:\n\t\tFrequencies:\n"
+                   "\t\t\t* 2412.0 MHz [1] (20.0 dBm)\n\t\t\t* 2437.0 MHz [6] (20.0 dBm)\n"
+                   "\t\t\t* 2462.0 MHz [11] (20.0 dBm)\n\t\t\t* 2484.0 MHz [14] (20.0 dBm) (no IR)\n")
+    IW_DUAS_BANDAS = IW_SO_24GHZ + ("\tBand 2:\n\t\tFrequencies:\n"
+                                    "\t\t\t* 5180.0 MHz [36] (23.0 dBm)\n"
+                                    "\t\t\t* 5200.0 MHz [40] (disabled)\n"
+                                    "\t\t\t* 5220.0 MHz [44] (23.0 dBm) (no IR)\n")
+    CANAIS = (1, 6, 11, 36, 40, 44, 48)
+
+    def test_canais_placa_so_24ghz(self):
+        # mt7601u: sem Band 2; a troca abortava no canal 36.
+        runner = lambda cmd: (0, self.IW_SO_24GHZ)  # noqa: E731
+        self.assertEqual(radio.supported_channels("phy0", self.CANAIS, runner), [1, 6, 11])
+
+    def test_canais_duas_bandas_sem_os_desligados(self):
+        calls = []
+
+        def runner(cmd):
+            calls.append(cmd)
+            return 0, self.IW_DUAS_BANDAS
+
+        self.assertEqual(radio.supported_channels("phy1", self.CANAIS, runner), [1, 6, 11, 36, 44])
+        self.assertEqual(calls, [["iw", "phy", "phy1", "info"]])
+
+    def test_canais_sem_iw_ou_sem_resposta_util(self):
+        self.assertEqual(radio.supported_channels("phy0", self.CANAIS, lambda cmd: (127, "")),
+                         list(self.CANAIS))
+        self.assertEqual(radio.supported_channels("phy0", self.CANAIS, lambda cmd: (0, "Wiphy phy0\n")),
+                         list(self.CANAIS))
 
 
 class BundledToolsTests(unittest.TestCase):
@@ -390,6 +466,12 @@ class TradeChildTests(unittest.TestCase):
                 self.assertEqual(out[-1]["outcome"], "failed")
                 self.assertEqual(out[-1]["code"], code)
                 self.assertEqual(out[-1]["retryable"], retryable)
+                if scenario == "no_network":
+                    # A causa, que vem na linha de baixo do erro do motor, chega ao app.
+                    self.assertEqual(out[-1]["message"], "LDN join failed after 1 attempt(s): "
+                                     "no joinable FRLG network (saw 0, 0 joinable)")
+                self.assertTrue(any(m["type"] == "debug" and m["text"].startswith("canais da varredura:")
+                                    for m in out))
 
     def test_nome_que_o_jogo_nao_aceita(self):
         with tempfile.TemporaryDirectory() as tmp:
