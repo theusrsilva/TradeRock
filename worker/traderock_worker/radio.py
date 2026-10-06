@@ -7,6 +7,7 @@ NetworkManager, se era assim).
 """
 
 import os
+import re
 import subprocess
 from dataclasses import dataclass
 
@@ -61,6 +62,29 @@ def which(tool):
         if os.access(p, os.X_OK):
             return p
     return None
+
+
+# Linha de canal do `iw phy <phy> info`: "* 2412.0 MHz [1] (20.0 dBm)" ou "* 5180.0 MHz [36] (disabled)".
+IW_CHANNEL_RE = re.compile(r"^\s*\*\s+[\d.]+\s+MHz\s+\[(\d+)\](.*)$")
+
+
+def supported_channels(phy, wanted, runner=run):
+    """Os canais de `wanted` que a placa sintoniza, na mesma ordem.
+
+    O ldn.scan da troca aborta no primeiro canal que a placa recusa (placa só de 2,4 GHz nos canais
+    de 5 GHz), mesmo com a sala já vista num canal anterior. Se o `iw` falhar ou nada sobrar,
+    devolve `wanted` como está: o motor mostra o erro de sempre.
+    """
+    code, out = runner(["iw", "phy", phy, "info"])
+    if code != 0:
+        return list(wanted)
+    enabled = set()
+    for line in out.splitlines():
+        m = IW_CHANNEL_RE.match(line)
+        if m and "disabled" not in m.group(2):
+            enabled.add(int(m.group(1)))
+    usable = [c for c in wanted if c in enabled]
+    return usable or list(wanted)
 
 
 @dataclass(frozen=True)
