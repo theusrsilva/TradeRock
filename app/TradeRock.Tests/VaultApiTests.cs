@@ -222,10 +222,8 @@ public sealed class VaultApiTests : IAsyncLifetime
         Assert.Equal(pid, reopened.GetProperty("raw").GetProperty("pid").GetUInt32());
         Assert.Equal(2, (await DemoIds()).Length);
 
-        // Virar uma cópia de outro Pokémon do cofre não pode.
-        var other = await Get($"/api/builder/from/{ids[1]}");
-        var otherData = (await Json(await _client.PostAsJsonAsync("/api/builder/advanced",
-            new { raw = JsonNode.Parse(other.GetProperty("raw").GetRawText()), language = "pt-BR" }))).GetProperty("data").GetString();
+        // Virar uma cópia de outro Pokémon do cofre não pode (o arquivo guardado dele, byte a byte).
+        var otherData = await _client.GetByteArrayAsync($"/api/pokemon/{ids[1]}/file");
         var duplicate = await _client.PostAsJsonAsync($"/api/vault/pokemon/{ids[0]}/replace", new { data = otherData });
         Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
         Assert.Contains("pokemon_duplicate", await duplicate.Content.ReadAsStringAsync());
