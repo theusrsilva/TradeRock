@@ -1,0 +1,63 @@
+--- frlgsim/trade.py
++++ frlgsim/trade.py
+@@ -132,7 +132,11 @@
+ # (its real LinkFullSave writes), so the chain must NOT end on a short quiet window - it ends when the host
+ # RE-EXCHANGES (Phase M, host_reexchange in feed_in_frame). This timeout only releases a truly vanished host
+ # (well above any real inter-barrier pause) so the sim never hangs forever.
+-SAVE_CHAIN_TIMEOUT = 600
++# A trade evolution runs its scene (and, if the mon learns a move, waits on the player) before the
++# host's save barriers, with no barrier on the wire: 600f (~10s) ended the chain mid-evolution and
++# left the host on "Saving...". 3600f (~60s); a host that comes back later resumes the chain anyway
++# (_save_chain_lapsed in feed_in_frame).
++SAVE_CHAIN_TIMEOUT = 3600
+ 
+ # Frames of host block-inactivity before we treat BufferTradeParties as finished WITHOUT having seen the
+ # ribbons block [READY_TO_TRADE / cancel-to-leave gate, last-resort fallback]. The LIVE host ALWAYS
+@@ -483,6 +487,7 @@
+         self._save_settle = 0           # consecutive host-idle frames since the last save barrier
+         self._save_started = False      # the FIRST save-chain round has been initiated (gate the inter-round pace)
+         self._save_round_wait = 0       # frames waited since the last save round completed (inter-round pace)
++        self._save_chain_lapsed = False # the chain ended on the safety net, not on the host re-exchanging
+         self._cancel_barrier_active = False  # (d) cancel-exit standby running, finish when it passes
+         self._return_field_barrier_active = False  # (e) return-to-field sync standby (count+1 after (d))
+         # POST-CANCEL OVERWORLD: after the cancel-exit standby passes, the real game
+@@ -658,6 +663,14 @@
+         saw_barrier = host_slot is not None
+         if saw_barrier:
+             self.barrier.on_in_slot(host_slot)
++            # The chain ended on the safety net (the host went quiet for a long trade evolution), but the
++            # host is back on its save barriers: resume the chain, or it waits forever on "Saving...".
++            if (self._save_chain_lapsed and not self._save_barriers and not self._post_cancel_overworld
++                    and host_slot["op"] == rfu.READY_EXIT_STANDBY):
++                self._save_chain_lapsed = False
++                self._save_barriers = True
++                self._save_settle = 0
++                self.log("save-chain: host standby after the safety net -> resuming chain")
+         if unwrapped is not None:
+             self.barrier.observe_frame(saw_barrier)
+             # Save-chain settle tracker: consecutive IN frames with NO host barrier op. The post-trade
+@@ -671,6 +684,8 @@
+         # exchange. NB only a HOST block (mpId 0) or a REQ counts - the mpId-1 entries in `completed`
+         # are reflections of OUR OWN just-sent block (e.g. READY_FINISH), which must NOT end the chain.
+         host_reexchange = bool(reqs) or any(mpid == 0 for mpid, _c, _d in completed)
++        if host_reexchange:
++            self._save_chain_lapsed = False
+         if self._save_barriers and host_reexchange:
+             self._save_barriers = False
+             # Drop any in-flight save standby (e.g. a freshly-initiated count=N round the host will never
+@@ -1045,6 +1060,7 @@
+         # host stops participating in barriers (SaveChainHost finishes; or MockHost re-exchanges, which
+         # clears _save_barriers in feed_in_frame when its REQ/block arrives).
+         self._save_barriers = True
++        self._save_chain_lapsed = False
+         self._save_settle = 0
+         self._save_started = False       # first save round prompt; subsequent rounds paced (SAVE_BARRIER_GAP)
+         self._save_round_wait = 0
+@@ -1155,6 +1171,7 @@
+             # vanished (the dead-host safety net; the NORMAL end is host_reexchange in feed_in_frame).
+             if self._save_settle > SAVE_CHAIN_TIMEOUT:
+                 self._save_barriers = False
++                self._save_chain_lapsed = True
+                 self.log(f"save-chain: host vanished for >{SAVE_CHAIN_TIMEOUT}f -> chain done (safety net)")
+                 return False
+             # Initiate the next round IMMEDIATELY once the host completed the current one (barrier IDLE).
