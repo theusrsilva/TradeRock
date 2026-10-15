@@ -14,6 +14,7 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
   const port = state.serialPort
   const [busy, setBusy] = useState<'probe' | 'identify' | 'verify' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [detail, setDetail] = useState<string | null>(null)
   const [confirmFlash, setConfirmFlash] = useState(false)
   const [job, setJob] = useState<Esp32FlashJob | null>(null)
   const probed = useRef<string | null>(null)
@@ -26,11 +27,13 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
   async function run(kind: 'probe' | 'identify' | 'verify') {
     setBusy(kind)
     setError(null)
+    setDetail(null)
     try {
       const res = await api.post<{ status: SetupStatus }>(`/api/setup/esp32/${kind}`)
       onStatus(res.status)
     } catch (e) {
       setError(e instanceof ApiError && e.code ? e.code : 'unknown')
+      setDetail(e instanceof ApiError ? e.detail : null)
     } finally {
       setBusy(null)
     }
@@ -46,10 +49,12 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
   async function flash() {
     setConfirmFlash(false)
     setError(null)
+    setDetail(null)
     try {
       setJob(await api.post<Esp32FlashJob>('/api/setup/esp32/flash'))
     } catch (e) {
       setError(e instanceof ApiError && e.code ? e.code : 'unknown')
+      setDetail(e instanceof ApiError ? e.detail : null)
     }
   }
 
@@ -61,7 +66,10 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
         const res = await api.get<{ job: Esp32FlashJob; status: SetupStatus | null }>('/api/setup/esp32/flash')
         setJob(res.job)
         if (res.job.finished && res.status) onStatus(res.status)
-        if (res.job.stage === 'error') setError(res.job.errorCode ?? 'unknown')
+        if (res.job.stage === 'error') {
+          setError(res.job.errorCode ?? 'unknown')
+          setDetail(res.job.errorMessage)
+        }
       } catch {
         // tenta de novo no próximo intervalo
       }
@@ -131,6 +139,7 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
       {error && (
         <p role="alert" className="rounded-lg bg-bad-soft p-3 text-sm text-bad">
           {t(`failures.${error}`, { defaultValue: t('failures.unknown') })}
+          {detail && <code className="mt-1 block break-words text-xs">{detail}</code>}
         </p>
       )}
 

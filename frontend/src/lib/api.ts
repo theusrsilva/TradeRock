@@ -19,6 +19,7 @@ export class ApiError extends Error {
     public status: number,
     public code: string | null,
     public errors: string[],
+    public detail: string | null = null,
   ) {
     super(`HTTP ${status}${code ? ` (${code})` : ''}`)
   }
@@ -42,16 +43,18 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   if (!response.ok) {
     let code: string | null = null
     let errors: string[] = []
+    let detail: string | null = null
     try {
-      const data = (await response.json()) as { error?: string; errors?: string[] }
+      const data = (await response.json()) as { error?: string; errors?: string[]; message?: string }
       code = data.error ?? null
       errors = data.errors ?? []
+      detail = data.message ?? null
     } catch {
       // corpo vazio ou não-JSON
     }
     // Pela rede, o login expirou ou caiu (senha trocada, modo servidor desligado): volta à tela de entrada.
     if (response.status === 401 && code === 'login_required') window.dispatchEvent(new Event(unauthorizedEvent))
-    throw new ApiError(response.status, code, errors)
+    throw new ApiError(response.status, code, errors, detail)
   }
   if (response.status === 204) return undefined as T
   const text = await response.text()
