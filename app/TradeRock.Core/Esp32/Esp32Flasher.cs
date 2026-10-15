@@ -134,6 +134,11 @@ public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir
             start.Environment["SystemRoot"] = systemRoot;
             start.Environment["PATH"] = Path.Combine(systemRoot, "System32");
             start.Environment["TEMP"] = start.Environment["TMP"] = Path.GetTempPath();
+            // Sem a pasta pessoal o Python falha ("Could not determine home directory") ao carregar a
+            // configuração do esptool. Aponta para uma pasta do próprio TradeRock, vazia, para que o
+            // esptool também não leia arquivos de configuração soltos do usuário.
+            Directory.CreateDirectory(tempDir);
+            start.Environment["USERPROFILE"] = tempDir;
         }
         else
         {
