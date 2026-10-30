@@ -102,12 +102,14 @@ flowchart LR
     end
     eng --> fake["FakeEngine<br/>(simulação, dev)"]
     eng --> py["PythonLdnEngine<br/>(Linux)"]
-    eng --> esp["Esp32SerialEngine<br/>(Linux e Windows)"]
+    eng --> esp["PokeldnEngine<br/>(ESP32, Linux e Windows)"]
+    eng --> lan["PokeldnLanEngine<br/>(Sword/Shield na rede de casa)"]
     py -- "stdin/stdout (JSON)" --> worker["traderock-worker<br/>(Python embutido, root via pkexec + polkit)"]
-    worker --> wifi["frlg-ldn-trade<br/>+ placa Wi-Fi"]
-    esp -- "USB serial" --> board["ESP32 + firmware"]
-    wifi -. "LDN" .-> sw["Switch<br/>FireRed/LeafGreen"]
+    worker --> wifi["frlg-ldn-trade (FRLG) ou pokeldn<br/>+ placa Wi-Fi"]
+    esp -- "pokeldn (Python embutido)<br/>USB serial" --> board["ESP32 + firmware do pokeldn"]
+    wifi -. "LDN" .-> sw["Switch<br/>(jogos Pokémon)"]
     board -. "LDN" .-> sw
+    lan -. "UDP, rede de casa" .-> sw
 ```
 
 - **Segurança local:** o servidor só escuta em `127.0.0.1`, recusa cabeçalhos `Host` desconhecidos
@@ -116,7 +118,7 @@ flowchart LR
   nunca roda como root.
 - **Motores externos** entram como submódulos git em `engines/`, sem copiar código:
   - [`tornadus/frlg-ldn-trade`](https://github.com/tornadus/frlg-ldn-trade): motor Python (placa Wi-Fi).
-  - [`easyworld/frlg-ldn-trade-esp32`](https://github.com/easyworld/frlg-ldn-trade-esp32): core C# e firmware ESP32.
+  - [`Decryptu/pokeldn`](https://github.com/Decryptu/pokeldn): jogos do Switch, ESP32 (firmware incluso) e modo LAN.
   - [`santacrab2/PKHeX-Plugins`](https://github.com/santacrab2/PKHeX-Plugins): PKHeX.Core.AutoMod.
 
   O frlg-ldn-trade recebe dois patches do FRLG-LDN-Trade-Console na hora do build
@@ -133,12 +135,12 @@ flowchart LR
 ```
 app/TradeRock.App/       executável: servidor + janela
 app/TradeRock.Core/      domínio: troca (coordenador, motores), Pokémon (PKHeX), armazenamento (SQLite), ESP32
-app/Frlg.Trade.Core.Patched/  núcleo C# do easyworld (motor ESP32) compilado com os patches do TradeRock
 app/TradeRock.Tests/     testes (xUnit v3)
 catalog/                 catálogo de placas Wi-Fi, ESP32 e conversores USB-serial (JSON)
 worker/                  worker privilegiado (Linux, Python): protocolo, rádio, wrapper do motor
 frontend/                React + Vite + TypeScript + Tailwind
-firmware/                notas sobre o firmware ESP32 embutido (os binários vêm do submódulo do easyworld)
+firmware/                notas sobre o firmware ESP32 embutido (os binários ficam em assets/firmware/pokeldn)
+assets/                  sprites, Pokémon de demonstração e firmware do ESP32
 engines/                 submódulos (motores e AutoMod)
 content/                 textos explicativos em markdown, por idioma
 packaging/               atalho, ícone e script de instalação do worker (Linux); instalador Windows
@@ -290,8 +292,8 @@ ritmo real. Na etapa "Jogo e treinador" dá para escolher o que o Switch simulad
 falhar algumas vezes antes de conectar, chaves erradas, cancelar a troca etc. Para acelerar a
 simulação em desenvolvimento, use `--Engines:Fake:SpeedFactor=0.2` (0 = instantâneo).
 
-Na primeira execução, o app já traz dois Pokémon de demonstração (MEWTWO e DEOXYS, do repositório
-do easyworld). Detalhes do fluxo em [docs/trade-flow.md](docs/trade-flow.md).
+Na primeira execução, o app já traz dois Pokémon de demonstração (MEWTWO e DEOXYS, fornecidos pelo
+autor do easyworld/frlg-ldn-trade-esp32, em `assets/demo`). Detalhes do fluxo em [docs/trade-flow.md](docs/trade-flow.md).
 
 ### Modo servidor (celular e outros PCs)
 

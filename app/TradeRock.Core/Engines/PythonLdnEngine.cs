@@ -54,6 +54,9 @@ public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdK
         var state = (await setup.StatusAsync(cancellationToken)).State;
         if (state.Phy is null)
             return TradeAttemptResult.Fail("wifi_not_configured", "Escolha a placa Wi-Fi no assistente.", retryable: false);
+        // Os jogos novos pedem a sala aberta pela placa (modo AP, D23); o teste da placa diz se ela consegue.
+        if (request.GameInfo.Family != GameFamily.Frlg && state.CardTest is { Ap: false } card && card.Phy == state.Phy)
+            return TradeAttemptResult.Fail("card_no_ap", "Esta placa não abre a sala dos jogos novos (modo AP).", retryable: false);
 
         byte[] keyFile;
         try

@@ -277,6 +277,7 @@
     "esp32_firmware_not_checked": "Check the ESP32 firmware before the test.",
     "keys_invalid": "prod.keys isn't valid.",
     "console_never_joined": "The Switch never joined the room. Check that it searched for the trade with the same code and try again.",
+    "card_no_ap": "This Wi-Fi card can't open the room for the newer games (AP mode): with it, only FireRed/LeafGreen can trade. For the other games, use an ESP32 (or your home network, for Sword/Shield).",
     "pokeldn_missing": "The Switch games engine (pokeldn) was not found in this install.",
     "received_missing": "The trade finished, but the received Pokémon did not show up."
   },
@@ -700,8 +701,6 @@
     "chooseBoardPlaceholder": "Pick your board model…",
     "choosePort": "Which port is the ESP32 on?",
     "noPorts": "No port found. Plug the ESP32 in with a data cable.",
-    "confirmModule": "Checked: the module metal shield says ESP32-WROOM-32E.",
-    "moduleHelp": "Read the name printed on the module metal shield (the silver part with the antenna).",
     "refresh": "Check again",
     "copy": "Copy",
     "copied": "Copied!",
@@ -758,7 +757,6 @@
       "phy_is_internet": "This card is the PC's internet ({{iface}}): internet drops while trading. Use a network cable or a second adapter.",
       "esp32_board_not_chosen": "Tell us which ESP32 you have.",
       "esp32_board_unsupported": "{{model}}: unsupported.",
-      "esp32_confirm_module": "Check that the module is ESP32-WROOM-32E.",
       "esp32_board_recommended": "{{model}}: recommended.",
       "esp32_board_works": "{{model}}: works.",
       "esp32_board_untested": "{{model}}: no complete trade reported with this firmware.",
@@ -787,6 +785,8 @@
       "card_test_passed": "The {{model}} card ({{phy}}) passed: it entered monitor mode and transmitted.",
       "card_test_failed": "The {{model}} card ({{phy}}) failed the test. See the result below.",
       "card_test_passed_no_rx": "The card transmitted but received nothing during the test. It may just be that there are no Wi-Fi networks nearby; if trading can't find the Switch, suspect reception.",
+      "card_test_no_ap": "The {{model}} card ({{phy}}) couldn't open a network in AP mode. It trades with FireRed/LeafGreen but can't open the room for the other games. For those, use an ESP32 (or your home network, for Sword/Shield).",
+      "card_test_ap_unknown": "This test is from an older version and didn't check AP mode, which the newer games use. Test the card again to find out whether it trades with them.",
       "card_test_passed_some_channels": "The card works but didn't tune to every channel (1, 6 and 11). Trading may fail if the Switch uses one of them.",
       "network_manager_ok": "NetworkManager set up so it doesn't interfere with trading.",
       "network_manager_unconfigured": "NetworkManager may interfere with trading. Set it up below (recommended).",
@@ -814,7 +814,7 @@
       "esp32_chip_unsupported": "The {{chip}} chip has no TradeRock firmware.",
       "esp32_board_mismatch": "You picked {{model}}, but the chip is {{chip}}. Fix the board in the list above.",
       "esp32_flash_too_small": "This board's flash is {{size}}; the firmware needs {{needed}}.",
-      "esp32_old_revision": "{{chip}} chip: old revision, typical of the ESP32-WROOM-32 module (not the 32E), which doesn't trade reliably. Check the name on the metal shield."
+      "esp32_old_revision": "{{chip}} chip: old revision, typical of the ESP32-WROOM-32 module. Some of these boards can't hear the Switch; the Switch test shows whether yours works."
     },
     "deliveries": {
       "entrega-6": "network component and card test",
@@ -838,6 +838,8 @@
       "sent": "Sent",
       "received": "Received",
       "channelFailed": "didn't tune",
+      "apOk": "The card opened a network in AP mode: it trades with every game.",
+      "apNo": "The card couldn't open a network in AP mode: it trades only with FireRed/LeafGreen.",
       "codes": {
         "passed": "The card passed: monitor mode and transmission work.",
         "passed_no_rx": "The card transmitted but received no frames.",

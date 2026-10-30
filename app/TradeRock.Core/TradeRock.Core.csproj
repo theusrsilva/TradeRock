@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="PKHeX.Core" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="System.IO.Ports" />
     <PackageReference Include="System.Management" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
@@ -18,11 +19,6 @@
   <!-- PKHeX.Core.AutoMod (santacrab2/PKHeX-Plugins, MIT), do submódulo: não é publicado no NuGet. -->
   <ItemGroup>
     <ProjectReference Include="..\..\engines\PKHeX-Plugins\PKHeX.Core.AutoMod\PKHeX.Core.AutoMod.csproj" />
-  </ItemGroup>
-
-  <!-- Núcleo do easyworld com os patches do TradeRock (motor ESP32). -->
-  <ItemGroup>
-    <ProjectReference Include="..\Frlg.Trade.Core.Patched\Frlg.Trade.Core.Patched.csproj" />
   </ItemGroup>
 
   <!-- Traduções das mensagens do PKHeX (content/<idioma>/pkhex) e dados do construtor. -->
@@ -33,16 +29,15 @@
     <EmbeddedResource Include="..\..\packaging\linux\worker-setup.sh" LogicalName="worker-setup.sh" />
   </ItemGroup>
 
-  <!-- Firmware do ESP32 (binários completos publicados pelo easyworld, gravados em 0x0) e os SHA256 deles. -->
+  <!-- Firmware do ESP32: o do pokeldn para todos os jogos (D23), de scripts/fetch-pokeldn-firmware.sh. -->
   <ItemGroup>
-    <!-- Firmware do ESP32: o do pokeldn para todos os jogos (D23), de scripts/fetch-pokeldn-firmware.sh. -->
     <EmbeddedResource Include="..\..\assets\firmware\pokeldn\*.bin" LogicalName="firmware/%(Filename)%(Extension)" />
     <EmbeddedResource Include="..\..\assets\firmware\pokeldn\SHA256SUMS.txt" LogicalName="firmware/SHA256SUMS.txt" />
   </ItemGroup>
 
-  <!-- Pokémon de demonstração (modo demonstração e testes), lidos do submódulo do easyworld. -->
+  <!-- Pokémon de demonstração (modo demonstração e testes). -->
   <ItemGroup>
-    <EmbeddedResource Include="..\..\engines\frlg-ldn-trade-esp32\assets\party\*.pk3" LogicalName="demo/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\assets\demo\*.pk3" LogicalName="demo/%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

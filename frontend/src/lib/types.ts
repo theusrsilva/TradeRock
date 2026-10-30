@@ -517,6 +517,9 @@ export interface CardTestResult {
   error: string | null
   simulated: boolean
   driver: string | null
+  /** Modo AP com o monitor ao lado (sala dos jogos novos); null = teste antigo, sem essa etapa. */
+  ap: boolean | null
+  apError: string | null
 }
 
 export type SwitchTestCode =
@@ -632,7 +635,6 @@ export interface SetupStatus {
     phy: string | null
     serialPort: string | null
     esp32Board: string | null
-    esp32ModuleConfirmed: boolean
     keysSkipped: boolean
     cardTest: CardTestResult | null
     esp32Probe: Esp32ProbeResult | null

@@ -821,3 +821,37 @@ sprites até a Gen 9, cofre único com filtro, legalidade que avisa sem bloquear
 - **Verificado:** testes do worker e da API (modo LAN sem configuração, sem código, recusa de outro jogo) e
   compilação do instalador pelo Inno Setup do Windows.
 - **Não verificado:** a troca com um Sword/Shield de verdade e o `smoke-windows.ps1`, que pede o UAC.
+
+## D25. Sem o motor do easyworld; teste do modo AP (Entrega 17)
+
+O autor deixou as duas escolhas comigo ("pode seguir da forma que achar melhor").
+
+- **O easyworld saiu.** O motor C# (`Esp32SerialEngine`, `SerialEsp32Link`, `Frlg.Trade.Core.Patched`), o patch
+  `engines/patches/frlg-ldn-trade-esp32`, o ESP32 falso (`fake_esp32.py`) e o submódulo foram removidos. O motor
+  já estava fora do registro desde a D23.
+  - Os sprites 1–386 (do PokeAPI) e os dois Pokémon de demonstração (MEWTWO e DEOXYS, do autor do easyworld)
+    foram copiados para `assets/sprites` e `assets/demo`. O `SHA256SUMS` dos sprites agora cobre 1–1025.
+  - Sem o núcleo, o BouncyCastle e o ZstdSharp saem das dependências. O `System.IO.Ports` (portas COM no Windows)
+    passa a ser referência direta do `TradeRock.Core`.
+- **O FRLG com a placa Wi-Fi continua no frlg-ldn-trade**, em que o console abre a sala e a placa entra. Assim, uma
+  placa sem modo AP ainda troca com o FRLG. Os jogos novos seguem pelo pokeldn (D23).
+- **Teste do modo AP.** Nos jogos novos o TradeRock abre a sala, e a biblioteca LDN (`ldn.create_network`) cria a
+  interface em modo AP com o monitor ao lado. O teste da placa (`card_child.py`) ganhou essa etapa:
+  `Factory.create_ap` + `create_monitor` no primeiro canal que sintonizou, por meio segundo, com um SSID qualquer e
+  sem chave (limite de 15 s).
+  - O resultado vai à parte (`ap`, `apError`): sem AP a placa continua aprovada, porque troca com o FRLG.
+  - Conexão mostra o aviso `card_test_no_ap`, que não bloqueia. Um teste de antes desta entrega (`ap` nulo) mostra
+    `card_test_ap_unknown` e sugere testar de novo.
+  - Com `ap = false`, o `PythonLdnEngine` recusa os jogos novos antes de chamar o worker (`card_no_ap`), sem pedir a
+    senha à toa.
+- **Catálogo de ESP32 com os dados do pokeldn** (`docs/hardware_esp32.md` do submódulo). O catálogo ainda descrevia
+  o firmware do easyworld, e com o do pokeldn duas coisas mudam:
+  - **S3 e C6 usam a USB nativa**, como o C3. Pela porta do conversor o firmware do pokeldn não responde. O
+    catálogo, o guia e o aviso `port_should_be_native` foram corrigidos.
+  - **O ESP32 clássico deixa de exigir o WROOM-32E.** O pokeldn relata uma placa clássica trocando com todos os
+    jogos, e só um WROOM-32 genérico que não ouve o Switch. O WROOM-32 passa de "não suportado" para "sem teste".
+    A confirmação do módulo (estado, caixa de seleção e desenho) saiu, e o aviso de revisão antiga do chip agora
+    manda fazer o teste com o Switch.
+  - Nenhuma placa fica como "recomendada": o TradeRock ainda não trocou com nenhuma.
+- **Verificado:** build, testes do .NET, do worker e do frontend.
+- **Não verificado:** a etapa do AP numa placa de verdade (precisa de root e de uma placa no Linux).

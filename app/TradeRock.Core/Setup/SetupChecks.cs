@@ -14,12 +14,9 @@ public sealed record SetupState
     /// <summary>Id da placa ESP32 no catálogo (ex.: esp32-s3), informada pela pessoa até a detecção por esptool (Entrega 9).</summary>
     public string? Esp32Board { get; init; }
 
-    /// <summary>ESP32 clássico: a pessoa conferiu "ESP32-WROOM-32E" na blindagem do módulo.</summary>
-    public bool Esp32ModuleConfirmed { get; init; }
-
     public bool KeysSkipped { get; init; }
 
-    /// <summary>Último teste real da placa (modo monitor + quadros de ação).</summary>
+    /// <summary>Último teste real da placa (modo monitor + quadros de ação + modo AP).</summary>
     public CardTestResult? CardTest { get; init; }
 
     /// <summary>Último teste com o Switch (beacon da sala encontrado e decifrado).</summary>
@@ -50,7 +47,11 @@ public sealed record Esp32FirmwareResult(string Port, string Target, bool Matche
 
 public sealed record CardTestChannel(int Channel, bool Set, int Sent, int Received, string? Error);
 
-/// <summary>Resultado do teste da placa (worker/traderock_worker/card_child.py). <see cref="Code"/> é estável.</summary>
+/// <summary>
+/// Resultado do teste da placa (worker/traderock_worker/card_child.py). <see cref="Code"/> é estável.
+/// <see cref="Ap"/>: a placa abriu uma rede em modo AP com o monitor ao lado, o que o pokeldn faz para abrir a sala
+/// dos jogos novos (D23). Sem isso ela só troca com o FRLG; null = teste de antes da Entrega 17.
+/// </summary>
 public sealed record CardTestResult(
     string Phy,
     bool Passed,
@@ -59,7 +60,9 @@ public sealed record CardTestResult(
     IReadOnlyList<CardTestChannel> Channels,
     string? Error = null,
     bool Simulated = false,
-    string? Driver = null) // módulo/driver da placa testada: o mesmo phyN pode ser outra placa depois
+    string? Driver = null, // módulo/driver da placa testada: o mesmo phyN pode ser outra placa depois
+    bool? Ap = null,
+    string? ApError = null)
 {
     public bool IsFor(WifiCard card) => Phy == card.Phy && (Driver is null || Driver == (card.Module ?? card.Driver));
 }
@@ -227,6 +230,14 @@ public static class SetupChecks
         // Passou, mas com ressalva (nada recebido, ou só alguns canais): avisa sem bloquear.
         if (test is { Passed: true, Code: not "passed" })
             yield return new SetupCheck("card_test_note", 4, CheckStatus.Warning, false, $"card_test_{test.Code}", cardArgs);
+        // Sem modo AP a placa não abre a sala dos jogos novos: o FRLG continua trocando.
+        if (test is { Passed: true })
+        {
+            if (test.Ap == false)
+                yield return new SetupCheck("card_test_ap", 4, CheckStatus.Warning, false, "card_test_no_ap", cardArgs);
+            else if (test.Ap is null)
+                yield return new SetupCheck("card_test_ap", 4, CheckStatus.Info, false, "card_test_ap_unknown", cardArgs);
+        }
 
         if (system.NetworkManagerRunning)
             yield return system.LdnNetwork is { Complete: true }
@@ -317,8 +328,6 @@ public static class SetupChecks
             yield return new SetupCheck("esp32_board", 4, CheckStatus.Error, true, "esp32_board_not_chosen");
         else if (board.Status == CompatStatus.Unsupported)
             yield return new SetupCheck("esp32_board", 4, CheckStatus.Error, true, "esp32_board_unsupported", Args(("model", board.Model)));
-        else if (board.Module == "ESP32-WROOM-32E" && !state.Esp32ModuleConfirmed)
-            yield return new SetupCheck("esp32_board", 4, CheckStatus.Error, true, "esp32_confirm_module");
         else
             yield return new SetupCheck("esp32_board", 4, board.Status == CompatStatus.Untested ? CheckStatus.Warning : CheckStatus.Ok,
                 board.Status != CompatStatus.Untested, $"esp32_board_{Name(board.Status)}", Args(("model", board.Model)));
@@ -345,7 +354,7 @@ public static class SetupChecks
             yield return new SetupCheck("serial_port", 4, CheckStatus.Ok, true, "serial_ok",
                 Args(("port", port.Path), ("chip", chip?.Name ?? port.ProductName ?? "?")));
 
-            // Conferência da porta com o tipo de placa: C3 usa USB nativa; S3/C6/clássico, o conversor.
+            // Conferência da porta com o tipo de placa: S3, C3 e C6 usam a USB nativa; o clássico, o conversor.
             if (board is not null && chip is not null)
             {
                 var native = chip.Vid == "303a";
@@ -410,7 +419,8 @@ public static class SetupChecks
                 yield return new SetupCheck("esp32_flash_size", 4, CheckStatus.Error, true, "esp32_flash_too_small",
                     Args(("size", chip.FlashSize!), ("needed", image.FlashSize)));
 
-            // ESP32 clássico: o WROOM-32E usa o chip D0WD-V3 (revisão 3); revisão menor indica o WROOM-32 antigo.
+            // ESP32 clássico: o WROOM-32E usa o chip D0WD-V3 (revisão 3); revisão menor indica o WROOM-32 antigo, que em
+            // algumas placas não ouve o Switch (docs/hardware_esp32.md do pokeldn). O teste com o Switch tira a dúvida.
             if (chip.Target == "esp32" && chip.Revision < 300)
                 yield return new SetupCheck("esp32_revision", 4, CheckStatus.Warning, false, "esp32_old_revision", Args(("chip", chip.Description)));
         }

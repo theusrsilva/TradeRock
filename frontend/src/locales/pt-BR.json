@@ -277,6 +277,7 @@
     "esp32_firmware_not_checked": "Confira o firmware do ESP32 antes do teste.",
     "keys_invalid": "O prod.keys não é válido.",
     "console_never_joined": "O Switch não entrou na sala. Confira se ele procurou a troca com o mesmo código e tente de novo.",
+    "card_no_ap": "Esta placa Wi-Fi não abre a sala dos jogos novos (modo AP): com ela, só o FireRed/LeafGreen troca. Para os outros jogos, use um ESP32 (ou a rede de casa, no Sword/Shield).",
     "pokeldn_missing": "O motor dos jogos do Switch (pokeldn) não foi encontrado nesta instalação.",
     "received_missing": "A troca terminou, mas o Pokémon recebido não apareceu."
   },
@@ -700,8 +701,6 @@
     "chooseBoardPlaceholder": "Escolha o modelo da placa…",
     "choosePort": "Em qual porta está o ESP32?",
     "noPorts": "Nenhuma porta encontrada. Ligue o ESP32 com um cabo de dados.",
-    "confirmModule": "Conferi: a tampa metálica do módulo diz ESP32-WROOM-32E.",
-    "moduleHelp": "Veja o nome escrito na tampa metálica do módulo (a peça prateada com a antena).",
     "refresh": "Verificar de novo",
     "copy": "Copiar",
     "copied": "Copiado!",
@@ -758,7 +757,6 @@
       "phy_is_internet": "Esta placa é a internet do PC ({{iface}}): a internet cai durante a troca. Use cabo de rede ou um segundo adaptador.",
       "esp32_board_not_chosen": "Diga qual ESP32 você tem.",
       "esp32_board_unsupported": "{{model}}: não suportado.",
-      "esp32_confirm_module": "Confira se o módulo é o ESP32-WROOM-32E.",
       "esp32_board_recommended": "{{model}}: recomendado.",
       "esp32_board_works": "{{model}}: funciona.",
       "esp32_board_untested": "{{model}}: sem troca completa relatada com este firmware.",
@@ -787,6 +785,8 @@
       "card_test_passed": "A placa {{model}} ({{phy}}) passou no teste: entrou em modo monitor e transmitiu.",
       "card_test_failed": "A placa {{model}} ({{phy}}) não passou no teste. Veja o resultado abaixo.",
       "card_test_passed_no_rx": "A placa transmitiu, mas não recebeu nada durante o teste. Pode ser só falta de redes Wi-Fi por perto; se a troca não achar o Switch, desconfie da recepção.",
+      "card_test_no_ap": "A placa {{model}} ({{phy}}) não abriu rede em modo AP. Ela troca com o FireRed/LeafGreen, mas não abre a sala dos outros jogos. Para eles, use um ESP32 (ou a rede de casa, no Sword/Shield).",
+      "card_test_ap_unknown": "Este teste é de uma versão anterior e não conferiu o modo AP, que os jogos novos usam. Teste a placa de novo para saber se ela troca com eles.",
       "card_test_passed_some_channels": "A placa funcionou, mas não sintonizou todos os canais (1, 6 e 11). A troca pode falhar se o Switch usar um deles.",
       "network_manager_ok": "NetworkManager configurado para não atrapalhar a troca.",
       "network_manager_unconfigured": "O NetworkManager pode atrapalhar a troca. Configure abaixo (recomendado).",
@@ -814,7 +814,7 @@
       "esp32_chip_unsupported": "O chip {{chip}} não tem firmware do TradeRock.",
       "esp32_board_mismatch": "Você marcou {{model}}, mas o chip é {{chip}}. Corrija a placa na lista acima.",
       "esp32_flash_too_small": "A flash desta placa tem {{size}}; o firmware precisa de {{needed}}.",
-      "esp32_old_revision": "Chip {{chip}}: revisão antiga, típica do módulo ESP32-WROOM-32 (não o 32E), que não troca de forma confiável. Confira o nome na blindagem."
+      "esp32_old_revision": "Chip {{chip}}: revisão antiga, típica do módulo ESP32-WROOM-32. Algumas placas assim não ouvem o Switch; o teste com o Switch mostra se a sua serve."
     },
     "deliveries": {
       "entrega-6": "componente de rede e teste da placa",
@@ -838,6 +838,8 @@
       "sent": "Enviados",
       "received": "Recebidos",
       "channelFailed": "não sintonizou",
+      "apOk": "A placa abriu uma rede em modo AP: troca com todos os jogos.",
+      "apNo": "A placa não abriu rede em modo AP: troca só com o FireRed/LeafGreen.",
       "codes": {
         "passed": "A placa passou: modo monitor e transmissão funcionando.",
         "passed_no_rx": "A placa transmitiu, mas não recebeu nenhum quadro.",

@@ -28,8 +28,7 @@ public static class AppEndpoints
             return Results.NoContent();
         });
 
-        // Sprites do PokeAPI, embutidos: 1–386 via engines/frlg-ldn-trade-esp32/assets/sprites e 387–1025 de
-        // assets/sprites (scripts/fetch-sprites.sh). Formas usam o sprite da forma normal.
+        // Sprites do PokeAPI embutidos de assets/sprites (scripts/fetch-sprites.sh). Formas usam o sprite da forma normal.
         var assembly = typeof(AppEndpoints).Assembly;
         api.MapGet("/sprites/{species:int}", (int species, HttpContext context) =>
         {

@@ -138,15 +138,15 @@
       "id": "esp32-s3",
       "model": "ESP32-S3",
       "chip": "esp32s3",
-      "connection": "uart",
-      "flash": "16 MB",
-      "status": "recommended",
+      "connection": "native_usb",
+      "flash": "4 MB",
+      "status": "works",
       "notes": {
-        "pt-BR": "O mais testado: o autor da adaptação fez uma troca completa. Use a porta USB ligada ao conversor USB-serial da placa (ex.: CH340), não a USB nativa, em placas com duas portas. O firmware publicado ainda não foi retestado numa troca real.",
-        "en": "The most tested: the port author completed a full trade. Use the USB port wired to the board's USB-serial converter (e.g. CH340), not the native USB, on boards with two ports. The published firmware hasn't been re-tested in a real trade yet."
+        "pt-BR": "Trocas reais relatadas pelo pokeldn com o FireRed/LeafGreen e o Sword/Shield. Use a USB nativa do chip: em placas com duas portas, a marcada \"USB\" (não a \"UART\" ou \"COM\"); pela outra o firmware não responde.",
+        "en": "Real trades reported by pokeldn with FireRed/LeafGreen and Sword/Shield. Use the chip's native USB: on boards with two ports, the one marked \"USB\" (not \"UART\" or \"COM\"); the firmware doesn't answer through the other."
       },
-      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32/blob/main/firmware/esp32-s3/README.md",
-      "verifiedAt": "2026-09-29"
+      "source": "https://github.com/Decryptu/pokeldn/blob/main/docs/hardware_esp32.md",
+      "verifiedAt": "2026-10-30"
     },
     {
       "id": "esp32-c3",
@@ -156,55 +156,53 @@
       "flash": "4 MB",
       "status": "works",
       "notes": {
-        "pt-BR": "Uma troca completa relatada; a estabilidade em uso longo ainda precisa de teste. Usa a USB nativa do chip, não um conversor USB-serial.",
-        "en": "One complete trade reported; long-run stability still needs testing. Uses the chip's native USB, not a USB-serial converter."
+        "pt-BR": "Trocas reais relatadas pelo pokeldn com o FireRed/LeafGreen e o Sword/Shield. Usa a USB nativa do chip. Placas com antena externa (como a XIAO) só funcionam com a antena ligada.",
+        "en": "Real trades reported by pokeldn with FireRed/LeafGreen and Sword/Shield. Uses the chip's native USB. Boards with an external antenna (like the XIAO) only work with the antenna attached."
       },
-      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32/blob/main/firmware/esp32-c3/README.md",
-      "verifiedAt": "2026-09-29"
+      "source": "https://github.com/Decryptu/pokeldn/blob/main/docs/hardware_esp32.md",
+      "verifiedAt": "2026-10-30"
     },
     {
       "id": "esp32-c6",
       "model": "ESP32-C6",
       "chip": "esp32c6",
-      "connection": "uart",
-      "flash": "16 MB",
+      "connection": "native_usb",
+      "flash": "4 MB",
       "status": "works",
       "notes": {
-        "pt-BR": "Duas trocas reais relatadas. Usa a porta do conversor USB-serial da placa. O firmware publicado não foi retestado numa troca real.",
-        "en": "Two real trades reported. Uses the board's USB-serial converter port. The published firmware hasn't been re-tested in a real trade."
+        "pt-BR": "Trocas reais relatadas pelo pokeldn com o FireRed/LeafGreen, o Sword/Shield e o Scarlet/Violet. Usa a USB nativa do chip.",
+        "en": "Real trades reported by pokeldn with FireRed/LeafGreen, Sword/Shield and Scarlet/Violet. Uses the chip's native USB."
       },
-      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32#readme",
-      "verifiedAt": "2026-09-29"
+      "source": "https://github.com/Decryptu/pokeldn/blob/main/docs/hardware_esp32.md",
+      "verifiedAt": "2026-10-30"
     },
     {
       "id": "esp32-wroom-32e",
       "model": "ESP32 clássico (módulo ESP32-WROOM-32E)",
       "chip": "esp32",
-      "module": "ESP32-WROOM-32E",
       "connection": "uart",
       "flash": "4 MB",
-      "status": "untested",
+      "status": "works",
       "notes": {
-        "pt-BR": "É o único módulo clássico aceito pelo firmware. O firmware foi gravado e conferido numa placa real, mas não há troca completa relatada com ele. Confira o nome completo na blindagem metálica do módulo.",
-        "en": "The only classic module the firmware accepts. The firmware was flashed and verified on a real board, but no complete trade has been reported with it. Check the full name on the module's metal shield."
+        "pt-BR": "Uma placa ESP32 clássica trocou com todos os jogos nos testes do pokeldn. Use a porta do conversor USB-serial da placa (CH340, CP210x).",
+        "en": "A classic ESP32 board traded with every game in pokeldn's tests. Use the board's USB-serial converter port (CH340, CP210x)."
       },
-      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32/blob/main/firmware/esp32/README.md",
-      "verifiedAt": "2026-09-29"
+      "source": "https://github.com/Decryptu/pokeldn/blob/main/docs/hardware_esp32.md",
+      "verifiedAt": "2026-10-30"
     },
     {
       "id": "esp32-wroom-32",
       "model": "ESP32 clássico (módulo ESP32-WROOM-32, antigo)",
       "chip": "esp32",
-      "module": "ESP32-WROOM-32",
       "connection": "uart",
       "flash": "4 MB",
-      "status": "unsupported",
+      "status": "untested",
       "notes": {
-        "pt-BR": "Problemas conhecidos: não completa trocas de forma confiável. O nome é quase igual ao do WROOM-32E; confira a letra E na blindagem do módulo.",
-        "en": "Known problems: doesn't complete trades reliably. The name is almost the same as WROOM-32E; check for the letter E on the module shield."
+        "pt-BR": "Algumas placas com este módulo não ouvem o Switch, outras trocam normalmente. O teste com o Switch mostra se a sua serve. Use a porta do conversor USB-serial.",
+        "en": "Some boards with this module can't hear the Switch, others trade fine. The Switch test shows whether yours works. Use the USB-serial converter port."
       },
-      "source": "https://github.com/easyworld/frlg-ldn-trade-esp32/blob/main/firmware/esp32/README.md",
-      "verifiedAt": "2026-09-29"
+      "source": "https://github.com/Decryptu/pokeldn/blob/main/docs/hardware_esp32.md",
+      "verifiedAt": "2026-10-30"
     }
   ],
   "usbSerial": [

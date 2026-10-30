@@ -30,9 +30,9 @@ public sealed class SetupTranslationTests
             foreach (var phy in phys)
             foreach (var port in ports)
             foreach (var board in boards)
-            foreach (var confirmed in new[] { false, true })
+            foreach (var skipped in new[] { false, true })
             {
-                var state = new SetupState { Radio = radio, Phy = phy, SerialPort = port, Esp32Board = board, Esp32ModuleConfirmed = confirmed, KeysSkipped = keys is null && confirmed };
+                var state = new SetupState { Radio = radio, Phy = phy, SerialPort = port, Esp32Board = board, KeysSkipped = keys is null && skipped };
                 foreach (var check in SetupChecks.Evaluate(system, advice, state, keys, catalog))
                     yield return check;
             }
@@ -75,6 +75,8 @@ public sealed class SetupTranslationTests
         {
             null,
             new("phy1", true, "passed", default, []),
+            new("phy1", true, "passed", default, [], Ap: false),
+            new("phy1", true, "passed", default, [], Ap: true),
             new("phy1", true, "passed_no_rx", default, []),
             new("phy1", true, "passed_some_channels", default, []),
             new("phy1", false, "tx_failed", default, []),

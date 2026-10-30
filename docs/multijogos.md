@@ -39,8 +39,7 @@ SAV9SV, SAV9ZA).
 O firmware do easyworld só serve para o FRLG. Com dois firmwares, a pessoa teria que regravar a placa
 toda vez que mudasse de jogo, o que não dá para pedir a um leigo. O do pokeldn atende todos os jogos,
 inclusive o FRLG, nas mesmas placas (ESP32 clássico, S3, C3, C6). Por isso a placa passa a receber o
-firmware do pokeldn. O motor do easyworld (C#) fica no código como reserva para o FRLG até a primeira
-troca com placa real, e sai depois disso.
+firmware do pokeldn. O motor do easyworld (C#) saiu do código na Entrega 17 (D25).
 
 ## Experiência de uso
 
@@ -66,7 +65,7 @@ jogos que têm.
 | 14 ✓ | Base multijogo | Catálogo de jogos; seletor de jogo na troca; cofre com formato por Pokémon e filtro; "Meu treinador" por jogo; construtor e legalidade por jogo (avisa sem bloquear); mover entre jogos como o HOME; sprites até a Gen 9; instruções por jogo (D22) |
 | 15 ✓ | Motor pokeldn: ESP32 (Linux e Windows, firmware do pokeldn; D23) e placa Wi-Fi (Linux) | O TradeRock é o anfitrião; scripts de anfitrião do pokeldn com as flags do catálogo dele; ESP32 sem root (todos os jogos) e placa Wi-Fi pelo worker (jogos novos); trocar de volta (D23) |
 | 16 ✓ | Modo LAN sem placa | Sword/Shield pela rede de casa, no Linux e no Windows, sem root |
-| 17 | Limpeza do motor do easyworld (o ESP32 e o Windows foram adiantados na 15) | Tirar do código o motor C# do easyworld e o firmware antigo; teste da placa Wi-Fi em modo AP |
+| 17 ✓ | Limpeza do motor do easyworld (o ESP32 e o Windows foram adiantados na 15) | Motor C# e submódulo do easyworld fora; catálogo de ESP32 com os dados do pokeldn; teste da placa Wi-Fi em modo AP (D25) |
 | 18 | Outras atividades | Raids (SwSh e SV), Mystery Gift (FRLG e SwSh), Union Circle e eventos |
 | 19 | Modo servidor com os jogos novos | Fila e contas com o seletor de jogo |
 

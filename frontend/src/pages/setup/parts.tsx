@@ -174,34 +174,3 @@ export function Esp32Table({ entries, highlight }: { entries: Esp32Entry[]; high
     </div>
   )
 }
-
-/** Desenho (sem fotos de terceiros): placa ESP32, módulo com a blindagem e as portas USB. */
-export function Esp32Illustration() {
-  return (
-    <svg viewBox="0 0 340 150" role="img" aria-label="ESP32-WROOM-32E" className="w-full max-w-md text-ink">
-      <rect x="10" y="20" width="250" height="110" rx="8" className="fill-slate-800 stroke-slate-600" strokeWidth="2" />
-      {Array.from({ length: 15 }, (_, i) => (
-        <circle key={`a${i}`} cx={24 + i * 15} cy="30" r="3" className="fill-amber-400" />
-      ))}
-      {Array.from({ length: 15 }, (_, i) => (
-        <circle key={`b${i}`} cx={24 + i * 15} cy="120" r="3" className="fill-amber-400" />
-      ))}
-      <rect x="90" y="42" width="110" height="66" rx="4" className="fill-slate-300 stroke-slate-400" strokeWidth="2" />
-      <rect x="200" y="46" width="40" height="58" className="fill-slate-700" />
-      <path d="M206 52 h28 v8 h-22 v8 h22 v8 h-22 v8 h22" className="fill-none stroke-amber-400" strokeWidth="2" />
-      <text x="145" y="70" textAnchor="middle" fontSize="11" fontWeight="700" className="fill-slate-800">ESP32-WROOM</text>
-      <text x="145" y="88" textAnchor="middle" fontSize="16" fontWeight="800" className="fill-red-600">-32E</text>
-      <rect x="0" y="52" width="22" height="18" rx="3" className="fill-slate-400" />
-      <rect x="0" y="82" width="22" height="18" rx="3" className="fill-slate-400" />
-      <text x="28" y="65" fontSize="9" className="fill-emerald-300">UART / COM</text>
-      <text x="28" y="95" fontSize="9" className="fill-slate-300">USB / OTG</text>
-      <path d="M300 80 L252 80" stroke="currentColor" strokeWidth="1.5" markerEnd="url(#esp32-arrow)" />
-      <defs>
-        <marker id="esp32-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-          <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
-        </marker>
-      </defs>
-      <text x="304" y="84" fontSize="14" fontWeight="700" fill="currentColor">E?</text>
-    </svg>
-  )
-}

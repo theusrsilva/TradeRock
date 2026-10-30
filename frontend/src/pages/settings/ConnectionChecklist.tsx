@@ -9,7 +9,7 @@ import { useIsRemote } from '../../lib/auth'
 import { connectionKeys, systemCheckIds, useConnection, type ConnectionKey, type ItemState } from '../../lib/connection'
 import type { HardwareCatalog, SetupStatus } from '../../lib/types'
 import { Esp32Actions } from '../setup/Esp32Actions'
-import { CatalogNotice, CheckList, CompatBadge, Esp32Illustration, Esp32Table, WifiTable } from '../setup/parts'
+import { CatalogNotice, CheckList, CompatBadge, Esp32Table, WifiTable } from '../setup/parts'
 import { SwitchTest } from '../setup/SwitchTest'
 import { LanCard } from './LanCard'
 import { WifiActions } from '../setup/WifiActions'
@@ -27,7 +27,7 @@ export const stateLook: Record<ItemState | 'guide' | 'testing', Look> = {
   testing: { chip: 'bg-info-soft text-info', icon: 'progress_activity', label: 'ui.conn.state.testing' },
 }
 
-type Patch = Partial<Pick<SetupStatus['state'], 'radio' | 'phy' | 'serialPort' | 'esp32Board' | 'esp32ModuleConfirmed' | 'keysSkipped' | 'completed'>>
+type Patch = Partial<Pick<SetupStatus['state'], 'radio' | 'phy' | 'serialPort' | 'esp32Board' | 'keysSkipped' | 'completed'>>
 type RowKey = ConnectionKey | 'game'
 
 /**
@@ -448,7 +448,6 @@ function RadioPanel({
   const detectedDrivers = advice.cards.flatMap((c) => [c.card.module, c.card.driver]).filter((d): d is string => !!d)
   // No Linux, a placa Wi-Fi aparece primeiro; no Windows, só o ESP32.
   const options = windows ? advice.options.filter((o) => o.engine === 'esp32') : advice.options
-  const board = catalog.esp32.find((b) => b.id === state.esp32Board)
   const ports = system.serialPorts.filter((p) => !p.driverMissing)
 
   return (
@@ -543,18 +542,6 @@ function RadioPanel({
               ))}
             </select>
           </label>
-          {board?.module && board.status !== 'unsupported' && (
-            <Callout tone="amber">
-              <div className="flex flex-col gap-2">
-                <Esp32Illustration />
-                <p>{t('wizard.moduleHelp')}</p>
-                <label className="flex items-center gap-2 font-bold">
-                  <input type="checkbox" className="accent-accent" checked={state.esp32ModuleConfirmed} onChange={(e) => onPatch({ esp32ModuleConfirmed: e.target.checked })} />
-                  {t('wizard.confirmModule')}
-                </label>
-              </div>
-            </Callout>
-          )}
           <div className="flex flex-col gap-1.5">
             <div className="text-[13px] font-bold">{t('wizard.choosePort')}</div>
             {ports.length === 0 && <p className="text-sm text-muted">{t('wizard.noPorts')}</p>}

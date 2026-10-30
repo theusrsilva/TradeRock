@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Baixa os sprites 387–1025 (Gen 4 a Gen 9) do PokeAPI/sprites num commit fixo para assets/sprites e confere
-# com assets/sprites/SHA256SUMS. Os 1–386 continuam vindo do easyworld (engines/frlg-ldn-trade-esp32/assets/sprites).
+# com assets/sprites/SHA256SUMS. Os 1–386 (também do PokeAPI) vieram do easyworld e já estão no repositório.
 # Roda só quando o conjunto muda (o resultado fica no repositório); o app nunca baixa nada (D17).
 #   scripts/fetch-sprites.sh           baixa o que falta e confere
 #   scripts/fetch-sprites.sh --update  baixa tudo e regrava o SHA256SUMS (ao trocar o commit)
@@ -19,7 +19,7 @@ done | xargs -r -P 8 -I{} curl -fsSL -o "$DIR/{}.png" \
   "https://raw.githubusercontent.com/PokeAPI/sprites/$COMMIT/sprites/pokemon/{}.png"
 
 if [[ ${1:-} == --update ]]; then
-  (cd "$DIR" && sha256sum $(seq -f '%g.png' "$FIRST" "$LAST") > SHA256SUMS)
+  (cd "$DIR" && sha256sum $(seq -f '%g.png' 1 "$LAST") > SHA256SUMS)
 fi
 (cd "$DIR" && sha256sum -c --quiet SHA256SUMS)
-echo "sprites $FIRST–$LAST conferidos em $DIR"
+echo "sprites 1–$LAST conferidos em $DIR"

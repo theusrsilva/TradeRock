@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using TradeRock.Core;
 using TradeRock.Core.Setup;
 
@@ -395,6 +396,26 @@ public sealed class SetupChecksTests
     }
 
     [Fact]
+    public void Placa_sem_modo_ap_troca_so_o_frlg()
+    {
+        var passed = new CardTestResult("phy1", true, "passed", default, [], Driver: "mt76x0u", Ap: true);
+        SetupState State(CardTestResult test) => new() { Radio = "wifi", Phy = "phy1", CardTest = test };
+        Assert.DoesNotContain(Checks("linux-compatible", State(passed), GoodKeys), c => c.Id == "card_test_ap");
+        // Sem AP: a placa passa (o FRLG troca), com um aviso que não bloqueia.
+        var noAp = Checks("linux-compatible", State(passed with { Ap = false }), GoodKeys);
+        Assert.Equal(CheckStatus.Ok, Get(noAp, "card_test").Status);
+        Assert.Equal(("card_test_no_ap", CheckStatus.Warning, false), (Get(noAp, "card_test_ap").Code, Get(noAp, "card_test_ap").Status, Get(noAp, "card_test_ap").Essential));
+        // Teste de antes da Entrega 17: sugere testar de novo.
+        Assert.Equal("card_test_ap_unknown", Get(Checks("linux-compatible", State(passed with { Ap = null }), GoodKeys), "card_test_ap").Code);
+
+        var parsed = SetupService.ParseCardTest("phy1", JsonNode.Parse("""
+            {"passed": true, "code": "passed", "channels": [], "ap": false, "apError": "OSError: [Errno 95] Operation not supported"}
+            """)!.AsObject(), default);
+        Assert.Equal((false, "OSError: [Errno 95] Operation not supported"), (parsed.Ap, parsed.ApError));
+        Assert.Null(SetupService.ParseCardTest("phy1", JsonNode.Parse("""{"passed": true, "code": "passed"}""")!.AsObject(), default).Ap);
+    }
+
+    [Fact]
     public void Teste_com_o_switch_vale_so_para_a_mesma_placa_e_o_mesmo_prod_keys()
     {
         var saved = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
@@ -471,7 +492,7 @@ public sealed class SetupChecksTests
     {
         var checks = Checks("linux-esp32", new SetupState { Radio = "esp32", Esp32Board = "esp32-s3", SerialPort = "/dev/ttyUSB0" }, GoodKeys);
 
-        Assert.Equal("esp32_board_recommended", Get(checks, "esp32_board").Code);
+        Assert.Equal("esp32_board_works", Get(checks, "esp32_board").Code);
         Assert.Equal("WCH CH340", Get(checks, "serial_port").Args!["chip"]);
         var group = Get(checks, "serial_group");
         Assert.Equal(CheckStatus.Error, group.Status);
@@ -500,7 +521,7 @@ public sealed class SetupChecksTests
         Assert.Equal("esp32_board_mismatch", Code(State(chip: new(port, "esp32c6", "ESP32-C6", 1, "16MB", now)), "esp32_chip"));
         Assert.Equal("esp32_flash_too_small", Code(State(chip: new(port, "esp32s3", "ESP32-S3", 2, "2MB", now)), "esp32_flash_size"));
 
-        var classic = new SetupState { Radio = "esp32", Esp32Board = "esp32-wroom-32e", Esp32ModuleConfirmed = true, SerialPort = port,
+        var classic = new SetupState { Radio = "esp32", Esp32Board = "esp32-wroom-32e", SerialPort = port,
             Esp32Chip = new(port, "esp32", "ESP32-D0WDQ6 (revision v1.0)", 100, "4MB", now) };
         var revision = Get(Checks("linux-esp32", classic, GoodKeys), "esp32_revision");
         Assert.Equal(("esp32_old_revision", CheckStatus.Warning), (revision.Code, revision.Status));
@@ -538,18 +559,25 @@ public sealed class SetupChecksTests
     }
 
     [Fact]
-    public void Esp32_classico_exige_confirmar_o_modulo_e_o_antigo_nao_e_suportado()
+    public void Esp32_classico_funciona_e_o_antigo_fica_sem_teste()
     {
+        // Firmware do pokeldn (D23): não há mais módulo a confirmar; o WROOM-32 antigo vira "sem teste" (aviso).
         var state = new SetupState { Radio = "esp32", Esp32Board = "esp32-wroom-32e", SerialPort = "/dev/ttyUSB0" };
-        Assert.Equal("esp32_confirm_module", Get(Checks("linux-esp32", state, GoodKeys), "esp32_board").Code);
-        Assert.Equal(CheckStatus.Warning, Get(Checks("linux-esp32", state with { Esp32ModuleConfirmed = true }, GoodKeys), "esp32_board").Status);
-        Assert.Equal("esp32_board_unsupported", Get(Checks("linux-esp32", state with { Esp32Board = "esp32-wroom-32" }, GoodKeys), "esp32_board").Code);
+        Assert.Equal(("esp32_board_works", CheckStatus.Ok), Pair(Get(Checks("linux-esp32", state, GoodKeys), "esp32_board")));
+        Assert.Equal(("esp32_board_untested", CheckStatus.Warning),
+            Pair(Get(Checks("linux-esp32", state with { Esp32Board = "esp32-wroom-32" }, GoodKeys), "esp32_board")));
+        Assert.DoesNotContain(Checks("linux-esp32", state, GoodKeys), c => c.Id == "usb_port_kind");
     }
 
-    [Fact]
-    public void Esp32_c3_numa_porta_de_conversor_avisa()
+    private static (string, CheckStatus) Pair(SetupCheck check) => (check.Code, check.Status);
+
+    [Theory]
+    [InlineData("esp32-c3")]
+    [InlineData("esp32-s3")]
+    [InlineData("esp32-c6")]
+    public void Esp32_de_usb_nativa_numa_porta_de_conversor_avisa(string board)
     {
-        var checks = Checks("linux-esp32", new SetupState { Radio = "esp32", Esp32Board = "esp32-c3", SerialPort = "/dev/ttyUSB0" }, GoodKeys);
+        var checks = Checks("linux-esp32", new SetupState { Radio = "esp32", Esp32Board = board, SerialPort = "/dev/ttyUSB0" }, GoodKeys);
         Assert.Equal("port_should_be_native", Get(checks, "usb_port_kind").Code);
     }
 

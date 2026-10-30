@@ -419,6 +419,14 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.Equal("za", inner["game"]!.GetValue<string>());
         Assert.Null(inner["radio"]);  // placa Wi-Fi: o worker escolhe
         Assert.Null(inner["keys"]);   // as chaves vão à parte, só para o worker
+
+        // Placa sem modo AP (teste da placa): os jogos novos param antes do worker; o FRLG continua.
+        var settings = _app.Services.GetRequiredService<TradeRock.Core.Storage.SettingsStore>();
+        var state = (await _app.Services.GetRequiredService<SetupService>().StatusAsync(CancellationToken.None)).State;
+        await settings.SetAsync(SetupService.StateKey, state with { CardTest = new CardTestResult("phy1", true, "passed", default, [], Ap: false) }, CancellationToken.None);
+        var noAp = await engine.RunAttemptAsync(request, _ => ValueTask.CompletedTask, CancellationToken.None);
+        Assert.Equal("card_no_ap", noAp.Failure!.Code);
+        Assert.Single(_worker.Requests, r => r["op"]?.GetValue<string>() == "start_pokeldn");
     }
 
     [LinuxFact]

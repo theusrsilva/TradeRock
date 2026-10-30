@@ -140,7 +140,7 @@ class EventMapTests(unittest.TestCase):
         """Patch 0003: a cadeia de salvamento pós-troca aguenta a pausa de uma evolução e, se a rede de
         segurança disparar, volta quando o host retoma as barreiras (antes, o Switch travava em "Saving...")."""
         engine = os.path.join(REPO, "engines", "frlg-ldn-trade")
-        pk3 = os.path.join(REPO, "engines", "frlg-ldn-trade-esp32", "assets", "party", "mewtwo.pk3")
+        pk3 = os.path.join(REPO, "assets", "demo", "mewtwo.pk3")
         if not (os.path.isdir(os.path.join(engine, "frlgsim")) and os.path.exists(pk3)):
             self.skipTest("submódulos ausentes")
         with tempfile.TemporaryDirectory() as tmp:
