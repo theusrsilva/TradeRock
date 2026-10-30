@@ -509,6 +509,14 @@ class ServerHarness:
                     "print(json.dumps({'type':'result','result':{'passed':True,'code':'found_decrypted',"
                     "'keysBytes':len(k),'seconds':p['seconds'],'keysPath':p['keys']}}))")
             return [sys.executable, "-c", code]
+        if kind == "pokeldn":
+            # O filho do pokeldn: confere o que o worker acrescentou ao pedido e responde no protocolo dele.
+            code = ("import json,os,sys; p=json.loads(sys.stdin.readline()); "
+                    "ok=os.path.isfile(p['keys']) and p['radio'] is None and p['phy']=='phy0' and p['game']=='sv'; "
+                    "print(json.dumps({'type':'event','kind':'joined'})); "
+                    "print(json.dumps({'type':'trade_done','index':1,'data':'eA=='})); "
+                    "print(json.dumps({'type':'result','exitCode':0 if ok else 9,'trades':1}))")
+            return [sys.executable, "-c", code]
         if kind == "card":
             code = ("import json,sys; sys.stdin.readline(); print(json.dumps({'type':'result','result':"
                     "{'monitor':True,'channels':[],'passed':True,'code':'passed'}}))")
@@ -573,6 +581,25 @@ class ServerTests(unittest.TestCase):
         self.assertIn(["nmcli", "device", "set", "wlp2s0", "managed", "yes"], self.h.runner.calls)
         # pasta temporária com as chaves foi apagada
         self.assertEqual(glob.glob(os.path.join(tempfile.gettempdir(), "traderock-trade-*", "prod.keys")), [])
+
+    def test_troca_pelo_pokeldn(self):
+        """start_pokeldn (D23): as chaves vão num arquivo 600 do root, a placa é a escolhida, o rádio volta e cada
+        mensagem do pokeldn chega ao app."""
+        self.h.send({"id": 1, "op": "start_pokeldn", "phy": "phy0", "keys": KEYS,
+                     "request": {"game": "sv", "offers": ["eA=="], "code": "12345678"}})
+        started, _ = self.h.read_until(lambda m: m.get("id") == 1)
+        self.assertTrue(started["ok"])
+        end, seen = self.h.read_until(lambda m: m.get("event") == "pokeldn_end")
+        self.assertEqual(end["exitCode"], 0)
+        messages = [m["message"] for m in seen if m.get("event") == "pokeldn"]
+        self.assertEqual([m["type"] for m in messages], ["event", "trade_done", "result"])
+        self.assertEqual(messages[-1]["exitCode"], 0)  # o filho conferiu chaves, rádio e placa
+        self.assertIn(["nmcli", "device", "set", "wlp2s0", "managed", "yes"], self.h.runner.calls)
+        self.assertEqual(glob.glob(os.path.join(tempfile.gettempdir(), "traderock-pokeldn-*", "prod.keys")), [])
+
+        self.h.send({"id": 2, "op": "start_pokeldn", "phy": "phy0", "keys": KEYS, "request": "x"})
+        bad, _ = self.h.read_until(lambda m: m.get("id") == 2)
+        self.assertEqual(bad["error"]["code"], "invalid_request")
 
     def test_ocupado_e_cancelar(self):
         self.h.scenario = "hang"

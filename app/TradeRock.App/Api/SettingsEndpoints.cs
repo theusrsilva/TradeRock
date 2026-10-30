@@ -13,7 +13,7 @@ public static class SettingsEndpoints
 
     /// <summary>Motor e os jogos que ele troca (chaves do catálogo: frlg, sv...).</summary>
     public sealed record EngineDto(string Id, bool IsSimulation, bool Available, string? ReasonCode, bool Selected, IReadOnlyList<string> Games,
-        bool UsesPokeldn);
+        IReadOnlyList<string> PokeldnGames);
 
     public sealed record SelectEngineDto(string Id);
 
@@ -49,7 +49,8 @@ public static class SettingsEndpoints
                 var availability = await engine.CheckAvailabilityAsync(ct);
                 result.Add(new EngineDto(engine.Id, engine.IsSimulation, availability.Available,
                     availability.ReasonCode, engine.Id == selected.Id,
-                    GameCatalog.All.Where(g => engine.Supports(g.Family)).Select(g => g.Key).ToList(), engine.UsesPokeldn));
+                    GameCatalog.All.Where(g => engine.Supports(g.Family)).Select(g => g.Key).ToList(),
+                    GameCatalog.All.Where(g => engine.Supports(g.Family) && engine.UsesPokeldn(g.Family)).Select(g => g.Key).ToList()));
             }
             return result;
         });

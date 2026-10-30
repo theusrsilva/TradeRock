@@ -170,8 +170,8 @@ export interface Engine {
   selected: boolean
   /** Jogos que o motor troca (GameFamily). */
   games: GameFamily[]
-  /** Roda o pokeldn: o TradeRock cria a sala (também no FRLG) e existe o "trocar de volta". */
-  usesPokeldn: boolean
+  /** Jogos que o motor troca pelo pokeldn: o TradeRock cria a sala (também no FRLG) e existe o "trocar de volta". */
+  pokeldnGames: GameFamily[]
 }
 
 export interface Trainer {

@@ -4,6 +4,7 @@ formato e tamanho, e nenhum caminho de arquivo vem de fora (os arquivos são env
 import base64
 import binascii
 import re
+import json
 from dataclasses import dataclass
 
 MAX_LINE = 1 << 20          # 1 MiB por mensagem
@@ -115,3 +116,24 @@ def beacon_params(msg):
         keys=keys,
         seconds=_int(msg.get("seconds", 30), "seconds", 5, 120),
     )
+
+
+@dataclass(frozen=True)
+class PokeldnParams:
+    phy: str
+    keys: bytes
+    request: dict
+
+
+def pokeldn_params(msg):
+    """Troca pelo pokeldn com a placa Wi-Fi (D23). O pedido do jogo é conferido pelo pokeldn_trade.validate no filho;
+    aqui só o que é do worker: a placa e as chaves."""
+    keys = _b64(msg.get("keys"), "keys", MAX_KEYS)
+    if not keys:
+        raise RequestError("invalid_request", "keys vazio")
+    request = msg.get("request")
+    if not isinstance(request, dict):
+        raise RequestError("invalid_request", "request ausente")
+    if len(json.dumps(request)) > MAX_LINE:
+        raise RequestError("invalid_request", "request grande demais")
+    return PokeldnParams(phy=phy(msg.get("phy")), keys=keys, request=request)

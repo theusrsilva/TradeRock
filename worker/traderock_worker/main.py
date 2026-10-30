@@ -18,6 +18,9 @@ def run(argv, root):
         if argv[1] == "beacon":
             from . import beacon_child
             return beacon_child.main(engine_dir)
+        if argv[1] == "pokeldn":  # como root, com a placa Wi-Fi (o worker escreve as chaves e escolhe a placa)
+            from . import pokeldn_trade
+            return pokeldn_trade.main(root)
         return 2
     if argv == ["--esp32"]:
         from . import esp32_flash

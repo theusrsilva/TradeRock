@@ -782,6 +782,17 @@ sprites até a Gen 9, cofre único com filtro, legalidade que avisa sem bloquear
     vendorizado o importa, mas só o usa na placa Wi-Fi.
   - Verificado pelo WSL no Python do Windows: todos os módulos de protocolo importam, e `run.py --pokeldn board|trade`
     roda de ponta a ponta até o erro esperado (porta COM inexistente, oferta falsa).
+- **Placa Wi-Fi (Linux).**
+  - O motor `python-ldn` troca todos os jogos: o FRLG continua no frlg-ldn-trade (o console é o líder) e os outros
+    vão pelo pokeldn (`ITradeEngine.UsesPokeldn` vale por jogo).
+  - O worker (root) ganhou a operação `start_pokeldn`. Ela grava as chaves num arquivo 600 do root, roda o
+    `run.py --child pokeldn` (o mesmo `pokeldn_trade.py`, com `--phy` da placa escolhida e sem `POKELDN_RADIO`) e
+    repassa cada mensagem como `{"event": "pokeldn"}`, terminando com `pokeldn_end`.
+  - O rádio volta ao estado anterior no fim, como na troca do FRLG. As interfaces do pokeldn usam o prefixo `ldn*`,
+    que a configuração do NetworkManager da D15 já deixa de fora.
+  - Como anfitrião, o pokeldn precisa de uma placa que crie rede (modo AP). O teste da placa do assistente confere o
+    modo monitor, não o AP: falta acrescentar.
 - **Não verificado:**
   - gravação, HELLO e troca com uma placa real e um console real;
-  - o cancelamento educado no Windows.
+  - o cancelamento educado no Windows;
+  - a troca dos jogos novos com a placa Wi-Fi (modo AP).

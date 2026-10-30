@@ -37,7 +37,7 @@ export default function TradePage() {
   const { demo: simulation, ready, engines } = useConnection()
   // Jogos que o motor escolhido troca (o ESP32 com o pokeldn troca todos; a placa Wi-Fi, por enquanto, só o FRLG).
   const engineGames = engines.find((e) => e.selected)?.games
-  const pokeldn = engines.find((e) => e.selected)?.usesPokeldn ?? false
+  const pokeldnGames = engines.find((e) => e.selected)?.pokeldnGames ?? []
   const [startedHere, setStartedHere] = useState<string | null>(null)
   // "Usar na troca" no cofre já sabe o jogo: começa no time.
   const [step, setStep] = useState(GAME)
@@ -56,6 +56,7 @@ export default function TradePage() {
     tradeBack: false,
   })
   const game = gameOf(trainer.game)
+  const pokeldn = pokeldnGames.includes(game.family)
   const [startErrors, setStartErrors] = useState<string[]>([])
   const [acceptIllegal, setAcceptIllegal] = useState(false)
   const [allowIllegal, setAllowIllegal] = useState(false)

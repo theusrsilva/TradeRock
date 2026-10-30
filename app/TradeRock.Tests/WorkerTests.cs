@@ -394,6 +394,34 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
     }
 
     [LinuxFact]
+    public async Task Jogos_novos_vao_pelo_pokeldn_no_worker()
+    {
+        await ConfigureWifiAsync();
+        var engine = _app.Services.GetServices<ITradeEngine>().Single(e => e.Id == PythonLdnEngine.EngineId);
+        Assert.True(engine.Supports(TradeRock.Core.Games.GameFamily.Za));
+        Assert.True(engine.UsesPokeldn(TradeRock.Core.Games.GameFamily.Za));
+        Assert.False(engine.UsesPokeldn(TradeRock.Core.Games.GameFamily.Frlg));
+
+        var received = SwitchPokemon.Stored(SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Za, species: 133));
+        _worker.PokeldnReceived = Convert.ToBase64String(received);
+        var offer = SwitchPokemon.Stored(SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Za));
+        var request = new TradeRequest([new PartyMember(Guid.NewGuid(), offer, "Pikachu")], [0], TradeGame.LegendsZA,
+            new TradeRock.Core.Trading.TrainerProfile("Ana", 1, 2), LinkCode: "12345678");
+        var events = new List<TradeEvent>();
+        var result = await engine.RunAttemptAsync(request, e => { events.Add(e); return ValueTask.CompletedTask; }, CancellationToken.None);
+
+        Assert.Equal(AttemptOutcome.Completed, result.Outcome);
+        Assert.Equal(received, Assert.Single(events, e => e.Kind == TradeEventKind.TradeDone).ReceivedData);
+        var sent = _worker.Requests.Single(r => r["op"]?.GetValue<string>() == "start_pokeldn");
+        Assert.Equal("phy1", sent["phy"]!.GetValue<string>());
+        Assert.False(string.IsNullOrEmpty(sent["keys"]?.GetValue<string>()));
+        var inner = sent["request"]!.AsObject();
+        Assert.Equal("za", inner["game"]!.GetValue<string>());
+        Assert.Null(inner["radio"]);  // placa Wi-Fi: o worker escolhe
+        Assert.Null(inner["keys"]);   // as chaves vão à parte, só para o worker
+    }
+
+    [LinuxFact]
     public async Task Cancelar_pede_ao_worker_e_espera_ele_sair()
     {
         await ReadyAsync();

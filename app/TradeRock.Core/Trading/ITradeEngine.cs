@@ -48,10 +48,10 @@ public interface ITradeEngine
     bool Supports(GameFamily family) => family == GameFamily.Frlg;
 
     /// <summary>
-    /// O motor roda o pokeldn (D23): o TradeRock cria a sala e o console entra (também no FRLG), e existe o
-    /// "trocar de volta". Os motores antigos do FRLG entram na sala do console.
+    /// O motor troca esse jogo pelo pokeldn (D23): o TradeRock cria a sala e o console entra (também no FRLG), e existe
+    /// o "trocar de volta". Os motores antigos do FRLG entram na sala do console.
     /// </summary>
-    bool UsesPokeldn => false;
+    bool UsesPokeldn(GameFamily family) => false;
 
     Task<TradeAttemptResult> RunAttemptAsync(
         TradeRequest request,

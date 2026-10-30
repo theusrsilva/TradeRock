@@ -1,5 +1,7 @@
 using System.Text.Json.Nodes;
+using TradeRock.Core.Engines.Pokeldn;
 using TradeRock.Core.Engines.Worker;
+using TradeRock.Core.Games;
 using TradeRock.Core.Setup;
 using TradeRock.Core.Trading;
 
@@ -29,6 +31,11 @@ public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdK
     public string Id => EngineId;
 
     public bool IsSimulation => false;
+
+    /// <summary>FRLG pelo frlg-ldn-trade (o console é o líder); os outros jogos pelo pokeldn, no worker (D23).</summary>
+    public bool Supports(GameFamily family) => true;
+
+    public bool UsesPokeldn(GameFamily family) => family != GameFamily.Frlg;
 
     public async Task<EngineAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken)
     {
@@ -69,6 +76,8 @@ public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdK
         }
 
         client.DrainEvents();
+        if (request.GameInfo.Family != GameFamily.Frlg)
+            return await RunPokeldnAsync(client, request, state.Phy, keyFile, emit, cancellationToken);
         var args = new JsonObject
         {
             ["phy"] = state.Phy,
@@ -100,6 +109,65 @@ public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdK
     }
 
     /// <summary>Repassa os eventos da troca até o fim. Cancelado: pede ao worker e espera ele sair da sala.</summary>
+    /// <summary>Jogos do Switch pelo pokeldn com a placa Wi-Fi: o worker (root) roda o pokeldn_trade.py com a placa.</summary>
+    private async Task<TradeAttemptResult> RunPokeldnAsync(WorkerClient client, TradeRequest request, string phy, byte[] keyFile,
+        Func<TradeEvent, ValueTask> emit, CancellationToken ct)
+    {
+        var args = new JsonObject
+        {
+            ["phy"] = phy,
+            ["keys"] = Convert.ToBase64String(keyFile),
+            ["request"] = PokeldnEngine.Request(request, port: null, keysPath: null),
+        };
+        Array.Clear(keyFile);
+        try
+        {
+            await client.RequestAsync("start_pokeldn", args, TimeSpan.FromSeconds(30), ct);
+        }
+        catch (WorkerException e)
+        {
+            return TradeAttemptResult.Fail(e.Code, e.Message, retryable: e.Code is "busy" or "worker_timeout");
+        }
+        finally
+        {
+            args["keys"] = null;
+        }
+
+        var progress = new PokeldnEngine.Progress(request);
+        var cancelRequested = false;
+        using var cancelDeadline = new CancellationTokenSource();
+        await using var registration = ct.Register(() =>
+        {
+            cancelRequested = true;
+            _ = client.RequestAsync("cancel", null, TimeSpan.FromSeconds(10), CancellationToken.None)
+                .ContinueWith(_ => { }, TaskScheduler.Default);
+            cancelDeadline.CancelAfter(options.CancelWait);
+        });
+        try
+        {
+            await foreach (var msg in client.Events.ReadAllAsync(cancelDeadline.Token))
+            {
+                switch (msg["event"]?.GetValue<string>())
+                {
+                    case "pokeldn" when msg["message"] is JsonObject message:
+                        if (progress.Map(message, DateTimeOffset.UtcNow) is { } e)
+                            await emit(e);
+                        break;
+                    case "pokeldn_end":
+                        return cancelRequested && progress.Received < request.Trades ? TradeAttemptResult.Cancelled : progress.Result();
+                    case "worker_exited":
+                        return cancelRequested
+                            ? TradeAttemptResult.Cancelled
+                            : TradeAttemptResult.Fail("worker_exited", "O componente de rede parou durante a troca.", retryable: false);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancelDeadline.IsCancellationRequested)
+        {
+        }
+        return TradeAttemptResult.Cancelled;
+    }
+
     private async Task<TradeAttemptResult> FollowAsync(WorkerClient client, Func<TradeEvent, ValueTask> emit, CancellationToken ct)
     {
         var cancelRequested = false;

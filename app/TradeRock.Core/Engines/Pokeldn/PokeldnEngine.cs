@@ -24,7 +24,7 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
 
     public bool Supports(GameFamily family) => true;
 
-    public bool UsesPokeldn => true;
+    public bool UsesPokeldn(GameFamily family) => true;
 
     public async Task<EngineAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken)
     {
@@ -63,7 +63,8 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
     }
 
     /// <summary>O pedido do pokeldn_trade.py (ver o cabeçalho dele).</summary>
-    public static JsonObject Request(TradeRequest request, string port, string keysPath)
+    /// <param name="port">Porta do ESP32; null = placa Wi-Fi (o worker acrescenta as chaves e a placa).</param>
+    public static JsonObject Request(TradeRequest request, string? port, string? keysPath)
     {
         var game = request.GameInfo;
         var frlg = game.Family == GameFamily.Frlg;
@@ -83,7 +84,7 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
             ["tradeBack"] = request.TradeBack,
             ["trainer"] = new JsonObject { ["name"] = request.Trainer.Name, ["tid"] = tid, ["sid"] = sid, ["language"] = 2, ["gender"] = 0 },
             ["keys"] = keysPath,
-            ["radio"] = $"esp32:{port}",
+            ["radio"] = port is null ? null : $"esp32:{port}",
             ["seconds"] = RoomSeconds,
         };
         if (frlg)

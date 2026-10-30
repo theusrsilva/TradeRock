@@ -100,6 +100,8 @@ def validate(params):
     code = params.get("code")
     if code is not None and not re.fullmatch(r"\d{8}|\d,\d,\d", str(code)):
         raise ValueError("código inválido")
+    if params.get("phy") is not None and not re.fullmatch(r"phy[0-9]{1,3}", str(params["phy"])):
+        raise ValueError("phy inválido")
     radio = params.get("radio")
     if radio is not None and not re.fullmatch(r"esp32:(/dev/[A-Za-z0-9_.\-/]+|COM[0-9]{1,3})", str(radio)):
         raise ValueError("rádio inválido")
@@ -161,6 +163,8 @@ def command(params, engine, work):
             values[field.key] = str(int(params["seconds"]))
     # FRLG: o anfitrião oferece as posições 0..n-1 do time (--slot 0 do catálogo); o resto é preenchimento.
     extra = {"--trades": params["trades"], "--version": params["version"]} if gen3 else {}
+    if params.get("phy"):  # placa Wi-Fi escolhida no assistente (launcher.py do pokeldn: --phy)
+        extra["--phy"] = params["phy"]
     return os.path.join(engine, tool.script), build(tool, values, extra, settings), received
 
 
