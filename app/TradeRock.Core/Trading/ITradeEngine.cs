@@ -1,3 +1,5 @@
+using TradeRock.Core.Games;
+
 namespace TradeRock.Core.Trading;
 
 public enum AttemptOutcome
@@ -41,6 +43,9 @@ public interface ITradeEngine
     bool IsSimulation { get; }
 
     Task<EngineAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken);
+
+    /// <summary>Jogos que o motor sabe trocar. Os motores reais do FRLG só trocam com o FireRed/LeafGreen.</summary>
+    bool Supports(GameFamily family) => family == GameFamily.Frlg;
 
     Task<TradeAttemptResult> RunAttemptAsync(
         TradeRequest request,

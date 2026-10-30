@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
 using TradeRock.App.Server;
+using TradeRock.Core.Games;
 using TradeRock.Core.Storage;
 using TradeRock.Core.Trading;
 
@@ -17,7 +18,8 @@ public static class TradeEndpoints
         TradeGame Game,
         TrainerDto Trainer,
         SimulationOptions? Simulation,
-        bool AcceptIllegal = false);
+        bool AcceptIllegal = false,
+        string? LinkCode = null);
 
     public sealed record TradeHistoryItemDto(
         Guid Id, DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string EngineId, bool IsSimulation,
@@ -45,6 +47,10 @@ public static class TradeEndpoints
             if (body.Party is null || body.OfferedSlots is null || body.Trainer is null)
                 return Results.BadRequest(new { error = "invalid", errors = new[] { "missing_fields" } });
 
+            if (!Enum.IsDefined(body.Game))
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "game_invalid" } });
+            var game = GameCatalog.Of(body.Game);
+
             // Todo Pokémon da troca já está guardado no cofre: o time vem de lá, por id.
             var party = new List<PartyMember>();
             var stored = new List<StoredPokemon>();
@@ -52,6 +58,9 @@ public static class TradeEndpoints
             {
                 if (await store.GetAsync(id, ct) is not { DeletedAt: null } p)
                     return Results.BadRequest(new { error = "invalid", errors = new[] { "unknown_pokemon" } });
+                // Cada jogo troca o próprio formato (mover entre jogos é outra operação, no cofre).
+                if (p.Family != game.Family)
+                    return Results.BadRequest(new { error = "invalid", errors = new[] { "pokemon_wrong_game" } });
                 var name = string.IsNullOrWhiteSpace(p.Nickname) ? p.SpeciesName : p.Nickname;
                 party.Add(new PartyMember(p.Id, await store.ReadDataAsync(p, ct), name));
                 stored.Add(p);
@@ -59,17 +68,21 @@ public static class TradeEndpoints
 
             var tradeSettings = await settings.GetAsync(SettingsEndpoints.TradeSettingsKey, TradeSettings.Default, ct);
 
-            // Pokémon ilegal não vai para o Switch, a não ser no modo avançado e com confirmação explícita.
+            // FRLG: Pokémon ilegal não vai para o Switch, a não ser no modo avançado e com confirmação explícita.
+            // Jogos novos: o PKHeX avisa, mas não bloqueia; basta a confirmação (decisão do autor, multijogos.md).
             var offeredIllegal = body.OfferedSlots
                 .Where(slot => slot >= 0 && slot < stored.Count && stored[slot].Legality == "illegal")
                 .ToList();
-            if (offeredIllegal.Count > 0 && !(tradeSettings.AllowIllegal && body.AcceptIllegal))
+            var allowIllegal = tradeSettings.AllowIllegal || game.Family != GameFamily.Frlg;
+            if (offeredIllegal.Count > 0 && !(allowIllegal && body.AcceptIllegal))
             {
-                var code = tradeSettings.AllowIllegal ? "illegal_needs_confirmation" : "illegal_pokemon";
+                var code = allowIllegal ? "illegal_needs_confirmation" : "illegal_pokemon";
                 return Results.BadRequest(new { error = "invalid", errors = new[] { code } });
             }
 
             var engine = await engines.GetSelectedAsync(ct);
+            if (!engine.Supports(game.Family))
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "engine_game_unsupported" } });
 
             // Motor real só com o assistente concluído no essencial (chaves, rádio, teste com o Switch).
             // O modo demonstração continua liberado.
@@ -85,7 +98,8 @@ public static class TradeEndpoints
             var request = new TradeRequest(
                 party, body.OfferedSlots, body.Game,
                 new TrainerProfile(body.Trainer.Name, body.Trainer.Tid, body.Trainer.Sid),
-                engine.IsSimulation ? body.Simulation : null);
+                engine.IsSimulation ? body.Simulation : null,
+                string.IsNullOrWhiteSpace(body.LinkCode) ? null : body.LinkCode.Trim());
 
             // Um rádio, uma troca por vez: com o rádio livre começa agora; senão espera a vez na fila.
             var caller = Caller.Of(context);

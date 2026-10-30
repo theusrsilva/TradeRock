@@ -1,4 +1,5 @@
 using PKHeX.Core;
+using TradeRock.Core.Games;
 using TradeRock.Core.Pokemon;
 
 namespace TradeRock.Core.Saves;
@@ -37,5 +38,23 @@ public static class Pk3Export
     {
         var clean = new string(name.Where(c => char.IsLetterOrDigit(c) || c is '-' or '_').ToArray());
         return clean.Length > 0 ? clean : "pokemon";
+    }
+}
+
+/// <summary>
+/// Exportação de qualquer jogo. FireRed/LeafGreen seguem o <see cref="Pk3Export"/> (.pk3/.ek3, 80 ou 100 bytes).
+/// Os outros saem no formato do próprio jogo (.pb7, .pk8, .pb8, .pa8, .pk9, .pa9), decriptados, como o PKHeX
+/// abre: "ek3" e o tamanho escolhidos para a Gen 3 não se aplicam (a forma de caixa é a guardada).
+/// </summary>
+public static class PokemonExport
+{
+    public static (byte[] Data, string Extension) ToFile(byte[] stored, GameFamily family, string format, int size)
+    {
+        if (family == GameFamily.Frlg)
+            return (Pk3Export.ToFile(stored, format, size), format);
+        var pk = PokemonReader.ToEntity(stored, family);
+        var data = new byte[pk.SIZE_STORED];
+        pk.WriteDecryptedDataStored(data);
+        return (data, GameCatalog.Get(family).Extension);
     }
 }

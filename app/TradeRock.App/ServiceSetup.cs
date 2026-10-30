@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using TradeRock.App.Server;
 using TradeRock.Core;
+using TradeRock.Core.Games;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Engines;
 using TradeRock.Core.Engines.Worker;
@@ -128,14 +129,28 @@ public static class ServiceSetup
 
     /// <summary>
     /// O "Switch" simulado manda um Pokémon de demonstração diferente do que foi oferecido,
-    /// para a troca fazer sentido na tela.
+    /// para a troca fazer sentido na tela. Nos jogos novos (sem Pokémon de demonstração), devolve uma cópia
+    /// do oferecido com outro treinador.
     /// </summary>
     private static byte[] DemoHostPokemon(TradeRequest request, int tradeIndex)
     {
+        if (request.GameInfo.Family != GameFamily.Frlg)
+            return DemoCopy(request.Party[request.OfferedSlots[tradeIndex]].Data, request.GameInfo.Family);
         var offered = Pk3Reader.Read(request.Party[request.OfferedSlots[tradeIndex]].Data).Sha256;
         var others = DemoPokemon.All.Where(d => Pk3Reader.Read(d.Data).Sha256 != offered).ToList();
         var pool = others.Count > 0 ? others : DemoPokemon.All.ToList();
         return pool[tradeIndex % pool.Count].Data;
+    }
+
+    private static byte[] DemoCopy(byte[] data, GameFamily family)
+    {
+        var pk = PokemonReader.ToEntity(data, family);
+        pk.OriginalTrainerName = "DEMO";
+        pk.PID = (uint)Random.Shared.NextInt64(0, uint.MaxValue);
+        pk.RefreshChecksum();
+        var result = new byte[pk.SIZE_STORED];
+        pk.WriteDecryptedDataStored(result);
+        return result;
     }
 
     /// <summary>Cria as pastas, aplica as migrações e, na primeira execução, coloca os Pokémon de demonstração.</summary>

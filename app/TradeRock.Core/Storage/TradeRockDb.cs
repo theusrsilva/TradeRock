@@ -59,6 +59,7 @@ public sealed class TradeRockDb(DbContextOptions<TradeRockDb> options) : DbConte
             e.HasIndex(p => new { p.OwnerId, p.Sha256 }).IsUnique();
             e.HasIndex(p => p.Species);
             e.Property(p => p.Origin).HasConversion<string>();
+            e.Property(p => p.Family).HasConversion<string>();
             // Uma posição de caixa só pode ter um Pokémon ativo (os da lixeira ficam sem caixa).
             e.HasIndex(p => new { p.BoxId, p.Slot }).IsUnique().HasFilter("\"BoxId\" IS NOT NULL AND \"Slot\" IS NOT NULL");
             e.HasIndex(p => p.DeletedAt);

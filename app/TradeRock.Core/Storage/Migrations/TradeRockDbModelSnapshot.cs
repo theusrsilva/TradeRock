@@ -61,7 +61,14 @@ namespace TradeRock.Core.Storage.Migrations
                     b.Property<long?>("DeletedAt")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Family")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("Fateful")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte>("Form")
                         .HasColumnType("INTEGER");
 
                     b.Property<byte>("Gender")

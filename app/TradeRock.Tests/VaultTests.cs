@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PKHeX.Core;
+using TradeRock.Core.Games;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Saves;
@@ -204,8 +205,8 @@ public sealed class VaultTests : IAsyncLifetime
 
         Assert.Equal(1, result.Deleted);
         Assert.Equal(1, result.KeptBecauseOfHistory);
-        Assert.False(File.Exists(_pokemon.FilePath(gone.Sha256)));
-        Assert.True(File.Exists(_pokemon.FilePath(kept.Sha256)));
+        Assert.False(File.Exists(_pokemon.FilePath(gone.Sha256, GameFamily.Frlg)));
+        Assert.True(File.Exists(_pokemon.FilePath(kept.Sha256, GameFamily.Frlg)));
         Assert.NotNull(await _pokemon.GetAsync(kept.Id, default));
     }
 

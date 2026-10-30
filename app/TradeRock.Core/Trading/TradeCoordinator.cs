@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
+using TradeRock.Core.Games;
 using TradeRock.Core.Storage;
 
 namespace TradeRock.Core.Trading;
@@ -8,8 +9,8 @@ namespace TradeRock.Core.Trading;
 /// <summary>Onde o coordenador guarda o que recebeu e o histórico.</summary>
 public interface ITradeRecorder
 {
-    /// <summary>Guarda o recebido no cofre de <paramref name="owner"/>.</summary>
-    Task<Guid> StoreReceivedAsync(Guid owner, byte[] data, CancellationToken ct);
+    /// <summary>Guarda o recebido (um Pokémon de <paramref name="family"/>) no cofre de <paramref name="owner"/>.</summary>
+    Task<Guid> StoreReceivedAsync(Guid owner, byte[] data, GameFamily family, CancellationToken ct);
     Task SaveAsync(Guid owner, TradeRecord record, CancellationToken ct);
 }
 
@@ -262,7 +263,8 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
             if (e.Kind == TradeEventKind.TradeDone && e.ReceivedData is { } data)
             {
                 // Grava no momento da confirmação (como o motor real faz com o .pk3).
-                var id = await recorder.StoreReceivedAsync(s.Owner, data, CancellationToken.None);
+                var id = await recorder.StoreReceivedAsync(s.Owner, data, GameCatalog.Of(s.Request.Game).Family,
+                    CancellationToken.None);
                 lock (_lock)
                 {
                     if (e.TradeIndex is { } index && index >= 0 && index < s.Received.Length)

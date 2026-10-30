@@ -1,3 +1,4 @@
+using TradeRock.Core.Games;
 using TradeRock.Core.Trading;
 
 namespace TradeRock.Core.Engines;
@@ -31,6 +32,9 @@ public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProv
 
     public Task<EngineAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken) =>
         Task.FromResult(new EngineAvailability(true));
+
+    /// <summary>A simulação vale para todos os jogos do catálogo.</summary>
+    public bool Supports(GameFamily family) => true;
 
     public async Task<TradeAttemptResult> RunAttemptAsync(
         TradeRequest request, Func<TradeEvent, ValueTask> emit, CancellationToken cancellationToken)

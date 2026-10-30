@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using TradeRock.Core.Games;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Saves;
 using TradeRock.Core.Storage;
@@ -69,6 +70,9 @@ public static class SaveEndpoints
             {
                 if (await store.GetAsync(item.PokemonId, ct) is not { DeletedAt: null } p)
                     return Results.BadRequest(new { error = "unknown_pokemon" });
+                // A injeção em .sav é só do FireRed/LeafGreen (SAV3).
+                if (p.Family != GameFamily.Frlg)
+                    return Results.BadRequest(new { error = "save_game_unsupported" });
                 placements.Add(new Placement(await store.ReadDataAsync(p, ct), item.Box, item.Slot));
             }
 

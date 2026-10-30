@@ -1,5 +1,6 @@
 using TradeRock.App.Server;
 using System.IO.Compression;
+using TradeRock.Core.Games;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Saves;
 using TradeRock.Core.Storage;
@@ -42,6 +43,7 @@ public static class VaultEndpoints
                     .Select(t => Guid.TryParse(t, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).ToList(),
                 MinLevel = byte.TryParse(q["minLevel"], out var min) ? min : null,
                 MaxLevel = byte.TryParse(q["maxLevel"], out var max) ? max : null,
+                Family = q["game"].FirstOrDefault() is { } key ? GameCatalog.ByKey(key)?.Family : null,
             };
             var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(BuilderEndpoints.MyTrainerKey), null, ct);
             return await Run(async () =>
@@ -157,8 +159,8 @@ public static class VaultEndpoints
         {
             if (await store.GetAsync(id, ct) is not { } p)
                 continue;
-            var data = Pk3Export.ToFile(await store.ReadDataAsync(p, ct), body.Format, body.Size);
-            var name = Pk3Export.FileName(p.Species, string.IsNullOrWhiteSpace(p.Nickname) ? p.SpeciesName : p.Nickname, body.Format);
+            var (data, extension) = PokemonExport.ToFile(await store.ReadDataAsync(p, ct), p.Family, body.Format, body.Size);
+            var name = Pk3Export.FileName(p.Species, string.IsNullOrWhiteSpace(p.Nickname) ? p.SpeciesName : p.Nickname, extension);
             var unique = name;
             for (var i = 2; !names.Add(unique); i++)
                 unique = $"{Path.GetFileNameWithoutExtension(name)}-{i}{Path.GetExtension(name)}";

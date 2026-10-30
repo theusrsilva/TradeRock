@@ -1,6 +1,7 @@
 using TradeRock.App.Server;
 using Microsoft.Extensions.Caching.Memory;
 using PKHeX.Core;
+using TradeRock.Core.Games;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Storage;
@@ -11,7 +12,17 @@ namespace TradeRock.App.Api;
 
 public static class BuilderEndpoints
 {
+    /// <summary>"Meu treinador" do FireRed/LeafGreen; os outros jogos usam "trainer.me.&lt;jogo&gt;" (<see cref="MyTrainerKeyFor"/>).</summary>
     public const string MyTrainerKey = "trainer.me";
+
+    public static string MyTrainerKeyFor(GameFamily family) =>
+        family == GameFamily.Frlg ? MyTrainerKey : $"{MyTrainerKey}.{GameCatalog.Get(family).Key}";
+
+    /// <summary>
+    /// "Meu treinador" de um jogo como a tela mostra: <see cref="Tid"/>/<see cref="Sid"/> com os dígitos do jogo
+    /// (5 no FRLG, 6 e 4 nos outros). Insígnias e Pokédex Nacional só valem no FRLG.
+    /// </summary>
+    public sealed record MyTrainerDto(string Name, uint Tid, uint? Sid, byte Gender = 0, byte Badges = 8, bool HasNationalDex = true);
 
     public sealed record GenerateDto(PokemonSpec Spec, string? Language);
     public sealed record AdvancedDto(RawPokemon Raw, string? Language);
@@ -149,30 +160,54 @@ public static class BuilderEndpoints
 
     private static void MapMyTrainer(IEndpointRouteBuilder api)
     {
-        api.MapGet("/settings/my-trainer", async (SettingsStore settings, CancellationToken ct) =>
-            await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct) is { } me ? Results.Ok(me) : Results.NoContent());
-
-        api.MapPut("/settings/my-trainer", async (MyTrainer body, SettingsStore settings, CancellationToken ct) =>
+        // ?game=frlg|lgpe|swsh|bdsp|pla|sv|za (padrão frlg). Guardado com TID16/SID16, como no arquivo.
+        api.MapGet("/settings/my-trainer", async (string? game, SettingsStore settings, CancellationToken ct) =>
         {
-            var errors = TrainerName.Validate(body.Name).ToList();
-            if (body.Badges > 8)
-                errors.Add("badges_invalid");
-            if (errors.Count > 0)
-                return Results.BadRequest(new { error = "invalid", errors });
-            await settings.SetAsync(UserSettings.Key(MyTrainerKey), body, ct);
-            return Results.Ok(body);
+            if (GameParam(game) is not { } g)
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "game_invalid" } });
+            return await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKeyFor(g.Family)), null, ct) is { } me
+                ? Results.Ok(ToDto(g, me))
+                : Results.NoContent();
         });
 
-        // Um Pokémon capturado no Switch e recebido pelo TradeRock traz o TID e o SID do jogador.
+        api.MapPut("/settings/my-trainer", async (string? game, MyTrainerDto body, SettingsStore settings, CancellationToken ct) =>
+        {
+            if (GameParam(game) is not { } g)
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "game_invalid" } });
+            var errors = TrainerName.Validate(body.Name, g).ToList();
+            if (body.Badges > 8)
+                errors.Add("badges_invalid");
+            var ids = TrainerIds.FromDisplay(g, body.Tid, body.Sid ?? 0);
+            if (ids is null)
+                errors.Add("trainer_id_invalid");
+            if (errors.Count > 0)
+                return Results.BadRequest(new { error = "invalid", errors });
+            // Da Gen 7 em diante o SID16 faz parte do TID que o jogo mostra: guarda sempre.
+            var me = new MyTrainer(body.Name, ids!.Value.Tid16, body.Sid is null && !g.SixDigitTrainerId ? null : ids.Value.Sid16,
+                body.Gender, body.Badges, body.HasNationalDex);
+            await settings.SetAsync(UserSettings.Key(MyTrainerKeyFor(g.Family)), me, ct);
+            return Results.Ok(ToDto(g, me));
+        });
+
+        // Um Pokémon capturado no Switch e recebido pelo TradeRock traz o TID e o SID do jogador (no jogo dele).
         api.MapPost("/settings/my-trainer/from-pokemon/{id:guid}", async (Guid id, PokemonStore store, SettingsStore settings, CancellationToken ct) =>
         {
             if (await store.GetAsync(id, ct) is not { } p)
                 return Results.NotFound();
-            var current = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
+            var key = UserSettings.Key(MyTrainerKeyFor(p.Family));
+            var current = await settings.GetAsync<MyTrainer?>(key, null, ct);
             var me = new MyTrainer(p.OtName, p.Tid, p.Sid, current?.Gender ?? 0, current?.Badges ?? 8, current?.HasNationalDex ?? true);
-            await settings.SetAsync(UserSettings.Key(MyTrainerKey), me, ct);
-            return Results.Ok(me);
+            await settings.SetAsync(key, me, ct);
+            return Results.Ok(ToDto(GameCatalog.Get(p.Family), me));
         });
+    }
+
+    private static SwitchGame? GameParam(string? game) => string.IsNullOrEmpty(game) ? GameCatalog.Get(GameFamily.Frlg) : GameCatalog.ByKey(game);
+
+    private static MyTrainerDto ToDto(SwitchGame game, MyTrainer me)
+    {
+        var (tid, sid) = TrainerIds.Display(game, me.Tid, me.Sid ?? 0);
+        return new MyTrainerDto(me.Name, tid, me.Sid is null && !game.SixDigitTrainerId ? null : sid, me.Gender, me.Badges, me.HasNationalDex);
     }
 
     /// <summary>OT padrão do construtor: "Meu treinador" ou, sem ele, o treinador padrão do motor (EMU).</summary>

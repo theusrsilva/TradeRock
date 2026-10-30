@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using TradeRock.Core.Games;
 using TradeRock.Core.Engines;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Storage;
@@ -317,7 +318,7 @@ internal sealed class MemoryRecorder : ITradeRecorder
     public List<byte[]> Stored { get; } = [];
     public List<TradeRecord> Records { get; } = [];
 
-    public Task<Guid> StoreReceivedAsync(Guid owner, byte[] data, CancellationToken ct)
+    public Task<Guid> StoreReceivedAsync(Guid owner, byte[] data, GameFamily family, CancellationToken ct)
     {
         lock (Stored) Stored.Add(data);
         return Task.FromResult(Guid.NewGuid());
