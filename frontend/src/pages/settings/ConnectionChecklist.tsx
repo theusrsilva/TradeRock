@@ -11,6 +11,7 @@ import type { HardwareCatalog, SetupStatus } from '../../lib/types'
 import { Esp32Actions } from '../setup/Esp32Actions'
 import { CatalogNotice, CheckList, CompatBadge, Esp32Illustration, Esp32Table, WifiTable } from '../setup/parts'
 import { SwitchTest } from '../setup/SwitchTest'
+import { LanCard } from './LanCard'
 import { WifiActions } from '../setup/WifiActions'
 
 type Look = { chip: string; icon: string; label: string }
@@ -268,6 +269,8 @@ export function ConnectionChecklist() {
           {t('wizard.exportReport')}
         </Button>
       </div>
+
+      <LanCard />
 
       {rows.map((row) => {
         const look = stateLook[checking && row.state !== 'guide' ? 'testing' : row.state]

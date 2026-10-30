@@ -465,6 +465,50 @@ public sealed class Esp32ApiTests : IAsyncLifetime
         Assert.Equal("console_never_joined", nobody.Failure!.Code);
     }
 
+    [Fact]
+    public async Task Modo_lan_do_sword_sem_configuracao_nem_codigo()
+    {
+        // D24: sem prod.keys, rádio nem teste com o Switch; o código não vai para o pokeldn.
+        var engine = _app.Services.GetServices<ITradeEngine>().Single(e => e.Id == "lan");
+        Assert.True((await engine.CheckAvailabilityAsync(CancellationToken.None)).Available);
+        Assert.False(engine.NeedsSetup);
+        Assert.True(engine.IgnoresLinkCode);
+        Assert.True(engine.Supports(TradeRock.Core.Games.GameFamily.Swsh));
+        Assert.False(engine.Supports(TradeRock.Core.Games.GameFamily.Sv));
+
+        var mine = SwitchPokemon.Stored(SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Swsh));
+        var theirs = SwitchPokemon.Stored(SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Swsh, species: 133, ot: "RIVAL"));
+        _pokeldn.Script = [Event("joined"), Done(1, theirs), Result(1)];
+
+        // Pela API: escolhe o modo LAN e troca sem ter configurado a conexão.
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.PutAsJsonAsync("/api/engines/selected", new { id = "lan" })).StatusCode);
+        var engines = await Json(await _client.GetAsync("/api/engines"));
+        var lan = engines.EnumerateArray().Single(e => e.GetProperty("id").GetString() == "lan");
+        Assert.Equal(["swsh"], lan.GetProperty("games").EnumerateArray().Select(g => g.GetString()));
+        using var upload = new MultipartFormDataContent { { new ByteArrayContent(mine), "files", "pikachu.pk8" } };
+        var uploaded = await Json(await _client.PostAsync("/api/pokemon", upload));
+        var id = uploaded[0].GetProperty("pokemon").GetProperty("id").GetGuid();
+        var start = await _client.PostAsJsonAsync("/api/trades", new
+        {
+            party = new[] { id }, offeredSlots = new[] { 0 }, game = "sword", acceptIllegal = true,
+            trainer = new { name = "Ana", tid = 123456, sid = 1234 }, linkCode = "12345678",
+        });
+        Assert.Equal(HttpStatusCode.Accepted, start.StatusCode);
+        for (var i = 0; i < 100 && (await Json(await _client.GetAsync("/api/trades"))).GetArrayLength() == 0; i++)
+            await Task.Delay(50);
+        var history = await Json(await _client.GetAsync("/api/trades"));
+        Assert.Equal("completed", history[0].GetProperty("status").GetString());
+        Assert.Equal("lan", _pokeldn.Last!["radio"]!.GetValue<string>());
+        Assert.Null(_pokeldn.Last["code"]);
+
+        // Outro jogo no modo LAN: recusado.
+        var sv = await _client.PostAsJsonAsync("/api/trades", new
+        {
+            party = new[] { id }, offeredSlots = new[] { 0 }, game = "scarlet", trainer = new { name = "Ana", tid = 1, sid = 2 },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, sv.StatusCode);
+    }
+
     private static JsonObject Event(string kind) => new() { ["type"] = "event", ["kind"] = kind };
     private static JsonObject Done(int index, byte[] data) => new() { ["type"] = "trade_done", ["index"] = index, ["data"] = Convert.ToBase64String(data) };
     private static JsonObject Result(int trades) => new() { ["type"] = "result", ["exitCode"] = 0, ["trades"] = trades };

@@ -26,7 +26,7 @@ def prepare(root, data_dir, radio=None):
     os.environ["POKELDN_DATA"] = data_dir
     os.environ["POKELDN_MANAGED_RUN"] = "1"
     os.environ.pop("POKELDN_PLUGINS", None)
-    if radio:
+    if radio and radio != "lan":  # LAN (D24): sem rádio, o pokeldn fala UDP pela rede de casa
         os.environ["POKELDN_RADIO"] = radio
     else:
         os.environ.pop("POKELDN_RADIO", None)

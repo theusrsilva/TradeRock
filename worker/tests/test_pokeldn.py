@@ -175,6 +175,10 @@ class PokeldnTradeTests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 self.trade.validate(self.params(**bad))
         self.assertEqual(self.trade.validate(self.params(game="frlg", trades=1, version="leafgreen", code=None)), "frlg")
+        # Modo LAN (D24): só o Sword/Shield, sem prod.keys.
+        self.assertEqual(self.trade.validate(self.params(game="swsh", radio="lan", keys=None)), "swsh")
+        with self.assertRaises(ValueError):
+            self.trade.validate(self.params(game="sv", radio="lan", keys=None))
 
     def test_marcos_e_recebidos(self):
         """O "[done]" manda o arquivo mais novo da pasta de recebidos; cada linha vai para o log sem chaves."""

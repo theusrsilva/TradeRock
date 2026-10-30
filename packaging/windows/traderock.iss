@@ -2,7 +2,8 @@
 ;   scripts/package-windows.sh --installer   (ou ISCC /DAppVersion=... /DSourceDir=... /DOutputDir=... traderock.iss)
 ;
 ; - Pede administrador (decisão do autor, D20): instala em Arquivos de Programas e cria a regra do
-;   Firewall do Windows para o modo servidor, só nas redes privadas e só para o traderock.exe.
+;   Firewall do Windows para o modo servidor, só nas redes privadas e só para o traderock.exe, e a regra do
+;   Sword/Shield na rede de casa (modo LAN, D24): UDP do pokeldn, só redes privadas e só para o Python embutido.
 ; - O app em si nunca roda como administrador: o "Abrir o TradeRock" do fim roda como o usuário.
 ; - Os dados (cofre, prod.keys, contas) ficam em %LOCALAPPDATA%\TradeRock de cada usuário e não são
 ;   apagados na desinstalação.
@@ -18,6 +19,9 @@
 #endif
 
 #define FirewallRule "TradeRock (modo servidor)"
+#define LanRule "TradeRock (Sword/Shield na rede de casa)"
+; Portas do modo LAN do Sword/Shield (pokeldn/ldn/pia_lan.py): busca, broadcast e estações.
+#define LanPorts "30000,40000,49152-49155"
 
 [Setup]
 AppId={{6B0C2E4A-7D1F-4E0B-9B53-2A8C7F3D9E61}
@@ -55,6 +59,8 @@ ptbr.DesktopIcon=Criar um atalho na Área de Trabalho
 en.DesktopIcon=Create a desktop shortcut
 ptbr.Firewall=Liberar o modo servidor no Firewall do Windows (só redes privadas)
 en.Firewall=Allow server mode in Windows Firewall (private networks only)
+ptbr.LanFirewall=Liberar a troca do Sword/Shield pela rede de casa no Firewall do Windows (só redes privadas)
+en.LanFirewall=Allow Sword/Shield trades over the home network in Windows Firewall (private networks only)
 ptbr.Launch=Abrir o TradeRock
 en.Launch=Open TradeRock
 ptbr.DataKept=Seus dados (cofre, contas e prod.keys) continuam em %LOCALAPPDATA%\TradeRock de cada usuário. Apague essa pasta se não for mais usar o TradeRock.
@@ -63,6 +69,7 @@ en.DataKept=Your data (vault, accounts and prod.keys) stays in each user's %LOCA
 [Tasks]
 Name: "desktopicon"; Description: "{cm:DesktopIcon}"; Flags: unchecked
 Name: "firewall"; Description: "{cm:Firewall}"
+Name: "lanfirewall"; Description: "{cm:LanFirewall}"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -76,10 +83,14 @@ Name: "{autodesktop}\TradeRock"; Filename: "{app}\traderock.exe"; Tasks: desktop
 ; rede quando o modo servidor é ligado (D19); fora disso, só em 127.0.0.1.
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#FirewallRule}"""; Flags: runhidden; Tasks: firewall
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#FirewallRule}"" dir=in action=allow program=""{app}\traderock.exe"" protocol=TCP profile=private enable=yes"; Flags: runhidden; Tasks: firewall
+; Regra do modo LAN: entrada UDP só para o Python embutido (é ele que roda o pokeldn), só no perfil "Privada".
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#LanRule}"""; Flags: runhidden; Tasks: lanfirewall
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#LanRule}"" dir=in action=allow program=""{app}\esp32-runtime\python\python.exe"" protocol=UDP localport={#LanPorts} profile=private enable=yes"; Flags: runhidden; Tasks: lanfirewall
 Filename: "{app}\traderock.exe"; Description: "{cm:Launch}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#FirewallRule}"""; Flags: runhidden; RunOnceId: "RemoveFirewallRule"
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#LanRule}"""; Flags: runhidden; RunOnceId: "RemoveLanRule"
 
 [Code]
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);

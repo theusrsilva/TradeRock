@@ -172,6 +172,10 @@ export interface Engine {
   games: GameFamily[]
   /** Jogos que o motor troca pelo pokeldn: o TradeRock cria a sala (também no FRLG) e existe o "trocar de volta". */
   pokeldnGames: GameFamily[]
+  /** Precisa da configuração da conexão (o modo LAN não precisa). */
+  needsSetup: boolean
+  /** O jogo ignora o código de troca (modo LAN do Sword/Shield). */
+  ignoresLinkCode: boolean
 }
 
 export interface Trainer {

@@ -53,6 +53,12 @@ public interface ITradeEngine
     /// </summary>
     bool UsesPokeldn(GameFamily family) => false;
 
+    /// <summary>O motor precisa da configuração da conexão (prod.keys, rádio, teste com o Switch). O modo LAN não precisa.</summary>
+    bool NeedsSetup => true;
+
+    /// <summary>O jogo ignora o código de troca nesse motor (modo LAN do Sword/Shield).</summary>
+    bool IgnoresLinkCode => false;
+
     Task<TradeAttemptResult> RunAttemptAsync(
         TradeRequest request,
         Func<TradeEvent, ValueTask> emit,

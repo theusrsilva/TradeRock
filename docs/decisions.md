@@ -796,3 +796,28 @@ sprites até a Gen 9, cofre único com filtro, legalidade que avisa sem bloquear
   - gravação, HELLO e troca com uma placa real e um console real;
   - o cancelamento educado no Windows;
   - a troca dos jogos novos com a placa Wi-Fi (modo AP).
+
+## D24. Modo LAN do Sword/Shield (Entrega 16)
+
+- **É um motor a mais (`lan`, `PokeldnLanEngine`).** Respostas do autor: é uma conexão a mais e não mexe no rádio
+  configurado.
+  - Ele troca só o Sword/Shield, pela rede de casa: o pokeldn roda o `swsh_host.py --lan` (ferramenta
+    `swsh-lan-host` do catálogo dele), como o usuário, no Linux e no Windows.
+  - Não precisa de ESP32, placa Wi-Fi nem prod.keys (`ITradeEngine.NeedsSetup = false`), então a troca não pede o
+    assistente concluído.
+  - O jogo ignora o código de troca, que some da tela (`IgnoresLinkCode`) e não vai ao pokeldn.
+  - Ele é escolhido no cartão "Rede de casa" de Configurações → Conexão. "Voltar" volta ao motor do rádio
+    configurado ou à demonstração.
+- **No console:** em Opções, L + R + analógico esquerdo liga o modo LAN. As instruções estão em
+  `content/*/trade/jogos/swsh-lan.md`, a partir dos passos que o pokeldn testou num Sword real, num Switch 2 pelo
+  Wi-Fi.
+- **Rede.** O pokeldn usa UDP 30000 (busca), 40000 (broadcast) e 49152–49155 (estações), sempre na rede local.
+  - A trava de rede (D21) deixa passar. A única consulta de nome do pokeldn (`gethostbyname_ex` do próprio
+    computador) é recusada e ele segue sem ela.
+  - O endereço vem da rota padrão: um "connect" UDP para 192.0.2.1, endereço reservado, sem enviar nada.
+- **Firewall do Windows.** Tarefa nova do instalador, marcada por padrão: entrada UDP nessas portas, só no perfil
+  "Privada" e só para o `esp32-runtime\python\python.exe`, que é quem roda o pokeldn. A desinstalação apaga a
+  regra, e o `smoke-windows.ps1` confere as duas coisas.
+- **Verificado:** testes do worker e da API (modo LAN sem configuração, sem código, recusa de outro jogo) e
+  compilação do instalador pelo Inno Setup do Windows.
+- **Não verificado:** a troca com um Sword/Shield de verdade e o `smoke-windows.ps1`, que pede o UAC.

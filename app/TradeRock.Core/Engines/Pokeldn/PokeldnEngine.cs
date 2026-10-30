@@ -47,7 +47,7 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
         var tracker = new Progress(request);
         try
         {
-            await foreach (var message in process.RunAsync("trade", Request(request, port, keys.FilePath), cancellationToken))
+            await foreach (var message in process.RunAsync("trade", Request(request, $"esp32:{port}", keys.FilePath), cancellationToken))
             {
                 if (tracker.Map(message, DateTimeOffset.UtcNow) is { } e)
                     await emit(e);
@@ -63,8 +63,8 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
     }
 
     /// <summary>O pedido do pokeldn_trade.py (ver o cabeçalho dele).</summary>
-    /// <param name="port">Porta do ESP32; null = placa Wi-Fi (o worker acrescenta as chaves e a placa).</param>
-    public static JsonObject Request(TradeRequest request, string? port, string? keysPath)
+    /// <param name="radio">"esp32:&lt;porta&gt;", "lan" ou null = placa Wi-Fi (o worker acrescenta as chaves e a placa).</param>
+    public static JsonObject Request(TradeRequest request, string? radio, string? keysPath)
     {
         var game = request.GameInfo;
         var frlg = game.Family == GameFamily.Frlg;
@@ -84,7 +84,7 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
             ["tradeBack"] = request.TradeBack,
             ["trainer"] = new JsonObject { ["name"] = request.Trainer.Name, ["tid"] = tid, ["sid"] = sid, ["language"] = 2, ["gender"] = 0 },
             ["keys"] = keysPath,
-            ["radio"] = port is null ? null : $"esp32:{port}",
+            ["radio"] = radio,
             ["seconds"] = RoomSeconds,
         };
         if (frlg)

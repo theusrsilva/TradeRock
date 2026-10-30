@@ -1215,7 +1215,17 @@
         "On your unlocked Switch, run Lockpick_RCM.",
         "Copy the prod.keys file from the SD card to the PC.",
         "Click Upload prod.keys below."
-      ]
+      ],
+      "lan": {
+        "title": "Home network (Sword/Shield only)",
+        "inUse": "In use",
+        "sub": "Sword/Shield can also trade over your home network, with no ESP32, Wi-Fi card or prod.keys. The Switch and this computer must be on the same network.",
+        "step1": "In the game, open Options and press L + R + the left stick together: a message says LAN mode is on.",
+        "step2": "The link code is not used: any Switch in LAN mode on the same network finds TradeRock.",
+        "use": "Use the home network",
+        "backRadio": "Back to the radio",
+        "backDemo": "Back to demo mode"
+      }
     },
     "settings": {
       "tabs": {

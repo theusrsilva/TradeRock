@@ -103,9 +103,11 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
 
   const items = connectionItems(setup)
   const readyCount = connectionKeys.filter((k) => items[k] === 'ok').length
-  const demo = engines.find((e) => e.selected)?.isSimulation ?? false
-  // Pela rede não dá para ver as verificações: "pronto" é ter um motor de verdade escolhido.
-  const ready = remote ? engines.length > 0 && !demo : (setup?.readyToTrade ?? false) && !demo
+  const selected = engines.find((e) => e.selected)
+  const demo = selected?.isSimulation ?? false
+  // Pela rede não dá para ver as verificações: "pronto" é ter um motor de verdade escolhido. O modo LAN não precisa
+  // da configuração da conexão (D24).
+  const ready = !!selected && !demo && (remote || !selected.needsSetup || (setup?.readyToTrade ?? false))
 
   return (
     <ConnectionContext.Provider value={{ setup, engines, demo, items, readyCount, ready, reload, setSetup, reloadEngines }}>

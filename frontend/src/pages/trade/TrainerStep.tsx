@@ -40,11 +40,14 @@ export function TrainerStep({
   onChange,
   simulation,
   canTradeBack,
+  linkCodeIgnored = false,
 }: {
   state: TrainerState
   onChange: (state: TrainerState) => void
   simulation: boolean
   canTradeBack: boolean
+  /** Modo LAN do Sword/Shield: o jogo ignora o código (D24). */
+  linkCodeIgnored?: boolean
 }) {
   const { t } = useTranslation()
   const [presets, setPresets] = useState<TrainerPreset[]>([])
@@ -148,7 +151,7 @@ export function TrainerStep({
           {more ? t('ui.trade.lessOptions') : t('ui.trade.moreOptions')}
         </button>
 
-        {game.linkCode !== 'none' && (
+        {game.linkCode !== 'none' && !linkCodeIgnored && (
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
               <span className="flex-1 font-bold">

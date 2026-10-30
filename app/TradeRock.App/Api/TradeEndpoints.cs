@@ -87,8 +87,8 @@ public static class TradeEndpoints
                 return Results.BadRequest(new { error = "invalid", errors = new[] { "engine_game_unsupported" } });
 
             // Motor real só com o assistente concluído no essencial (chaves, rádio, teste com o Switch).
-            // O modo demonstração continua liberado.
-            if (!engine.IsSimulation)
+            // O modo demonstração e o modo LAN (sem rádio nem chaves, D24) continuam liberados.
+            if (!engine.IsSimulation && engine.NeedsSetup)
             {
                 var status = await setup.StatusAsync(ct);
                 // Cenário simulado no assistente (desenvolvimento): os dados não são deste PC.

@@ -1215,7 +1215,17 @@
         "No seu Switch desbloqueado, rode o Lockpick_RCM.",
         "Copie o arquivo prod.keys do cartão SD para o PC.",
         "Clique em Enviar prod.keys abaixo."
-      ]
+      ],
+      "lan": {
+        "title": "Rede de casa (só Sword/Shield)",
+        "inUse": "Em uso",
+        "sub": "O Sword/Shield também troca pela rede de casa, sem ESP32, placa Wi-Fi nem prod.keys. O Switch e este computador precisam estar na mesma rede.",
+        "step1": "No jogo, abra as Opções e aperte L + R + o analógico esquerdo juntos: aparece o aviso de que o modo LAN foi ligado.",
+        "step2": "Na troca, o código não é usado: qualquer Switch no modo LAN da mesma rede encontra o TradeRock.",
+        "use": "Usar a rede de casa",
+        "backRadio": "Voltar para o rádio",
+        "backDemo": "Voltar para a demonstração"
+      }
     },
     "settings": {
       "tabs": {

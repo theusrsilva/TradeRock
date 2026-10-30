@@ -83,6 +83,7 @@ public static class ServiceSetup
         });
         services.AddSingleton<ITradeEngine, PythonLdnEngine>();
         services.AddSingleton<ITradeEngine, PokeldnEngine>();
+        services.AddSingleton<ITradeEngine, PokeldnLanEngine>();
         services.AddSingleton<EngineRegistry>();
     }
 

@@ -7,7 +7,8 @@ catálogo dele (`pokeldn.app.command.build`), carregado com importlib e chamado 
 
 Entrada (uma linha JSON): {"game": "sv", "offers": ["<base64>", ...], "code": "12345678" | null,
 "tradeBack": false, "trainer": {"name", "tid", "sid", "language", "gender"}, "keys": "<caminho do prod.keys>",
-"radio": "esp32:COM3" | null (placa Wi-Fi, como root), "seconds": 900}.
+"radio": "esp32:COM3" | "lan" | null (placa Wi-Fi, como root), "seconds": 900}.
+"lan": modo LAN do Sword/Shield pela rede de casa, sem rádio nem prod.keys (D24).
 As ofertas já vêm no formato que o pokeldn espera de cada jogo (PokeldnOffer no C#).
 No FRLG, "offers" é o time do anfitrião: primeiro os oferecidos, na ordem das trocas, depois os de preenchimento;
 "trades" diz quantos são oferecidos e "version" é "firered" ou "leafgreen".
@@ -103,6 +104,10 @@ def validate(params):
     if params.get("phy") is not None and not re.fullmatch(r"phy[0-9]{1,3}", str(params["phy"])):
         raise ValueError("phy inválido")
     radio = params.get("radio")
+    if radio == "lan":
+        if game != "swsh":
+            raise ValueError("o modo LAN é só do Sword/Shield")
+        return game
     if radio is not None and not re.fullmatch(r"esp32:(/dev/[A-Za-z0-9_.\-/]+|COM[0-9]{1,3})", str(radio)):
         raise ValueError("rádio inválido")
     if not isinstance(params.get("keys"), str) or not os.path.isfile(params["keys"]):
@@ -129,14 +134,15 @@ def command(params, engine, work):
     from pokeldn.app.settings import Settings
 
     game = params["game"]
-    key = "frlg-trade-host" if game == "frlg" else f"{game}-host"
+    lan = params.get("radio") == "lan"
+    key = "swsh-lan-host" if lan else "frlg-trade-host" if game == "frlg" else f"{game}-host"
     tool = next(t for g in CATALOG for t in g.tools if t.key == key)
     trainer = params.get("trainer") or {}
     received = os.path.join(work, "received")
     os.makedirs(received, exist_ok=True)
     gen3 = game == "frlg"
     settings = Settings(
-        keys=params["keys"], received=received, capture=False, sprites=False, check_updates=False,
+        keys=params.get("keys") or os.devnull, received=received, capture=False, sprites=False, check_updates=False,
         ot=trainer.get("name") or "TRADEROCK", language=int(trainer.get("language", 2)),
         gender=int(trainer.get("gender", 0)),
         tid=int(trainer.get("tid", 0)) if gen3 else 0, sid=int(trainer.get("sid", 0)) if gen3 else 0,

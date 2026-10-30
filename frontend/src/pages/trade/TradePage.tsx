@@ -37,7 +37,9 @@ export default function TradePage() {
   const { demo: simulation, ready, engines } = useConnection()
   // Jogos que o motor escolhido troca (o ESP32 com o pokeldn troca todos; a placa Wi-Fi, por enquanto, só o FRLG).
   const engineGames = engines.find((e) => e.selected)?.games
-  const pokeldnGames = engines.find((e) => e.selected)?.pokeldnGames ?? []
+  const selectedEngine = engines.find((e) => e.selected)
+  const pokeldnGames = selectedEngine?.pokeldnGames ?? []
+  const lan = selectedEngine?.ignoresLinkCode ?? false
   const [startedHere, setStartedHere] = useState<string | null>(null)
   // "Usar na troca" no cofre já sabe o jogo: começa no time.
   const [step, setStep] = useState(GAME)
@@ -176,7 +178,8 @@ export default function TradePage() {
   // FRLG: ilegal só com o modo avançado. Jogos novos: o PKHeX avisa, mas não bloqueia (basta confirmar).
   const illegalAllowed = allowIllegal || game.family !== 'frlg'
   const problems = partyProblems(party, offeredIllegal && !illegalAllowed, game.family === 'frlg')
-  const trainerOk = trainerNameErrors(trainer.trainer.name, game).length === 0 && linkCodeErrors(trainer.game, trainer.linkCode).length === 0
+  const trainerOk =
+    trainerNameErrors(trainer.trainer.name, game).length === 0 && (lan || linkCodeErrors(trainer.game, trainer.linkCode).length === 0)
   const canGo = (target: number) =>
     target <= PARTY || (problems.length === 0 && (target <= TRAINER || trainerOk))
   const canContinue = step < REMINDER ? canGo(step + 1) : !offeredIllegal || acceptIllegal
@@ -191,7 +194,7 @@ export default function TradePage() {
       trainer: trainer.trainer,
       simulation: simulation ? { scenario: trainer.scenario, failuresBeforeSuccess: trainer.failuresBeforeSuccess } : null,
       acceptIllegal,
-      linkCode: trainer.linkCode || null,
+      linkCode: lan ? null : trainer.linkCode || null,
       tradeBack: pokeldn && trainer.tradeBack,
     }
     setLeftQueue(false)
@@ -265,7 +268,7 @@ export default function TradePage() {
       {step === PARTY && (
         <PartyStep pokemon={pokemon} state={party} onChange={setParty} onReload={loadPokemon} allowIllegal={illegalAllowed} game={game} />
       )}
-      {step === TRAINER && <TrainerStep state={trainer} onChange={setTrainer} simulation={simulation} canTradeBack={pokeldn} />}
+      {step === TRAINER && <TrainerStep state={trainer} onChange={setTrainer} simulation={simulation} canTradeBack={pokeldn} linkCodeIgnored={lan} />}
       {step === REMINDER && (
         <div className="flex flex-col gap-[18px] rounded-xl border border-line bg-surface p-[22px]">
           <div>
@@ -275,7 +278,7 @@ export default function TradePage() {
           {/* Jogos novos, e o FRLG pelo ESP32 (o TradeRock cria a sala): passos do jogo. Placa Wi-Fi no FRLG: o console é o líder. */}
           {game.family !== 'frlg' || pokeldn ? (
             <div className="rounded-lg bg-surface2 p-4">
-              <ContentFile name={`trade/jogos/${game.family}`} />
+              <ContentFile name={lan ? 'trade/jogos/swsh-lan' : `trade/jogos/${game.family}`} />
             </div>
           ) : (
             <>
@@ -336,7 +339,7 @@ export default function TradePage() {
             <div className="flex-1 text-sm">
               <b>{sending.length ? t('ui.trade.sending', { names: sendNames }) : t('ui.trade.nothingToSend')}</b> · {versionName(trainer.game)} ·{' '}
               {t('ui.trade.trainerLabel')} <b>{trainer.trainer.name}</b>
-              {trainer.linkCode && (
+              {trainer.linkCode && !lan && (
                 <>
                   {' '}· {t('ui.trade.linkCode')} <b className="font-mono">{trainer.linkCode}</b>
                 </>
