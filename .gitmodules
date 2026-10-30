@@ -7,3 +7,6 @@
 [submodule "engines/PKHeX-Plugins"]
 	path = engines/PKHeX-Plugins
 	url = https://github.com/santacrab2/PKHeX-Plugins
+[submodule "engines/pokeldn"]
+	path = engines/pokeldn
+	url = https://github.com/Decryptu/pokeldn

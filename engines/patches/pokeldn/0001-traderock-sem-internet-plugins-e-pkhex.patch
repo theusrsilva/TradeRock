@@ -1,0 +1,36 @@
+--- pokeldn/pokemon.py
++++ pokeldn/pokemon.py
+@@ -409,6 +409,10 @@
+     data = entity_bytes(game, data)
+     if transform is not None:
+         data = entity_bytes(game, transform(data))
++    if os.environ.get("TRADEROCK") == "1":
++        # TradeRock: the app already checked the Pokemon with its own PKHeX (a warning, never a block)
++        # and sends it in the party form; no plugins, no pokeldn-pkhex.
++        return offer_bytes(game, data)
+     return offer_bytes(game, prepare(game, plugin_edits(game, data), fresh=fresh, fields=fields))
+ 
+ 
+--- pokeldn/plugins.py
++++ pokeldn/plugins.py
+@@ -423,6 +423,8 @@
+     if _done:
+         return list(_loaded.values())
+     _done = True
++    if os.environ.get("TRADEROCK") == "1":
++        return []           # TradeRock: plugins run third-party code and may reach the internet
+     on = set(enabled())
+     wanted = [p for p in discover() if named(p) or p.id in on]
+     if wanted:
+--- pokeldn/app/update.py
++++ pokeldn/app/update.py
+@@ -185,6 +185,9 @@
+ 
+ 
+ def _open(url: str, timeout: float = 30.0):
++    if os.environ.get("TRADEROCK") == "1":
++        # TradeRock never reaches the internet (D17): updates, sprites, plugin store, events gallery.
++        raise OSError("TradeRock: internet access is disabled")
+     def allowed(address):
+         parts = urllib.parse.urlsplit(address)
+         return (parts.scheme == "https" and bool(parts.hostname) and not parts.username and not parts.password

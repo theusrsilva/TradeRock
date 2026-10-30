@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D20).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D21).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -22,7 +22,8 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
   como pré-lançamento). O CI roda só nas tags `v*` e publica o Release com o texto de
   `packaging/release-notes.md` e a lista automática do GitHub.
 - Rode `scripts/ci.sh` antes de commitar. Ele roda typecheck, testes e build do frontend, os testes
-  do worker (Python `unittest`) e o build e os testes do .NET.
+  do worker (Python `unittest`), os testes do pokeldn (`scripts/test-pokeldn.sh`, ~5 min) e o build e os
+  testes do .NET.
 
 ## Segurança (inegociável)
 
@@ -69,7 +70,9 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 9 | Esp32SerialEngine + gravação de firmware + validações ESP32 + beacon com ESP32 | feita, **sem placa real** |
 | 10 | Modo servidor na rede (contas, cofre por conta, fila) | feita, **sem celular real** |
 | 11 | Build e instalador Windows (só ESP32) | feita, **sem ESP32 real no Windows** |
-| 12 | Nova interface (protótipo "TradeRock v2" do Claude Design, visual A claro/escuro, celular). O assistente de 7 etapas virou a lista de Configurações → Conexão; edição no painel do cofre (`POST /api/vault/pokemon/{id}/replace`) | em PR |
+| 12 | Nova interface (protótipo "TradeRock v2" do Claude Design, visual A claro/escuro, celular). O assistente de 7 etapas virou a lista de Configurações → Conexão; edição no painel do cofre (`POST /api/vault/pokemon/{id}/replace`) | feita |
+| 13 | Integração do pokeldn (submódulo, patch do modo TradeRock, trava de rede, testes no CI, D21) | em PR |
+| 14–19 | Troca com todos os jogos do Switch: base multijogo, motor pokeldn (placa Wi-Fi), modo LAN do SwSh, ESP32 com o firmware do pokeldn e Windows, outras atividades, modo servidor | planejadas em [docs/multijogos.md](docs/multijogos.md) |
 
 Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-lançamento é a tag `v0.00.01`. As branches das entregas foram apagadas depois do merge.
 
@@ -104,8 +107,8 @@ Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-l
 | `worker/` | Worker Python: `traderock_worker/` (server, radio, trade_child, card_child, beacon_child, esp32_flash, events, protocol) e `tests/` (dublês de trio/ldn em `fake_ldn`) |
 | `frontend/` | React + Vite + TS + Tailwind; o build vai para `app/TradeRock.App/wwwroot`. Cores do tema em `src/index.css` (tokens `bg-surface`, `text-muted`, `bg-accent`...); componentes base em `src/components/ui.tsx`; fontes e ícones embutidos (`src/assets/fonts`) |
 | `catalog/hardware-catalog.json` | Catálogo de placas |
-| `engines/` | Submódulos (frlg-ldn-trade, frlg-ldn-trade-esp32, PKHeX-Plugins) e `patches/` |
-| `scripts/` | `ci.sh`, `dev-host.sh`, `build-worker.sh`, `build-nettools.sh`, `install-worker.sh`, `package-linux.sh`, `smoke-linux.sh`, `package-windows.sh`, `smoke-windows.ps1` |
+| `engines/` | Submódulos (frlg-ldn-trade, frlg-ldn-trade-esp32, pokeldn, PKHeX-Plugins) e `patches/` |
+| `scripts/` | `ci.sh`, `dev-host.sh`, `build-worker.sh`, `stage-pokeldn.sh`, `test-pokeldn.sh`, `build-nettools.sh`, `install-worker.sh`, `package-linux.sh`, `smoke-linux.sh`, `package-windows.sh`, `smoke-windows.ps1` |
 | `packaging/linux/` | Atalho, ícone e `worker-setup.sh` (instalação do worker do AppImage como root) |
 | `packaging/windows/` | `traderock.iss` (Inno Setup), `traderock.ico` e `make-icon.py` |
 

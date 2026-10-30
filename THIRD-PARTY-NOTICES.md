@@ -7,6 +7,7 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | --- | --- | --- |
 | [tornadus/frlg-ldn-trade](https://github.com/tornadus/frlg-ldn-trade) | Motor de troca com a placa Wi-Fi (submódulo) | AGPL-3.0 |
 | [kinnay/LDN](https://github.com/kinnay/LDN) | Biblioteca LDN usada pelo motor Python | GPL-3.0 |
+| [Decryptu/pokeldn](https://github.com/Decryptu/pokeldn) | Motor dos jogos do Switch (Let's Go, Sword/Shield, BDSP, Arceus, Scarlet/Violet, Legends: Z-A) no worker (submódulo, com o patch de `engines/patches/pokeldn`). Traz uma cópia modificada do kinnay/LDN (`vendor/LDN`) | AGPL-3.0 (cópia do LDN: GPL-3.0) |
 | [easyworld/frlg-ldn-trade-esp32](https://github.com/easyworld/frlg-ldn-trade-esp32) | Núcleo C# (motor ESP32, compilado com o patch de `engines/patches/frlg-ldn-trade-esp32`) e os binários de firmware de `firmware/release`, embutidos no app e gravados na placa | AGPL-3.0 (componente LDN: GPL-3.0); o firmware inclui o ESP-IDF v6.1 (Apache-2.0) e bibliotecas binárias da Espressif |
 | BouncyCastle.Cryptography, ZstdSharp.Port, System.IO.Ports | Dependências do núcleo do easyworld (NuGet) | MIT; MIT; MIT |
 | [Konscious.Security.Cryptography.Argon2](https://github.com/kmaragon/Konscious.Security.Cryptography) 1.3.1 (com Konscious.Security.Cryptography.Blake2 1.1.1 e System.Memory) | Hash Argon2id das senhas do modo servidor (NuGet) | MIT |
