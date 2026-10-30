@@ -734,16 +734,30 @@ export interface GiftEntry {
 export interface ActivitiesCatalog {
   engineId: string
   engineSupports: boolean
-  games: { game: GameFamily; activities: 'gift'[]; giftExtensions: string[] }[]
+  games: { game: GameFamily; activities: ('gift' | 'raid' | 'circle')[]; supported: ('gift' | 'raid' | 'circle')[]; giftExtensions: string[] }[]
   gifts: Partial<Record<GameFamily, { presets: GiftEntry[]; events: GiftEntry[] }>>
+  lairLegendaries: number[]
 }
 
-export type ActivityEventKind = 'started' | 'waiting' | 'joined' | 'left' | 'delivered' | 'advertising' | 'error' | 'finished'
+export type ActivityEventKind =
+  | 'started'
+  | 'waiting'
+  | 'joined'
+  | 'left'
+  | 'delivered'
+  | 'advertising'
+  | 'lobby'
+  | 'battle'
+  | 'over'
+  | 'error'
+  | 'finished'
 
 export interface ActivitySnapshot {
   id: string
   game: TradeGame
-  kind: 'gift'
+  kind: 'gift' | 'raid' | 'circle'
+  /** Tipo de raid ou do Union Circle ("quests", "encounters"). */
+  raidKind: string | null
   giftLabel: string | null
   status: 'running' | 'completed' | 'failed' | 'cancelled'
   startedAt: string

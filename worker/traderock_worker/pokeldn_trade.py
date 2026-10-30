@@ -15,6 +15,15 @@ Outras atividades (D26): {"activity": "gift", "game": "frlg" | "swsh", "gift": {
 {"mode": "event", "event": key} | {"mode": "file", "data": "<base64>", "extension": "wc3" | "wc8"}, ...} no lugar de
 "offers". As chaves dos presentes vêm de catalog/gifts.json (scripts/pokeldn/gift_catalog.py). Nada é gravado
 na placa (--save-to-board fica desligado).
+
+Raids (D26): {"activity": "raid", "game": "swsh" | "sv", "raid": {"kind": ..., ...}, ...}. Os tipos e os campos estão
+em RAIDS; os Pokémon vão em base64 (.pk8 ou .pk9) e as raids de evento vêm da cópia embutida das galerias
+(pokeldn_env.use_bundled_raid_events extrai só o evento escolhido). No Sword/Shield, "radio": "lan" usa as
+ferramentas do modo LAN.
+
+Union Circle do Scarlet/Violet (D26): {"activity": "circle", "game": "sv", "circle": {"kind": "quests", "code": "1234",
+"task": "snacksworth" | "bp", "bp": 1000} | {"kind": "encounters", "code": "1234", "spawn": {"species": 25, "level": 30,
+"shiny": false, "tera": 0-17 | null}}}. O console abre o círculo e o TradeRock entra.
 No FRLG, "offers" é o time do anfitrião: primeiro os oferecidos, na ordem das trocas, depois os de preenchimento;
 "trades" diz quantos são oferecidos e "version" é "firered" ou "leafgreen".
 
@@ -23,6 +32,7 @@ Saída (linhas JSON num descritor próprio):
 - {"type": "trade_done", "index": n, "data": "<base64 do recebido>"}
 - {"type": "done", "kind": "delivery", "index": n} (presente do FRLG entregue)
 - {"type": "milestone", "kind": "advertising" | "served", "count": n} (presente do SwSh: o console só ouve o anúncio)
+- {"type": "milestone", "kind": "lobby" | "battle" | "over"} (raids: sala aberta, batalha começou, terminou)
 - {"type": "result", "exitCode": n, "trades": n} ou {"type": "error", "code", "message"}
 O `print` do pokeldn vai para a saída de erro (log), com as sequências hexadecimais longas apagadas.
 """
@@ -43,10 +53,35 @@ from . import pokeldn_env
 GAMES = ("frlg", "lgpe", "swsh", "bdsp", "pla", "sv", "za")
 EXTENSIONS = {"frlg": "pk3", "lgpe": "pb7", "swsh": "pk8", "bdsp": "pb8", "pla": "pa8", "sv": "pk9", "za": "pa9"}
 DONE = re.compile(r"\[done\] (\w+) (\d+) complete")
-ACTIVITIES = {"gift": ("frlg", "swsh")}
+ACTIVITIES = {"gift": ("frlg", "swsh"), "raid": ("swsh", "sv"), "circle": ("sv",)}
+CIRCLES = {"quests": "sv-circle-join", "encounters": "sv-circle-encounters-join"}
+BP_MAX = 9_999_999
+# Tipo de raid → (jogo, ferramenta do catálogo do pokeldn, a do modo LAN ou None).
+RAIDS = {
+    "max-raid-host": ("swsh", "swsh-raid-host", "swsh-lan-raid-host"),
+    "max-raid-join": ("swsh", "swsh-raid-join", "swsh-lan-raid-join"),
+    "lair-host": ("swsh", "swsh-lair-raid-host", "swsh-lan-lair-host"),
+    "lair-join": ("swsh", "swsh-lair-raid-join", "swsh-lan-lair-join"),
+    "tera-raid-host": ("sv", "sv-raid-host", None),
+    "tera-raid-join": ("sv", "sv-raid-join", None),
+}
+LAIR_LEGENDARIES = (144, 145, 146, 150, 243, 244, 245, 249, 250, 380, 381, 382)
+SV_CHOICES = {"version": ("scarlet", "violet"), "map": ("paldea", "kitakami", "blueberry"),
+              "progress": ("beginning", "tera", "3star", "4star", "5star", "6star"), "content": ("standard", "black")}
+MAX_POKEMON = 512
 GIFT_EXTENSIONS = {"frlg": ("wc3", "pokegift"), "swsh": ("wc8", "pokegift")}
 MILESTONES = ((re.compile(r"\badvertising comm id\b"), "advertising"),
-              (re.compile(r"\bserved (\d+) advertisements\b"), "served"))
+              (re.compile(r"\bserved (\d+) advertisements\b"), "served"),
+              # Raids: as linhas de swsh_host, swsh_connect, sv_host e sv_join (docs/swsh_raid.md, docs/sv_raid.md).
+              (re.compile(r"\[(?:raid|lair)\] \S+: lobby opens\b|\bseated at LDN node\b"
+                          r"|the host acknowledged the join request"), "lobby"),
+              (re.compile(r"both sides started|THE HOST STARTS THE BATTLE|the adventure has started"
+                          r"|the battle has begun|\[sv\] the battle begins"
+                          # Union Circle: o círculo começou (sv_join.py)
+                          r"|\[sv\] -> \S+: circle\b|\[sv\] circle: our player follows"), "battle"),
+              (re.compile(r"THE BATTLE IS OVER|our Pokemon is in the battle; closing|our player has left the raid"
+                          r"|handing the session to the console|the network is theirs"
+                          r"|the circle task is done"), "over"))
 LINK = re.compile(r"\[link\] (waiting|joined|left)\b")
 
 
@@ -126,7 +161,12 @@ def validate(params):
     if activity is not None:
         if game not in ACTIVITIES.get(activity, ()):
             raise ValueError("atividade inválida")
-        validate_gift(game, params.get("gift"))
+        if activity == "raid":
+            validate_raid(game, params.get("raid"), params.get("radio") == "lan")
+        elif activity == "circle":
+            validate_circle(params.get("circle"))
+        else:
+            validate_gift(game, params.get("gift"))
         if game == "frlg" and params.get("version") not in ("firered", "leafgreen"):
             raise ValueError("versão inválida")
         validate_radio(params, game)
@@ -154,14 +194,140 @@ def validate_radio(params, game):
         raise ValueError("phy inválido")
     radio = params.get("radio")
     if radio == "lan":
-        if game != "swsh" or params.get("activity") is not None:
-            raise ValueError("o modo LAN é só da troca do Sword/Shield")
+        if game != "swsh" or params.get("activity") not in (None, "raid"):
+            raise ValueError("o modo LAN é só da troca e das raids do Sword/Shield")
         return False
     if radio is not None and not re.fullmatch(r"esp32:(/dev/[A-Za-z0-9_.\-/]+|COM[0-9]{1,3})", str(radio)):
         raise ValueError("rádio inválido")
     if not isinstance(params.get("keys"), str) or not os.path.isfile(params["keys"]):
         raise ValueError("prod.keys ausente")
     return True
+
+
+def _pokemon(value, required):
+    if value is None and not required:
+        return
+    if not isinstance(value, str) or not 0 < len(base64.b64decode(value, validate=True)) <= MAX_POKEMON:
+        raise ValueError("Pokémon inválido")
+
+
+def validate_raid(game, raid, lan):
+    if not isinstance(raid, dict) or raid.get("kind") not in RAIDS:
+        raise ValueError("raid inválida")
+    raid_game, _, lan_tool = RAIDS[raid["kind"]]
+    if raid_game != game or (lan and lan_tool is None):
+        raise ValueError("raid inválida para este jogo")
+    event = raid.get("event")
+    # A chave é a pasta do evento dentro da galeria ("Index 001", "053 Evento/Round 2"); command() confere se existe.
+    if event is not None and (not isinstance(event, str) or not 0 < len(event) <= 200 or not event.isprintable()
+                              or ".." in event.split("/") or event.startswith("/") or "\\" in event):
+        raise ValueError("evento inválido")
+    kind = raid["kind"]
+    if kind == "max-raid-host":
+        _pokemon(raid.get("offer"), True)
+        if event is None:
+            _pokemon(raid.get("boss"), True)
+        elif not re.fullmatch(r"(sword|shield):[1-5]:\d{1,2}:(Wild Area|Isle of Armor|Crown Tundra)", str(raid.get("eventBoss"))):
+            raise ValueError("chefe inválido")
+    elif kind == "max-raid-join":
+        _pokemon(raid.get("offer"), False)
+        if raid.get("move", 1) not in (1, 2, 3, 4):
+            raise ValueError("golpe inválido")
+    elif kind == "lair-host":
+        if raid.get("legendary") not in LAIR_LEGENDARIES:
+            raise ValueError("lendário inválido")
+        if raid.get("code") is not None and not re.fullmatch(r"\d{8}", str(raid["code"])):
+            raise ValueError("código inválido")
+    elif kind == "tera-raid-host":
+        _pokemon(raid.get("pokemon"), True)
+        for name, allowed in SV_CHOICES.items():
+            if raid.get(name) is not None and raid[name] not in allowed:
+                raise ValueError(f"{name} inválido")
+        if not re.fullmatch(r"[0-9A-Fa-f]{8}", str(raid.get("seed", "000F34C3"))):
+            raise ValueError("semente inválida")
+        if raid.get("group") is not None and raid["group"] not in range(1, 11):
+            raise ValueError("grupo inválido")
+        if raid.get("players", 1) not in (1, 2, 3):
+            raise ValueError("jogadores inválidos")
+    elif kind == "tera-raid-join":
+        _pokemon(raid.get("pokemon"), True)
+
+
+def validate_circle(circle):
+    if not isinstance(circle, dict) or circle.get("kind") not in CIRCLES:
+        raise ValueError("Union Circle inválido")
+    if not re.fullmatch(r"\d{4}", str(circle.get("code"))):
+        raise ValueError("código inválido")
+    if circle["kind"] == "quests":
+        if circle.get("task", "snacksworth") not in ("snacksworth", "bp"):
+            raise ValueError("tarefa inválida")
+        if circle.get("task") == "bp" and not (isinstance(circle.get("bp"), int) and 1 <= circle["bp"] <= BP_MAX):
+            raise ValueError("BP inválido")
+        return
+    spawn = circle.get("spawn")
+    if not isinstance(spawn, dict) or not isinstance(spawn.get("species"), int) or not 1 <= spawn["species"] <= 1025:
+        raise ValueError("espécie inválida")
+    if not isinstance(spawn.get("level"), int) or not 1 <= spawn["level"] <= 100:
+        raise ValueError("nível inválido")
+    if spawn.get("tera") is not None and spawn["tera"] not in range(18):
+        raise ValueError("tipo Tera inválido")
+
+
+def circle_values(tool, circle):
+    values = {}
+    for field in tool.fields:
+        flag = field.flag[0] if isinstance(field.flag, tuple) else field.flag
+        if flag == "--code":
+            values[field.key] = circle["code"]
+        elif flag == "--circle-task":
+            values[field.key] = circle.get("task", "snacksworth")
+        elif flag == "--bbq-clear" and circle.get("bp"):
+            values[field.key] = str(circle["bp"])
+        elif flag == "--spawn":
+            spawn = circle["spawn"]
+            # Sem "legal": a conferência do lugar pede o ajudante PKHeX do pokeldn (D26).
+            value = {"species": spawn["species"], "level": spawn["level"], "shiny": bool(spawn.get("shiny"))}
+            if spawn.get("tera") is not None:
+                value["tera"] = spawn["tera"]
+            values[field.key] = value
+    return values
+
+
+def raid_values(tool, raid, game, work):
+    """Valores dos campos da ferramenta de raid, pela flag (o pokeldn monta os argumentos com eles)."""
+    extension = EXTENSIONS[game]
+
+    def pokemon(name):
+        if raid.get(name) is None:
+            return []
+        path = os.path.join(work, f"{name}.{extension}")
+        with open(path, "wb") as f:
+            f.write(base64.b64decode(raid[name]))
+        return [{"file": path}]
+
+    wanted = {
+        "--raid-event": raid.get("event") or "",
+        "--raid-version": raid.get("eventBoss") if game == "swsh" else raid.get("version"),
+        "--raid-boss": pokemon("boss"),
+        "--raid-gigantamax": bool(raid.get("gigantamax")),
+        "--offer-file": pokemon("offer"),
+        "--raid-move": str(raid.get("move", 1)),
+        "--lair-legendary": str(raid.get("legendary", "")),
+        "--code": raid.get("code") or "",
+        "--raid-pokemon": pokemon("pokemon"),
+        "--raid-map": raid.get("map"),
+        "--raid-progress": raid.get("progress"),
+        "--raid-content": raid.get("content"),
+        "--raid-event-group": str(raid["group"]) if raid.get("group") else "",
+        "--raid-seed": (raid.get("seed") or "000F34C3").upper(),
+        "--raid-players": str(raid.get("players", 1)),
+    }
+    values = {}
+    for field in tool.fields:
+        flag = field.flag[0] if isinstance(field.flag, tuple) else field.flag
+        if flag in wanted and wanted[flag] is not None:
+            values[field.key] = wanted[flag]
+    return values
 
 
 def lgpe_code(code):
@@ -181,6 +347,11 @@ def command(params, engine, work):
     activity = params.get("activity")
     if activity == "gift":
         key = f"{game}-gift"
+    elif activity == "raid":
+        _, key, lan_key = RAIDS[params["raid"]["kind"]]
+        key = lan_key if lan else key
+    elif activity == "circle":
+        key = CIRCLES[params["circle"]["kind"]]
     else:
         key = "swsh-lan-host" if lan else "frlg-trade-host" if game == "frlg" else f"{game}-host"
     tool = next(t for g in CATALOG for t in g.tools if t.key == key)
@@ -203,6 +374,16 @@ def command(params, engine, work):
         elif params.get("seconds"):
             values["--seconds"] = str(int(params["seconds"]))
         values = prepare(tool, values)  # grava o .pokegift dos presentes prontos e dos eventos (gift_builder)
+        return os.path.join(engine, tool.script), build(tool, values, extra, settings), received
+    if activity == "circle":
+        return os.path.join(engine, tool.script), build(tool, circle_values(tool, params["circle"]), extra, settings), received
+    if activity == "raid":
+        event = params["raid"].get("event")
+        if event:
+            from pokeldn.app import events_gallery
+            if not pokeldn_env.use_bundled_raid_events(engine, work, game, event) or not events_gallery.holds(event, game=game):
+                raise ValueError("evento desconhecido")
+        values = raid_values(tool, params["raid"], game, work)
         return os.path.join(engine, tool.script), build(tool, values, extra, settings), received
 
     files = []

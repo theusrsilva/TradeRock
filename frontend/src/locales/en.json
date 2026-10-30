@@ -1429,10 +1429,10 @@
   },
   "activities": {
     "title": "Other activities",
-    "sub": "Send Mystery Gift presents to the game, through the same radio as trading.",
+    "sub": "Mystery Gift, raids and Union Circle, through the same radio as trading.",
     "engineUnsupported": "The chosen connection doesn't do other activities. Use the ESP32, the Wi-Fi card or demo mode in Settings → Connection.",
     "whichGame": "Which game?",
-    "whichGameSub": "For now, FireRed/LeafGreen and Sword/Shield Mystery Gift.",
+    "whichGameSub": "Mystery Gift on FireRed/LeafGreen and Sword/Shield; raids on Sword/Shield and Scarlet/Violet; Union Circle on Scarlet/Violet.",
     "gift": {
       "title": "Which gift?",
       "sub": "Pick a ready-made gift, an official event or open a gift file.",
@@ -1456,12 +1456,17 @@
       "joined": "The console found the gift",
       "delivered": "Gift delivered",
       "advertising": "Gift on the air",
-      "swshConfirm": "The console only hears the gift and doesn't say when it gets it. Once the card shows up in the game and you accept it, click Done."
+      "swshConfirm": "The console only hears the gift and doesn't say when it gets it. Once the card shows up in the game and you accept it, click Done.",
+      "lobby": "Room open",
+      "battle": "Battle started",
+      "over": "Battle over",
+      "raidBattle": "The battle is on the console. When it ends, click Done."
     },
     "result": {
       "frlg": "Gift delivered. Save the game and talk to the delivery man on 2F of any Pokémon Center.",
       "swsh": "Done. If the card reached the game, the gift is there.",
-      "cancelled": "Sending stopped."
+      "cancelled": "Sending stopped.",
+      "raid": "Raid finished."
     },
     "errors": {
       "busy": "The radio is busy with a trade or another activity. Wait for it to finish.",
@@ -1472,7 +1477,124 @@
       "gift_not_received": "The console didn't receive the gift. Check that it was on the Mystery Gift search screen and try again.",
       "activity_engine_unsupported": "The chosen connection doesn't do other activities.",
       "activity_game_unsupported": "This game has no other activities in TradeRock yet.",
-      "load_failed": "Couldn't load the gift list."
+      "load_failed": "Couldn't load the gift list.",
+      "raid_invalid": "This raid isn't for this game, or a field is missing.",
+      "raid_pokemon_missing": "Choose the raid's Pokémon.",
+      "raid_event_invalid": "This event doesn't have that boss, version or stage.",
+      "raid_seed_invalid": "The seed needs 8 hexadecimal digits.",
+      "raid_not_started": "The battle didn't start. Check the console steps and try again.",
+      "unknown_pokemon": "That Pokémon is no longer in the vault.",
+      "pokemon_wrong_game": "That Pokémon is from another game.",
+      "link_code_invalid": "The code needs 8 digits.",
+      "circle_code_invalid": "The circle code has 4 digits.",
+      "circle_invalid": "Check the task, the Pokémon and the level.",
+      "circle_not_done": "The task didn't finish. Check the console steps and try again.",
+      "circle_not_started": "The circle didn't start. Check the console steps and try again."
+    },
+    "kinds": {
+      "gift": "Mystery Gift",
+      "raid": "Raids",
+      "circle": "Union Circle"
+    },
+    "raid": {
+      "title": "Which raid?",
+      "sub": "You choose who opens the room: TradeRock or your console.",
+      "start": "Start the raid",
+      "kinds": {
+        "max-raid-host": "Max Raid: the console joins",
+        "max-raid-join": "Max Raid: TradeRock joins",
+        "lair-host": "Dynamax Adventure: the console joins",
+        "lair-join": "Dynamax Adventure: TradeRock joins",
+        "tera-raid-host": "Tera Raid: the console joins",
+        "tera-raid-join": "Tera Raid: TradeRock joins"
+      },
+      "about": {
+        "max-raid-host": "TradeRock opens a Max Raid with the boss you choose and fights with your Pokémon. The console joins through Y-Comm.",
+        "max-raid-join": "The console opens the raid at a den (Invite Others) and TradeRock joins to fight at your side.",
+        "lair-host": "TradeRock opens a Dynamax Adventure with the chosen legendary. Once the adventure starts, it leaves and a game partner takes over.",
+        "lair-join": "The console opens the Dynamax Adventure at the Max Lair (Invite Others) and TradeRock joins to help.",
+        "tera-raid-host": "TradeRock opens a Tera Raid with the boss you choose. The console searches through the Poké Portal with code 4970.",
+        "tera-raid-join": "The console opens the Tera Raid at a crystal (Challenge as a group) and TradeRock joins with your Pokémon."
+      },
+      "noPokemon": "You have no Pokémon for this game in the vault. Make one in the builder or import a file.",
+      "choosePokemon": "Choose a Pokémon from the vault",
+      "anyPokemon": "None (pokeldn picks)",
+      "level": "level {{level}}",
+      "offer": "Pokémon TradeRock brings",
+      "offerHelp": "It fights at your side in the raid.",
+      "boss": "Boss",
+      "bossVault": "Boss from the vault",
+      "bossEvent": "Boss from an event",
+      "chooseBoss": "Choose the boss",
+      "gigantamax": "Gigantamax (only if the species has it)",
+      "event": "Event",
+      "move": "Move TradeRock uses",
+      "moveN": "Move {{n}}",
+      "legendary": "Legendary",
+      "code": "Code (optional)",
+      "codeHelp": "8 digits. Use the same on the console; leave blank for none.",
+      "svBoss": "Boss",
+      "svBossHelp": "The vault Pokémon becomes the raid boss.",
+      "svEventHelp": "Optional: an already distributed event Tera Raid.",
+      "noEvent": "No event",
+      "version": "Version",
+      "group": "Event group",
+      "map": "Region",
+      "maps": {
+        "paldea": "Paldea",
+        "kitakami": "Kitakami",
+        "blueberry": "Blueberry"
+      },
+      "progress": "Story stage",
+      "progressNames": {
+        "beginning": "Start",
+        "tera": "After the Tera Orb",
+        "3star": "3 stars",
+        "4star": "4 stars",
+        "5star": "5 stars",
+        "6star": "6 stars"
+      },
+      "players": "Consoles",
+      "playersHelp": "How many consoles will join. Empty seats go to game partners.",
+      "black": "6-star raid (black crystal)",
+      "seed": "Seed",
+      "seedHelp": "8 hexadecimal digits. The same seed gives the same raid.",
+      "svOffer": "Pokémon TradeRock brings"
+    },
+    "circle": {
+      "title": "Union Circle",
+      "sub": "The console opens the circle and TradeRock joins.",
+      "start": "Join the circle",
+      "kinds": {
+        "quests": "Blueberry Quests",
+        "encounters": "Encounters"
+      },
+      "about": {
+        "quests": "TradeRock clears Blueberry Quests for your console: every Snacksworth legendary, or the BP you choose. Then it leaves the circle.",
+        "encounters": "TradeRock makes the wild Pokémon you choose appear around your player, to battle and catch."
+      },
+      "code": "Circle code",
+      "codeHelp": "The 4 digits you used on the console.",
+      "task": "Task",
+      "tasks": {
+        "snacksworth": "Unlock every Snacksworth legendary",
+        "bp": "Give BP"
+      },
+      "bp": "BP",
+      "bpHelp": "From 1 to 9,999,999.",
+      "species": "Pokémon",
+      "chooseSpecies": "Choose the Pokémon",
+      "level": "Level",
+      "tera": "Tera type",
+      "teraDefault": "Normal (default)",
+      "shiny": "Shiny",
+      "progress": {
+        "lobby": "Joined the circle",
+        "started": "The circle started",
+        "over": "Task done",
+        "running": "The circle is running on the console. To finish, close the circle on the console or click Done."
+      },
+      "result": "Union Circle finished."
     }
   }
 }

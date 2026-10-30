@@ -178,13 +178,22 @@ public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProv
 
     public bool SupportsActivity(GameFamily family, ActivityKind kind) => PokeldnActivity.Supports(family, kind);
 
-    /// <summary>Mystery Gift simulado (modo demonstração): os mesmos marcos do pokeldn, sem console.</summary>
+    /// <summary>Mystery Gift e raids simulados (modo demonstração): os mesmos marcos do pokeldn, sem console.</summary>
     public async Task<ActivityResult> RunActivityAsync(ActivityRequest request, Func<ActivityEvent, ValueTask> emit, CancellationToken ct)
     {
         try
         {
             await emit(new ActivityEvent(ActivityEventKind.Started, _time.GetUtcNow()));
             await Wait(1, ct);
+            if (request.Kind is ActivityKind.Raid or ActivityKind.Circle)
+            {
+                await emit(new ActivityEvent(ActivityEventKind.Lobby, _time.GetUtcNow()));
+                await Wait(5, ct);
+                await emit(new ActivityEvent(ActivityEventKind.Battle, _time.GetUtcNow()));
+                await Wait(10, ct);
+                await emit(new ActivityEvent(ActivityEventKind.Over, _time.GetUtcNow()));
+                return ActivityResult.Done;
+            }
             if (request.GameInfo.Family == GameFamily.Swsh)
             {
                 // O console só ouve o anúncio: fica no ar o tempo do pokeldn, ou até a pessoa encerrar.
@@ -201,7 +210,7 @@ public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProv
         }
         catch (OperationCanceledException)
         {
-            return request.GameInfo.Family == GameFamily.Swsh ? ActivityResult.Done : ActivityResult.Cancelled;
+            return request.Kind == ActivityKind.Gift && request.GameInfo.Family == GameFamily.Swsh ? ActivityResult.Done : ActivityResult.Cancelled;
         }
     }
 }

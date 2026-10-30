@@ -5,8 +5,12 @@ import { Badge, Button, Callout, Icon, inputClass, PageTitle, Segmented } from '
 import { api, ApiError } from '../lib/api'
 import { GAMES, gameOf, versionName } from '../lib/games'
 import { giftText, groupName, whenText } from '../lib/gifts'
-import type { ActivitiesCatalog, ActivitySnapshot, GiftEntry, TradeGame } from '../lib/types'
+import type { ActivitiesCatalog, ActivitySnapshot, GiftEntry, Pokemon, TradeGame } from '../lib/types'
+import { CircleForm, circleReady, newCircle, type CircleState } from './activities/CircleForm'
+import { newRaid, RAID_KINDS, RaidForm, raidReady, type RaidState } from './activities/RaidForm'
 import { GameStep } from './trade/GameStep'
+
+type Activity = 'gift' | 'raid' | 'circle'
 
 type Mode = 'preset' | 'event' | 'file'
 
@@ -17,8 +21,10 @@ interface GiftFile {
 }
 
 /**
- * Outras atividades (D26): por enquanto, o Mystery Gift do FireRed/LeafGreen e do Sword/Shield, pelo rádio
- * configurado (ESP32 ou placa Wi-Fi) ou simulado no modo demonstração.
+ * Outras atividades (D26): Mystery Gift (FireRed/LeafGreen e Sword/Shield), raids (Sword/Shield e Scarlet/Violet) e
+ * Union Circle (Scarlet/Violet),
+ * pelo rádio configurado (ESP32 ou placa Wi-Fi; as raids do Sword/Shield também pela rede de casa) ou simuladas no
+ * modo demonstração.
  */
 export default function ActivitiesPage() {
   const { t } = useTranslation()
@@ -31,9 +37,14 @@ export default function ActivitiesPage() {
   const [search, setSearch] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
+  const [activity, setActivity] = useState<Activity>('gift')
+  const [raid, setRaid] = useState<RaidState>(newRaid('max-raid-host'))
+  const [vault, setVault] = useState<Pokemon[]>([])
+  const [circle, setCircle] = useState<CircleState>(newCircle())
 
   useEffect(() => {
     api.get<ActivitiesCatalog>('/api/activities').then(setCatalog, () => setErrors(['load_failed']))
+    api.get<Pokemon[]>('/api/pokemon').then(setVault, () => {})
     api.get<ActivitySnapshot | null>('/api/activities/current').then((s) => setCurrent(s ?? null), () => {})
   }, [])
 
@@ -50,15 +61,22 @@ export default function ActivitiesPage() {
   const family = gameOf(game).family
   const gifts = catalog?.gifts[family]
   const games = GAMES.filter((g) => catalog?.games.some((a) => a.game === g.family))
-  const extensions = catalog?.games.find((g) => g.game === family)?.giftExtensions ?? []
+  const gameActivities = catalog?.games.find((g) => g.game === family)
+  const extensions = gameActivities?.giftExtensions ?? []
+  const offered = (gameActivities?.activities ?? []) as Activity[]
+  const supported = (gameActivities?.supported ?? []) as Activity[]
 
   const chooseGame = (g: TradeGame) => {
     setGame(g)
-    if (gameOf(g).family !== family) {
+    const next = gameOf(g).family
+    if (next !== family) {
       setKey(null)
       setFile(null)
       setMode('preset')
       setSearch('')
+      const kinds = catalog?.games.find((x) => x.game === next)?.activities ?? []
+      setActivity(kinds.includes('gift') ? 'gift' : 'raid')
+      if (next === 'swsh' || next === 'sv') setRaid(newRaid(RAID_KINDS[next][0]))
     }
   }
 
@@ -95,6 +113,14 @@ export default function ActivitiesPage() {
     setBusy(true)
     setErrors([])
     try {
+      if (activity === 'raid') {
+        setCurrent(await api.post<ActivitySnapshot>('/api/activities', { game, kind: 'raid', raid }))
+        return
+      }
+      if (activity === 'circle') {
+        setCurrent(await api.post<ActivitySnapshot>('/api/activities', { game, kind: 'circle', circle }))
+        return
+      }
       const gift =
         mode === 'file' && file
           ? { mode, data: file.data, extension: file.extension, fileName: file.name }
@@ -120,7 +146,7 @@ export default function ActivitiesPage() {
       <PageTitle>{t('activities.title')}</PageTitle>
       <p className="-mt-2 text-sm text-muted">{t('activities.sub')}</p>
 
-      {catalog && !catalog.engineSupports && (
+      {catalog && (!catalog.engineSupports || (gameActivities && !supported.includes(activity))) && (
         <Callout tone="amber" icon="info">
           {t('activities.engineUnsupported')}
         </Callout>
@@ -135,6 +161,36 @@ export default function ActivitiesPage() {
         sub={t('activities.whichGameSub')}
       />
 
+      {offered.length > 1 && (
+        <Segmented<Activity>
+          className="self-start"
+          value={activity}
+          onChange={setActivity}
+          options={offered.map((a) => ({ value: a, label: t(`activities.kinds.${a}`) }))}
+        />
+      )}
+
+      {activity === 'raid' && (family === 'swsh' || family === 'sv') && (
+        <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-[22px]">
+          <div>
+            <div className="text-lg font-bold">{t('activities.raid.title')}</div>
+            <div className="text-sm text-muted">{t('activities.raid.sub')}</div>
+          </div>
+          <RaidForm family={family} raid={raid} onChange={setRaid} pokemon={vault} />
+        </div>
+      )}
+
+      {activity === 'circle' && (
+        <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-[22px]">
+          <div>
+            <div className="text-lg font-bold">{t('activities.circle.title')}</div>
+            <div className="text-sm text-muted">{t('activities.circle.sub')}</div>
+          </div>
+          <CircleForm circle={circle} onChange={setCircle} />
+        </div>
+      )}
+
+      {activity === 'gift' && (
       <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-[22px]">
         <div>
           <div className="text-lg font-bold">{t('activities.gift.title')}</div>
@@ -212,9 +268,13 @@ export default function ActivitiesPage() {
         )}
       </div>
 
+      )}
+
       <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-[22px]">
         <div className="text-lg font-bold">{t('activities.howTo', { game: gameOf(game).name })}</div>
-        <ContentFile name={`activities/gift-${family}`} />
+        <ContentFile
+          name={activity === 'raid' ? `activities/raid-${raid.kind}` : activity === 'circle' ? `activities/circle-${circle.kind}` : `activities/gift-${family}`}
+        />
       </div>
 
       {errors.length > 0 && (
@@ -228,8 +288,14 @@ export default function ActivitiesPage() {
       )}
 
       <div className="flex justify-end">
-        <Button icon="send" disabled={!chosen || busy || !catalog?.engineSupports} onClick={start}>
-          {t('activities.send')}
+        <Button
+          icon={activity === 'raid' ? 'swords' : activity === 'circle' ? 'group' : 'send'}
+          disabled={
+            !(activity === 'raid' ? raidReady(raid) : activity === 'circle' ? circleReady(circle) : chosen) || busy || !supported.includes(activity)
+          }
+          onClick={start}
+        >
+          {t(activity === 'raid' ? 'activities.raid.start' : activity === 'circle' ? 'activities.circle.start' : 'activities.send')}
         </Button>
       </div>
     </div>
@@ -245,10 +311,20 @@ function Progress({ snapshot, onStop, onAgain }: { snapshot: ActivitySnapshot; o
   const { t } = useTranslation()
   const game = gameOf(snapshot.game)
   const kinds = new Set(snapshot.events.map((e) => e.kind))
-  const swsh = game.family === 'swsh'
+  const circle = snapshot.kind === 'circle'
+  const raid = snapshot.kind === 'raid' || circle
+  const swsh = game.family === 'swsh' && !raid
   const running = snapshot.status === 'running'
+  const battled = kinds.has('battle') || kinds.has('over')
 
-  const steps = swsh
+  const steps = raid
+    ? [
+        { done: kinds.has('started'), label: t('activities.progress.started') },
+        { done: kinds.has('lobby') || battled, label: t(circle ? 'activities.circle.progress.lobby' : 'activities.progress.lobby') },
+        { done: battled, label: t(circle ? 'activities.circle.progress.started' : 'activities.progress.battle') },
+        { done: kinds.has('over') || (!running && battled), label: t(circle ? 'activities.circle.progress.over' : 'activities.progress.over') },
+      ]
+    : swsh
     ? [
         { done: kinds.has('started'), label: t('activities.progress.started') },
         { done: kinds.has('advertising'), label: t('activities.progress.advertising') },
@@ -265,7 +341,14 @@ function Progress({ snapshot, onStop, onAgain }: { snapshot: ActivitySnapshot; o
       <PageTitle>{t('activities.title')}</PageTitle>
       <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-[22px]">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-lg font-bold">{snapshot.giftLabel ?? t('activities.gift.title')}</span>
+          <span className="text-lg font-bold">
+            {circle
+              ? t(`activities.circle.kinds.${snapshot.raidKind}`)
+              : raid
+                ? t(`activities.raid.kinds.${snapshot.raidKind}`)
+                : (snapshot.giftLabel ?? t('activities.gift.title'))}
+          </span>
+          {raid && snapshot.giftLabel && <Badge>{snapshot.giftLabel}</Badge>}
           <Badge>{versionName(snapshot.game)}</Badge>
         </div>
         <ol className="flex flex-col gap-2">
@@ -282,9 +365,14 @@ function Progress({ snapshot, onStop, onAgain }: { snapshot: ActivitySnapshot; o
             {t('activities.progress.swshConfirm')}
           </Callout>
         )}
+        {running && raid && battled && (
+          <Callout tone="sky" icon="info">
+            {t(circle ? 'activities.circle.progress.running' : 'activities.progress.raidBattle')}
+          </Callout>
+        )}
         {snapshot.status === 'completed' && (
           <Callout tone="emerald" icon="check_circle">
-            {swsh ? t('activities.result.swsh') : t('activities.result.frlg')}
+            {circle ? t('activities.circle.result') : raid ? t('activities.result.raid') : swsh ? t('activities.result.swsh') : t('activities.result.frlg')}
           </Callout>
         )}
         {snapshot.status === 'cancelled' && <Callout tone="amber" icon="info">{t('activities.result.cancelled')}</Callout>}
@@ -298,7 +386,7 @@ function Progress({ snapshot, onStop, onAgain }: { snapshot: ActivitySnapshot; o
 
         <div className="flex justify-end gap-2">
           {running ? (
-            swsh ? (
+            swsh || (raid && battled) ? (
               <Button icon="check" onClick={onStop}>
                 {t('activities.done')}
               </Button>
@@ -317,7 +405,9 @@ function Progress({ snapshot, onStop, onAgain }: { snapshot: ActivitySnapshot; o
       {running && (
         <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-[22px]">
           <div className="text-lg font-bold">{t('activities.howTo', { game: game.name })}</div>
-          <ContentFile name={`activities/gift-${game.family}`} />
+          <ContentFile
+            name={circle ? `activities/circle-${snapshot.raidKind}` : raid ? `activities/raid-${snapshot.raidKind}` : `activities/gift-${game.family}`}
+          />
         </div>
       )}
     </div>

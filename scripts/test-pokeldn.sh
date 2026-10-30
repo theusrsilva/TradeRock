@@ -2,7 +2,7 @@
 # Roda os testes offline do pokeldn (engines/pokeldn) na cópia com os patches do TradeRock (D21).
 # O ajudante PKHeX do pokeldn (services/pkhex, .NET 10) é compilado só para os testes: o worker não o usa.
 # Testes que precisam só do flet (interface gráfica do pokeldn) contam como "skipped".
-# Também confere se catalog/gifts.json bate com o pokeldn (UPDATE_GIFTS=1 regrava o arquivo).
+# Também confere se catalog/gifts.json e catalog/raids.json batem com o pokeldn (UPDATE_CATALOG=1 regrava).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 REPO=$PWD
@@ -23,14 +23,18 @@ fi
 echo "==> ajudante PKHeX do pokeldn (só para os testes)"
 dotnet build --nologo -v q -c Release "$BUILD/src/services/pkhex" -o "$BUILD/pkhex" >/dev/null
 
-echo "==> catálogo de presentes (catalog/gifts.json)"
+echo "==> catálogos de presentes e de raids (catalog/gifts.json, catalog/raids.json)"
 (cd "$BUILD/src" && POKELDN_DATA="$BUILD/data" "$VENV/bin/python" "$REPO/scripts/pokeldn/gift_catalog.py" "$BUILD/gifts.json")
-if [[ ${UPDATE_GIFTS:-} == 1 ]]; then
-  cp "$BUILD/gifts.json" catalog/gifts.json
-elif ! cmp -s "$BUILD/gifts.json" catalog/gifts.json; then
-  echo "catalog/gifts.json não bate com o pokeldn: rode UPDATE_GIFTS=1 scripts/test-pokeldn.sh" >&2
-  exit 1
-fi
+(cd "$BUILD/src" && POKELDN_DATA="$BUILD/data" "$VENV/bin/python" "$REPO/scripts/pokeldn/raid_catalog.py" \
+  "$REPO/assets/raid-events/raid-events.zip" "$BUILD/raids.json")
+for name in gifts raids; do
+  if [[ ${UPDATE_CATALOG:-} == 1 ]]; then
+    cp "$BUILD/$name.json" "catalog/$name.json"
+  elif ! cmp -s "$BUILD/$name.json" "catalog/$name.json"; then
+    echo "catalog/$name.json não bate com o pokeldn: rode UPDATE_CATALOG=1 scripts/test-pokeldn.sh" >&2
+    exit 1
+  fi
+done
 
 echo "==> testes do pokeldn"
 cd "$BUILD/src"

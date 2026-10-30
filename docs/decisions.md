@@ -869,7 +869,7 @@ o ajudante do pokeldn; nada gravado na placa; sem backup nem restauração do sa
     gerados por ele a partir da EventsGallery), sem internet;
   - **arquivo:** `.wc3` (FRLG), `.wc8` (SwSh) ou `.pokegift`, até 256 KiB.
 - **Catálogo** em `catalog/gifts.json`, gerado do próprio pokeldn por `scripts/pokeldn/gift_catalog.py`. O
-  `scripts/test-pokeldn.sh` confere se ainda bate (`UPDATE_GIFTS=1` regrava). Ficam de fora os Pokémon de evento do
+  `scripts/test-pokeldn.sh` confere se ainda bate (`UPDATE_CATALOG=1` regrava). Ficam de fora os Pokémon de evento do
   FRLG (pedem o ajudante PKHeX do pokeldn), a leitura do save, os presets com opções e as melhorias guardadas
   ("Game boosts"). Os nomes dos prontos e dos grupos têm tradução em `frontend/src/locales/gifts.pt-BR.json`,
   conferida por teste; os eventos oficiais ficam com o nome original.
@@ -907,3 +907,46 @@ o ajudante do pokeldn; nada gravado na placa; sem backup nem restauração do sa
   quem está no PC escolhe o presente ou a raid e acompanha. Liberar pela rede pediria uma fila de atividades; fica
   para quando o autor quiser.
 - **Não verificado:** com um celular de verdade (como a Entrega 10).
+
+### D26 (continuação). Raids (Entrega 18b)
+
+- **Tipos:** Max Raid e Dynamax Adventure no Sword/Shield, Tera Raid no Scarlet/Violet. Em cada um, o console entra
+  na sala do TradeRock (host) ou o TradeRock entra na do console (join). As do Sword/Shield também vão pela rede de
+  casa: o motor `lan` usa as ferramentas `swsh-lan-*` do pokeldn, sem rádio nem chaves.
+- **Pokémon do cofre:** o chefe da Max Raid montada, o que o TradeRock leva e o chefe da Tera Raid, no formato do
+  jogo (`PokeldnOffer`).
+- **Raids de evento, embutidas.** A EventsGallery do Project Pokémon foi baixada no desenvolvimento por
+  `scripts/fetch-raid-events.sh`, com o próprio pokeldn, em commits travados: SV `bc61f78` e SwSh `0595d45`.
+  - Fica num .zip determinístico de 5 MB (`assets/raid-events`, conferido pelo SHA256SUMS). O app não baixa nada
+    (D17). A galeria não declara licença; são dados dos eventos oficiais, a mesma situação dos sprites.
+  - O `stage-pokeldn.sh` leva o .zip. O worker extrai só o evento escolhido na pasta da sessão, com o caminho longo
+    no Windows (os nomes passam de 150 caracteres), e aponta o `events_gallery.location` do pokeldn para lá.
+  - A tela usa `catalog/raids.json` (eventos, chefes do SwSh, grupos e etapas do SV), gerado por
+    `scripts/pokeldn/raid_catalog.py` e conferido no `scripts/test-pokeldn.sh` (`UPDATE_CATALOG=1` regrava). O app
+    confere a combinação escolhida antes de chamar o pokeldn.
+- **Sem o ajudante PKHeX do pokeldn:**
+  - os prêmios escolhidos (`--raid-reward`) ficam de fora, e a raid dá os prêmios da toca, do evento ou da semente;
+  - o patch passa a cobrir também o `pokemon.prepare`, que o `swsh_connect.py` (entrar na sala do console) chama
+    sempre.
+- **Fim:**
+  - o pokeldn não diz quem venceu, e cada console luta a própria batalha. A raid conta como concluída quando a
+    batalha começa ("lobby", "battle" e "over" vêm das linhas dos scripts);
+  - a Max Raid hospedada fica aberta até a pessoa clicar em Terminei, ou até o tempo do pokeldn acabar;
+  - as outras saem sozinhas.
+- **Verificado:** testes do worker (validação, comando de cada tipo, evento extraído do .zip), da API (raid simulada,
+  conferências, ESP32 e rede de casa) e o typecheck da tela.
+- **Não verificado:** raid com console de verdade.
+
+### D26 (continuação). Union Circle (Entrega 18c)
+
+- **Só no Scarlet/Violet, e o console é sempre o anfitrião:** ele abre um grupo local com um código de 4 dígitos, e o
+  TradeRock entra pelo `sv_join.py` do pokeldn.
+  - **Missões do Blueberry** (`sv-circle-join`): todos os lendários do Snacksworth, ou os BP escolhidos
+    (1 a 9.999.999). Dá certo quando o pokeldn diz que a tarefa terminou.
+  - **Encontros** (`sv-circle-encounters-join`): espécie (as que existem no SV), nível, tipo Tera e shiny. Ficam até
+    o console fechar o círculo. Dá certo quando o círculo começou.
+- **Sem o "só encontros legais"** (`--spawn-legal`), que pede o ajudante PKHeX do pokeldn.
+- **Marcos novos:** "lobby" quando o console aceita a entrada (também na Tera Raid em que o TradeRock entra),
+  "battle" quando o círculo começa e "over" quando a tarefa termina.
+- **Verificado:** testes do worker (validação, comando, marcos) e da API (simulado, conferências, pedido pelo ESP32).
+- **Não verificado:** com um Scarlet/Violet de verdade.

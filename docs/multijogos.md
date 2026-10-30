@@ -66,7 +66,7 @@ jogos que têm.
 | 15 ✓ | Motor pokeldn: ESP32 (Linux e Windows, firmware do pokeldn; D23) e placa Wi-Fi (Linux) | O TradeRock é o anfitrião; scripts de anfitrião do pokeldn com as flags do catálogo dele; ESP32 sem root (todos os jogos) e placa Wi-Fi pelo worker (jogos novos); trocar de volta (D23) |
 | 16 ✓ | Modo LAN sem placa | Sword/Shield pela rede de casa, no Linux e no Windows, sem root |
 | 17 ✓ | Limpeza do motor do easyworld (o ESP32 e o Windows foram adiantados na 15) | Motor C# e submódulo do easyworld fora; catálogo de ESP32 com os dados do pokeldn; teste da placa Wi-Fi em modo AP (D25) |
-| 18 | Outras atividades (D26) | 18a ✓ Mystery Gift (FRLG e SwSh); 18b raids (SwSh e SV, com as raids de evento embutidas); 18c Union Circle |
+| 18 | Outras atividades (D26) | 18a ✓ Mystery Gift (FRLG e SwSh); 18b ✓ raids (SwSh e SV, com as raids de evento embutidas); 18c ✓ Union Circle |
 | 19 ✓ | Modo servidor com os jogos novos | Fila e contas com o seletor de jogo (já funcionavam desde a 14; teste de ponta a ponta e D27) |
 
 ## Riscos

@@ -4,11 +4,73 @@ using TradeRock.Core.Trading;
 
 namespace TradeRock.Core.Activities;
 
-/// <summary>Outras atividades do pokeldn além da troca (D26). Por enquanto, o Mystery Gift.</summary>
+/// <summary>Outras atividades do pokeldn além da troca (D26): Mystery Gift, raids e Union Circle.</summary>
 public enum ActivityKind
 {
     Gift,
+    Raid,
+    Circle,
 }
+
+/// <summary>
+/// Union Circle do Scarlet/Violet: o console abre o círculo com um código de 4 dígitos e o TradeRock entra.
+/// "quests": cumpre missões do Blueberry por ele (todos os lendários do Snacksworth, ou os BP escolhidos);
+/// "encounters": faz aparecer o Pokémon selvagem escolhido em volta do jogador.
+/// </summary>
+public sealed record CircleChoice(string Kind, string Code, string Task = "snacksworth", int? Bp = null,
+    int? Species = null, int Level = 30, bool Shiny = false, int? Tera = null)
+{
+    public const int MaxBp = 9_999_999;
+}
+
+/// <summary>Tipos de raid (pokeldn_trade.py RAIDS): o TradeRock abre a sala (host) ou entra na do console (join).</summary>
+public static class RaidKinds
+{
+    public const string MaxRaidHost = "max-raid-host";
+    public const string MaxRaidJoin = "max-raid-join";
+    public const string LairHost = "lair-host";
+    public const string LairJoin = "lair-join";
+    public const string TeraRaidHost = "tera-raid-host";
+    public const string TeraRaidJoin = "tera-raid-join";
+
+    public static readonly IReadOnlyDictionary<string, GameFamily> Game = new Dictionary<string, GameFamily>
+    {
+        [MaxRaidHost] = GameFamily.Swsh, [MaxRaidJoin] = GameFamily.Swsh, [LairHost] = GameFamily.Swsh,
+        [LairJoin] = GameFamily.Swsh, [TeraRaidHost] = GameFamily.Sv, [TeraRaidJoin] = GameFamily.Sv,
+    };
+
+    /// <summary>Lendários da Dynamax Adventure (catálogo do pokeldn, --lair-legendary).</summary>
+    public static readonly int[] LairLegendaries = [144, 145, 146, 150, 243, 244, 245, 249, 250, 380, 381, 382];
+
+    public static readonly string[] SvVersions = ["scarlet", "violet"];
+    public static readonly string[] SvMaps = ["paldea", "kitakami", "blueberry"];
+    public static readonly string[] SvProgress = ["beginning", "tera", "3star", "4star", "5star", "6star"];
+    public static readonly string[] SvContent = ["standard", "black"];
+}
+
+/// <summary>
+/// A raid escolhida. Os Pokémon vêm do cofre, no formato do jogo: <see cref="Boss"/> (o chefe da Max Raid montada),
+/// <see cref="Offer"/> (o Pokémon que o TradeRock leva no Sword/Shield) e <see cref="Pokemon"/> (o chefe da Tera Raid
+/// hospedada, ou o que o TradeRock leva para a do console).
+/// </summary>
+public sealed record RaidChoice(
+    string Kind,
+    byte[]? Boss = null,
+    byte[]? Offer = null,
+    byte[]? Pokemon = null,
+    string? Event = null,
+    string? EventBoss = null,
+    bool Gigantamax = false,
+    int Move = 1,
+    int? Legendary = null,
+    string? Code = null,
+    string? Version = null,
+    string? Map = null,
+    string? Progress = null,
+    string? Content = null,
+    string? Seed = null,
+    int? Group = null,
+    int Players = 1);
 
 /// <summary>
 /// O presente escolhido: um pronto do pokeldn (<see cref="Key"/> do catalog/gifts.json), um evento oficial do
@@ -16,7 +78,8 @@ public enum ActivityKind
 /// </summary>
 public sealed record GiftChoice(string Mode, string? Key = null, byte[]? Data = null, string? Extension = null);
 
-public sealed record ActivityRequest(TradeGame Game, ActivityKind Kind, TrainerProfile Trainer, GiftChoice? Gift = null)
+public sealed record ActivityRequest(TradeGame Game, ActivityKind Kind, TrainerProfile Trainer, GiftChoice? Gift = null,
+    RaidChoice? Raid = null, CircleChoice? Circle = null)
 {
     public SwitchGame GameInfo => GameCatalog.Of(Game);
 }
@@ -32,6 +95,12 @@ public enum ActivityEventKind
     Delivered,
     /// <summary>Presente do Sword/Shield no ar; o console só ouve o anúncio e não confirma.</summary>
     Advertising,
+    /// <summary>Raid: a sala abriu (ou o TradeRock entrou na do console).</summary>
+    Lobby,
+    /// <summary>Raid: a batalha começou.</summary>
+    Battle,
+    /// <summary>Raid: a batalha acabou (ou o TradeRock deixou o Pokémon lutando e saiu).</summary>
+    Over,
     Error,
     Finished,
 }
@@ -140,4 +209,46 @@ public sealed class GiftCatalog
 
     private static string Text(JsonElement e, string name) =>
         e.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString()! : "";
+}
+
+/// <summary>
+/// As raids de evento embutidas (catalog/raids.json, gerado por scripts/pokeldn/raid_catalog.py a partir de
+/// assets/raid-events; D26). O app só confere as escolhas; a tela recebe o arquivo inteiro.
+/// </summary>
+public sealed class RaidCatalog
+{
+    public static RaidCatalog Embedded { get; } = Load();
+
+    /// <summary>O arquivo como está (a tela lê direto).</summary>
+    public byte[] Json { get; private init; } = [];
+
+    private Dictionary<string, HashSet<string>> SwshBosses { get; init; } = [];
+    private Dictionary<string, Dictionary<string, Dictionary<int, HashSet<string>>>> SvGroups { get; init; } = [];
+
+    public bool HasSwshBoss(string eventKey, string boss) => SwshBosses.TryGetValue(eventKey, out var b) && b.Contains(boss);
+
+    /// <summary>Evento do Scarlet/Violet com essa versão, grupo (null = qualquer) e etapa da história.</summary>
+    public bool HasSv(string eventKey, string version, int? group, string progress) =>
+        SvGroups.TryGetValue(eventKey, out var versions) && versions.TryGetValue(version, out var groups)
+        && (group is { } g ? groups.TryGetValue(g, out var p) && p.Contains(progress) : groups.Values.Any(p => p.Contains(progress)));
+
+    private static RaidCatalog Load()
+    {
+        using var stream = typeof(RaidCatalog).Assembly.GetManifestResourceStream("catalog/raids.json")
+            ?? throw new InvalidOperationException("catalog/raids.json não está embutido.");
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        var json = buffer.ToArray();
+        using var doc = JsonDocument.Parse(json);
+        var swsh = new Dictionary<string, HashSet<string>>();
+        foreach (var e in doc.RootElement.GetProperty("swsh").EnumerateArray())
+            swsh[e.GetProperty("key").GetString()!] = [.. e.GetProperty("bosses").EnumerateArray().Select(b => b[0].GetString()!)];
+        var sv = new Dictionary<string, Dictionary<string, Dictionary<int, HashSet<string>>>>();
+        foreach (var e in doc.RootElement.GetProperty("sv").EnumerateArray())
+            sv[e.GetProperty("key").GetString()!] = e.GetProperty("versions").EnumerateObject().ToDictionary(
+                v => v.Name,
+                v => v.Value.EnumerateArray().ToDictionary(g => g.GetProperty("group").GetInt32(),
+                    g => g.GetProperty("progress").EnumerateArray().Select(p => p.GetString()!).ToHashSet()));
+        return new RaidCatalog { Json = json, SwshBosses = swsh, SvGroups = sv };
+    }
 }

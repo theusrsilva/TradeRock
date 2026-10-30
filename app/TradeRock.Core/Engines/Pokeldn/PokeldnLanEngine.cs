@@ -1,3 +1,4 @@
+using TradeRock.Core.Activities;
 using TradeRock.Core.Esp32;
 using TradeRock.Core.Games;
 using TradeRock.Core.Trading;
@@ -9,7 +10,7 @@ namespace TradeRock.Core.Engines.Pokeldn;
 /// prod.keys, como o usuário, no Linux e no Windows. No console, o modo LAN se liga em Opções com L + R + analógico
 /// esquerdo, e o código de troca é ignorado.
 /// </summary>
-public sealed class PokeldnLanEngine(IPokeldnProcess process) : ITradeEngine
+public sealed class PokeldnLanEngine(IPokeldnProcess process) : ITradeEngine, IActivityEngine
 {
     public const string EngineId = "lan";
 
@@ -46,5 +47,28 @@ public sealed class PokeldnLanEngine(IPokeldnProcess process) : ITradeEngine
             return TradeAttemptResult.Fail(e.Code, e.Message, retryable: false);
         }
         return cancellationToken.IsCancellationRequested ? TradeAttemptResult.Cancelled : tracker.Result();
+    }
+
+    /// <summary>Pela rede de casa, só as raids do Sword/Shield (o pokeldn tem as ferramentas de raid do modo LAN, D24).</summary>
+    public bool SupportsActivity(GameFamily family, ActivityKind kind) => family == GameFamily.Swsh && kind == ActivityKind.Raid;
+
+    public async Task<ActivityResult> RunActivityAsync(ActivityRequest request, Func<ActivityEvent, ValueTask> emit, CancellationToken ct)
+    {
+        if (!SupportsActivity(request.GameInfo.Family, request.Kind))
+            return ActivityResult.Fail("activity_engine_unsupported");
+        var progress = new PokeldnActivity.Progress(request);
+        try
+        {
+            await foreach (var message in process.RunAsync("trade", PokeldnActivity.Request(request, "lan", null), ct))
+            {
+                if (progress.Map(message, DateTimeOffset.UtcNow) is { } e)
+                    await emit(e);
+            }
+        }
+        catch (Esp32Exception e)
+        {
+            return ActivityResult.Fail(e.Code, e.Message);
+        }
+        return progress.Result(ct.IsCancellationRequested);
     }
 }

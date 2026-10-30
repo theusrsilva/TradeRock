@@ -21,7 +21,8 @@ public sealed record ActivitySnapshot(
     DateTimeOffset? FinishedAt,
     IReadOnlyList<ActivityEvent> Events,
     string? ErrorCode,
-    string? ErrorMessage);
+    string? ErrorMessage,
+    string? RaidKind = null);
 
 /// <summary>Já há uma troca ou outra atividade usando o rádio.</summary>
 public sealed class RadioBusyException() : Exception("O rádio está ocupado.");
@@ -115,6 +116,6 @@ public sealed class ActivityService(TradeCoordinator trades, TimeProvider time, 
         public string? ErrorMessage { get; set; }
 
         public ActivitySnapshot Snapshot() => new(Id, Request.Game, Request.Kind, giftLabel, Status, startedAt, FinishedAt,
-            [.. Events], ErrorCode, ErrorMessage);
+            [.. Events], ErrorCode, ErrorMessage, Request.Raid?.Kind ?? Request.Circle?.Kind);
     }
 }

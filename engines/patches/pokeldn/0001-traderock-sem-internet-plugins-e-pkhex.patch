@@ -9,7 +9,13 @@
          return self._ask({"cmd": "gift", "game": "swsh", "data": base64.b64encode(data).decode()})
  
      def close(self):
-@@ -389,6 +391,8 @@
+@@ -385,10 +387,14 @@
+ 
+ 
+ def prepare(game, data, *, fresh=False, fields=None):
++    if os.environ.get("TRADEROCK") == "1":
++        return entity_bytes(game, data)   # TradeRock: checked by the app's own PKHeX (swsh_connect's offers)
+     return SERVICE.prepare(game, data, fresh=fresh, fields=fields)
  
  
  def validate(game, data):
@@ -18,7 +24,7 @@
      prepare(game, data)
      return data
  
-@@ -409,6 +413,10 @@
+@@ -409,6 +415,10 @@
      data = entity_bytes(game, data)
      if transform is not None:
          data = entity_bytes(game, transform(data))
