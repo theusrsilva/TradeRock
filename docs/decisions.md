@@ -855,3 +855,42 @@ O autor deixou as duas escolhas comigo ("pode seguir da forma que achar melhor")
   - Nenhuma placa fica como "recomendada": o TradeRock ainda não trocou com nenhuma.
 - **Verificado:** build, testes do .NET, do worker e do frontend.
 - **Não verificado:** a etapa do AP numa placa de verdade (precisa de root e de uma placa no Linux).
+
+## D26. Outras atividades: Mystery Gift (Entrega 18a)
+
+Respostas do autor: começar pelo Mystery Gift e fazer todas as atividades; o app confere com o próprio PKHeX, sem
+o ajudante do pokeldn; nada gravado na placa; sem backup nem restauração do save; raids de evento embutidas (18b).
+
+- **Tela "Atividades"** (`/atividades`, só na janela do PC, como a configuração do rádio). A pessoa escolhe o jogo
+  (FRLG ou Sword/Shield, os que têm Mystery Gift local) e o presente:
+  - **prontos do pokeldn:** no FRLG, Wonder Cards, mudanças num Pokémon, mudanças no jogo, mais presentes e Wonder
+    News; no SwSh, Pokémon, itens e roupas;
+  - **eventos oficiais do Sword/Shield:** os 189 cartões que o pokeldn traz (`pokeldn/swsh/data/events.json`,
+    gerados por ele a partir da EventsGallery), sem internet;
+  - **arquivo:** `.wc3` (FRLG), `.wc8` (SwSh) ou `.pokegift`, até 256 KiB.
+- **Catálogo** em `catalog/gifts.json`, gerado do próprio pokeldn por `scripts/pokeldn/gift_catalog.py`. O
+  `scripts/test-pokeldn.sh` confere se ainda bate (`UPDATE_GIFTS=1` regrava). Ficam de fora os Pokémon de evento do
+  FRLG (pedem o ajudante PKHeX do pokeldn), a leitura do save, os presets com opções e as melhorias guardadas
+  ("Game boosts"). Os nomes dos prontos e dos grupos têm tradução em `frontend/src/locales/gifts.pt-BR.json`,
+  conferida por teste; os eventos oficiais ficam com o nome original.
+- **Worker:** o `pokeldn_trade.py` ganhou o pedido `"activity": "gift"`. Ele roda `frlg_mg_host.py` ou
+  `swsh_gift_host.py` com o valor do campo "builder" do pokeldn e chama `command.prepare`, que grava o
+  `.pokegift`. O `gift_builder` troca uma chave desconhecida pela primeira da lista, então o worker confere a
+  chave antes, com o mesmo filtro do catálogo. `--save-to-board` fica sempre desligado. O modo LAN não manda
+  presentes.
+- **Fim da atividade:**
+  - **FRLG:** deu certo com `[done] delivery N complete`.
+  - **Sword/Shield:** o console só ouve o anúncio e não confirma. Deu certo se o presente ficou no ar
+    (`advertising comm id`). A pessoa encerra com "Terminei" depois de aceitar o cartão; senão, ele fica no ar
+    por 5 minutos.
+- **Patch:** `PkhexService.validate_gift` confere só o tamanho e a soma do cartão. O app confere o arquivo
+  aberto (tamanho do `.wc3` e do `.wc8`, jogo do `.pokegift`).
+- **Rádio:** uma atividade por vez, sem fila (`ActivityService`). Troca e atividade não rodam juntas: cada uma
+  recusa com 409 enquanto a outra roda. Com a placa Wi-Fi, a atividade precisa do modo AP (D25), o FRLG
+  inclusive. O modo demonstração simula os marcos.
+- **Remetente:** o "Meu treinador" do jogo, ou o treinador padrão.
+- **Correção junto:** a troca com o Legends: Arceus chamava o ajudante PKHeX do pokeldn por fora do
+  `prepare_offer` e falhava sempre. O patch cobre também o `pokemon.validate`.
+- **Verificado:** testes do worker (validação, comando de cada presente, marcos), da API (catálogo, presente
+  simulado, rádio ocupado, pedido ao pokeldn pelo ESP32) e das traduções.
+- **Não verificado:** a entrega num console de verdade e a tela num navegador.

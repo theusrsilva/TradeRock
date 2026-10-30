@@ -721,3 +721,34 @@ export interface QueuedTrade {
   entryId: string
   position: number
 }
+
+// Outras atividades (D26): Mystery Gift do FRLG e do Sword/Shield.
+export interface GiftEntry {
+  key: string
+  group: string
+  label: string
+  summary: string
+  when: string
+}
+
+export interface ActivitiesCatalog {
+  engineId: string
+  engineSupports: boolean
+  games: { game: GameFamily; activities: 'gift'[]; giftExtensions: string[] }[]
+  gifts: Partial<Record<GameFamily, { presets: GiftEntry[]; events: GiftEntry[] }>>
+}
+
+export type ActivityEventKind = 'started' | 'waiting' | 'joined' | 'left' | 'delivered' | 'advertising' | 'error' | 'finished'
+
+export interface ActivitySnapshot {
+  id: string
+  game: TradeGame
+  kind: 'gift'
+  giftLabel: string | null
+  status: 'running' | 'completed' | 'failed' | 'cancelled'
+  startedAt: string
+  finishedAt: string | null
+  events: { kind: ActivityEventKind; at: string; message: string | null; errorCode: string | null }[]
+  errorCode: string | null
+  errorMessage: string | null
+}

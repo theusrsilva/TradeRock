@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using TradeRock.Core.Activities;
 using TradeRock.Core.Esp32;
 using TradeRock.Core.Games;
 using TradeRock.Core.Setup;
@@ -11,7 +12,7 @@ namespace TradeRock.Core.Engines.Pokeldn;
 /// catálogo, o FRLG inclusive. O TradeRock é o anfitrião: abre a sala com o código de troca e o console, procurando
 /// com o mesmo código, entra. Uma chamada = uma sessão do pokeldn; o retry é do coordenador.
 /// </summary>
-public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnProcess process) : ITradeEngine
+public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnProcess process) : ITradeEngine, IActivityEngine
 {
     public const string EngineId = "esp32";
 
@@ -60,6 +61,33 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
         if (cancellationToken.IsCancellationRequested)
             return TradeAttemptResult.Cancelled;
         return tracker.Result();
+    }
+
+    public bool SupportsActivity(GameFamily family, ActivityKind kind) => PokeldnActivity.Supports(family, kind);
+
+    /// <summary>Outras atividades (D26) com o ESP32, como a troca.</summary>
+    public async Task<ActivityResult> RunActivityAsync(ActivityRequest request, Func<ActivityEvent, ValueTask> emit, CancellationToken ct)
+    {
+        var state = (await setup.StatusAsync(ct)).State;
+        if (state.SerialPort is not { } port)
+            return ActivityResult.Fail("esp32_not_configured");
+        if (!File.Exists(keys.FilePath))
+            return ActivityResult.Fail("keys_missing");
+
+        var progress = new PokeldnActivity.Progress(request);
+        try
+        {
+            await foreach (var message in process.RunAsync("trade", PokeldnActivity.Request(request, $"esp32:{port}", keys.FilePath), ct))
+            {
+                if (progress.Map(message, DateTimeOffset.UtcNow) is { } e)
+                    await emit(e);
+            }
+        }
+        catch (Esp32Exception e)
+        {
+            return ActivityResult.Fail(e.Code, e.Message);
+        }
+        return progress.Result(ct.IsCancellationRequested);
     }
 
     /// <summary>O pedido do pokeldn_trade.py (ver o cabeçalho dele).</summary>

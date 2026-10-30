@@ -10,7 +10,8 @@
     "history": "Histórico",
     "settings": "Configurações",
     "builder": "Criar Pokémon",
-    "setup": "Configurar"
+    "setup": "Configurar",
+    "activities": "Atividades"
   },
   "common": {
     "loading": "Carregando…",
@@ -1424,6 +1425,54 @@
       "license": "Licença, código-fonte e marcas",
       "projects_one": "{{count}} projeto",
       "projects_other": "{{count}} projetos"
+    }
+  },
+  "activities": {
+    "title": "Outras atividades",
+    "sub": "Mande presentes do Mystery Gift para o jogo, pelo mesmo rádio da troca.",
+    "engineUnsupported": "A conexão escolhida não faz outras atividades. Use o ESP32, a placa Wi-Fi ou o modo demonstração em Configurações → Conexão.",
+    "whichGame": "Para qual jogo?",
+    "whichGameSub": "Por enquanto, o Mystery Gift do FireRed/LeafGreen e do Sword/Shield.",
+    "gift": {
+      "title": "Qual presente?",
+      "sub": "Escolha um presente pronto, um evento oficial ou abra um arquivo de presente.",
+      "modes": {
+        "preset": "Prontos",
+        "event": "Eventos oficiais",
+        "file": "Arquivo"
+      },
+      "search": "Procurar…",
+      "nothing": "Nenhum presente encontrado.",
+      "fileHelp": "Abra um arquivo de presente ({{types}}). O TradeRock não baixa presentes: use arquivos que você já tem."
+    },
+    "howTo": "No {{game}}",
+    "send": "Enviar",
+    "stop": "Parar",
+    "done": "Terminei",
+    "again": "Mandar outro presente",
+    "progress": {
+      "started": "Preparando o rádio",
+      "waiting": "Esperando o console",
+      "joined": "O console encontrou o presente",
+      "delivered": "Presente entregue",
+      "advertising": "Presente no ar",
+      "swshConfirm": "O console só ouve o presente e não avisa quando recebe. Quando o cartão aparecer no jogo e você aceitar, clique em Terminei."
+    },
+    "result": {
+      "frlg": "Presente entregue. Salve o jogo e fale com o entregador no 2º andar de qualquer Centro Pokémon.",
+      "swsh": "Pronto. Se o cartão chegou ao jogo, o presente está lá.",
+      "cancelled": "Envio interrompido."
+    },
+    "errors": {
+      "busy": "O rádio está ocupado com uma troca ou outra atividade. Espere terminar.",
+      "gift_unknown": "Este presente não existe para o jogo escolhido.",
+      "gift_file_wrong_type": "Este tipo de arquivo não serve para o jogo escolhido.",
+      "gift_file_invalid": "O arquivo não é um presente válido.",
+      "gift_file_other_game": "Este presente é de outro jogo.",
+      "gift_not_received": "O console não recebeu o presente. Confira se ele estava na tela de busca do Mystery Gift e tente de novo.",
+      "activity_engine_unsupported": "A conexão escolhida não faz outras atividades.",
+      "activity_game_unsupported": "Este jogo ainda não tem outras atividades no TradeRock.",
+      "load_failed": "Não foi possível carregar a lista de presentes."
     }
   }
 }

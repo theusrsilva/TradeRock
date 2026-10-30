@@ -10,7 +10,8 @@
     "history": "History",
     "settings": "Settings",
     "builder": "Create Pokémon",
-    "setup": "Setup"
+    "setup": "Setup",
+    "activities": "Activities"
   },
   "common": {
     "loading": "Loading…",
@@ -1424,6 +1425,54 @@
       "license": "License, source code and trademarks",
       "projects_one": "{{count}} project",
       "projects_other": "{{count}} projects"
+    }
+  },
+  "activities": {
+    "title": "Other activities",
+    "sub": "Send Mystery Gift presents to the game, through the same radio as trading.",
+    "engineUnsupported": "The chosen connection doesn't do other activities. Use the ESP32, the Wi-Fi card or demo mode in Settings → Connection.",
+    "whichGame": "Which game?",
+    "whichGameSub": "For now, FireRed/LeafGreen and Sword/Shield Mystery Gift.",
+    "gift": {
+      "title": "Which gift?",
+      "sub": "Pick a ready-made gift, an official event or open a gift file.",
+      "modes": {
+        "preset": "Ready-made",
+        "event": "Official events",
+        "file": "File"
+      },
+      "search": "Search…",
+      "nothing": "No gift found.",
+      "fileHelp": "Open a gift file ({{types}}). TradeRock doesn't download gifts: use files you already have."
+    },
+    "howTo": "On {{game}}",
+    "send": "Send",
+    "stop": "Stop",
+    "done": "Done",
+    "again": "Send another gift",
+    "progress": {
+      "started": "Getting the radio ready",
+      "waiting": "Waiting for the console",
+      "joined": "The console found the gift",
+      "delivered": "Gift delivered",
+      "advertising": "Gift on the air",
+      "swshConfirm": "The console only hears the gift and doesn't say when it gets it. Once the card shows up in the game and you accept it, click Done."
+    },
+    "result": {
+      "frlg": "Gift delivered. Save the game and talk to the delivery man on 2F of any Pokémon Center.",
+      "swsh": "Done. If the card reached the game, the gift is there.",
+      "cancelled": "Sending stopped."
+    },
+    "errors": {
+      "busy": "The radio is busy with a trade or another activity. Wait for it to finish.",
+      "gift_unknown": "This gift doesn't exist for the chosen game.",
+      "gift_file_wrong_type": "This file type doesn't work for the chosen game.",
+      "gift_file_invalid": "The file isn't a valid gift.",
+      "gift_file_other_game": "This gift is for another game.",
+      "gift_not_received": "The console didn't receive the gift. Check that it was on the Mystery Gift search screen and try again.",
+      "activity_engine_unsupported": "The chosen connection doesn't do other activities.",
+      "activity_game_unsupported": "This game has no other activities in TradeRock yet.",
+      "load_failed": "Couldn't load the gift list."
     }
   }
 }

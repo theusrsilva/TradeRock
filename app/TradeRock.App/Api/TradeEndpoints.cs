@@ -44,8 +44,12 @@ public static class TradeEndpoints
         var group = api.MapGroup("/trades");
 
         group.MapPost("/", async (StartTradeDto body, HttpContext context, EngineRegistry engines, TradeQueue queue,
-            PokemonStore store, SettingsStore settings, TradeRock.Core.Setup.SetupService setup, CancellationToken ct) =>
+            PokemonStore store, SettingsStore settings, TradeRock.Core.Setup.SetupService setup,
+            TradeRock.Core.Activities.ActivityService activities, CancellationToken ct) =>
         {
+            // O rádio é o mesmo das outras atividades (D26): uma de cada vez.
+            if (activities.IsBusy)
+                return Results.Conflict(new { error = "busy" });
             if (body.Party is null || body.OfferedSlots is null || body.Trainer is null)
                 return Results.BadRequest(new { error = "invalid", errors = new[] { "missing_fields" } });
 

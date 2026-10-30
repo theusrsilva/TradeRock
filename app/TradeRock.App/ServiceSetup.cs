@@ -42,6 +42,7 @@ public static class ServiceSetup
         services.AddSingleton<ITradeRecorder>(sp => sp.GetRequiredService<TradeRecorder>());
         services.AddSingleton<TradeCoordinator>();
         services.AddSingleton<TradeQueue>();
+        services.AddSingleton<TradeRock.Core.Activities.ActivityService>();
         services.AddSingleton<WindowBridge>();
 
         // Worker privilegiado (placa Wi-Fi, só Linux). Em desenvolvimento, a instalação dev

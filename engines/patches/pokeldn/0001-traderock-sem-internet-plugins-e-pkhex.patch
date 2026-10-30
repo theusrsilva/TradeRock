@@ -1,6 +1,15 @@
 --- pokeldn/pokemon.py
 +++ pokeldn/pokemon.py
-@@ -389,6 +389,8 @@
+@@ -314,6 +314,8 @@
+         from pokeldn.swsh import wc8
+         if not wc8.sealed(data):
+             raise BuilderError("The WC8 size or checksum is invalid.")
++        if os.environ.get("TRADEROCK") == "1":
++            return {}       # TradeRock: an official card or one the app read with its own PKHeX
+         return self._ask({"cmd": "gift", "game": "swsh", "data": base64.b64encode(data).decode()})
+ 
+     def close(self):
+@@ -389,6 +391,8 @@
  
  
  def validate(game, data):
@@ -9,7 +18,7 @@
      prepare(game, data)
      return data
  
-@@ -409,6 +411,10 @@
+@@ -409,6 +413,10 @@
      data = entity_bytes(game, data)
      if transform is not None:
          data = entity_bytes(game, transform(data))

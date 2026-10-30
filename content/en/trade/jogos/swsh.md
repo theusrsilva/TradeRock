@@ -9,7 +9,7 @@
 
 <details><summary>Learn more</summary>
 
-- Sword/Shield can also trade over your home network (**LAN mode**), with no board at all. That mode comes in a later TradeRock version.
+- Sword/Shield can also trade over your home network (**LAN mode**), with no board at all: turn it on in **Settings → Connection → Home network**.
 - Do not turn off or leave in the middle of a trade.
 - If a Pokémon evolves by trade, the Switch evolves the one it receives.
 

@@ -1,3 +1,5 @@
+using TradeRock.Core.Activities;
+using TradeRock.Core.Engines.Pokeldn;
 using TradeRock.Core.Games;
 using TradeRock.Core.Trading;
 
@@ -18,7 +20,7 @@ public sealed class FakeEngineOptions
 /// que o frlg-ldn-trade registra (transport.py, sim.py, trade.py), com atrasos no ritmo de uma
 /// troca real, e cenários de falha para testar o assistente e o coordenador.
 /// </summary>
-public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProvider = null) : ITradeEngine
+public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProvider = null) : ITradeEngine, IActivityEngine
 {
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
 
@@ -172,5 +174,34 @@ public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProv
         ct.ThrowIfCancellationRequested();
         await Task.Yield();
         ct.ThrowIfCancellationRequested();
+    }
+
+    public bool SupportsActivity(GameFamily family, ActivityKind kind) => PokeldnActivity.Supports(family, kind);
+
+    /// <summary>Mystery Gift simulado (modo demonstração): os mesmos marcos do pokeldn, sem console.</summary>
+    public async Task<ActivityResult> RunActivityAsync(ActivityRequest request, Func<ActivityEvent, ValueTask> emit, CancellationToken ct)
+    {
+        try
+        {
+            await emit(new ActivityEvent(ActivityEventKind.Started, _time.GetUtcNow()));
+            await Wait(1, ct);
+            if (request.GameInfo.Family == GameFamily.Swsh)
+            {
+                // O console só ouve o anúncio: fica no ar o tempo do pokeldn, ou até a pessoa encerrar.
+                await emit(new ActivityEvent(ActivityEventKind.Advertising, _time.GetUtcNow()));
+                await Task.Delay(TimeSpan.FromSeconds(PokeldnActivity.GiftSeconds), _time, ct);
+                return ActivityResult.Done;
+            }
+            await emit(new ActivityEvent(ActivityEventKind.Waiting, _time.GetUtcNow()));
+            await Wait(3, ct);
+            await emit(new ActivityEvent(ActivityEventKind.Joined, _time.GetUtcNow()));
+            await Wait(4, ct);
+            await emit(new ActivityEvent(ActivityEventKind.Delivered, _time.GetUtcNow()));
+            return ActivityResult.Done;
+        }
+        catch (OperationCanceledException)
+        {
+            return request.GameInfo.Family == GameFamily.Swsh ? ActivityResult.Done : ActivityResult.Cancelled;
+        }
     }
 }

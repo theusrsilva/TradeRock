@@ -9,7 +9,7 @@
 
 <details><summary>Saiba mais</summary>
 
-- O Sword/Shield também troca pela rede de casa (**modo LAN**), sem placa nenhuma. Esse modo chega numa próxima versão do TradeRock.
+- O Sword/Shield também troca pela rede de casa (**modo LAN**), sem placa nenhuma: ligue em **Configurações → Conexão → Rede de casa**.
 - Não desligue nem saia no meio da troca.
 - Se um Pokémon evolui por troca, quem faz a evolução é o Switch, no Pokémon que ele recebe.
 

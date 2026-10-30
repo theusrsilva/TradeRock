@@ -1,0 +1,1651 @@
+{
+ "frlg": {
+  "presets": [
+   {
+    "key": "beast-cutscene",
+    "group": "Wonder Cards",
+    "label": "Legendary beast",
+    "summary": "Two berries, a Master Ball and a battle with the beast that follows the starter.",
+    "when": ""
+   },
+   {
+    "key": "celebi",
+    "group": "Wonder Cards",
+    "label": "Celebi",
+    "summary": "A level 50 Celebi from the delivery man.",
+    "when": ""
+   },
+   {
+    "key": "master-ball",
+    "group": "Wonder Cards",
+    "label": "Master Ball",
+    "summary": "One Master Ball.",
+    "when": ""
+   },
+   {
+    "key": "altering-cave",
+    "group": "Wonder Cards",
+    "label": "Altering Cave",
+    "summary": "Changes which Pokemon live in Altering Cave.",
+    "when": ""
+   },
+   {
+    "key": "wish-egg",
+    "group": "Wonder Cards",
+    "label": "Wish Egg",
+    "summary": "One of six eggs that knows Wish, picked by the console.",
+    "when": ""
+   },
+   {
+    "key": "pokepark-egg",
+    "group": "Wonder Cards",
+    "label": "PokePark egg",
+    "summary": "One of fifteen eggs with special moves, picked by the console.",
+    "when": ""
+   },
+   {
+    "key": "pc-japan-egg",
+    "group": "Wonder Cards",
+    "label": "Pokemon Center Japan egg",
+    "summary": "One of four eggs with special moves.",
+    "when": ""
+   },
+   {
+    "key": "starter-egg",
+    "group": "Wonder Cards",
+    "label": "Starter egg",
+    "summary": "An egg of one of the nine first partners.",
+    "when": ""
+   },
+   {
+    "key": "rare-berries",
+    "group": "Wonder Cards",
+    "label": "Rare berries",
+    "summary": "An Enigma, a Lansat and a Starf Berry.",
+    "when": ""
+   },
+   {
+    "key": "national-dex",
+    "group": "Wonder Cards",
+    "label": "National Pokedex",
+    "summary": "Upgrades the Pokedex to the National Pokedex.",
+    "when": ""
+   },
+   {
+    "key": "porygon-tm-gift",
+    "group": "Wonder Cards",
+    "label": "Porygon TM gift",
+    "summary": "A Porygon and a TM.",
+    "when": ""
+   },
+   {
+    "key": "solrock-stamp",
+    "group": "Wonder Cards",
+    "label": "Sun and Moon Rally: Solrock",
+    "summary": "A rally stamp.",
+    "when": ""
+   },
+   {
+    "key": "lunatone-stamp",
+    "group": "Wonder Cards",
+    "label": "Sun and Moon Rally: Lunatone",
+    "summary": "A rally stamp.",
+    "when": ""
+   },
+   {
+    "key": "visiting-trainer",
+    "group": "Wonder Cards",
+    "label": "Visiting trainer",
+    "summary": "A trainer who waits in the Pokemon Center.",
+    "when": ""
+   },
+   {
+    "key": "battle-count-card",
+    "group": "Wonder Cards",
+    "label": "Battle count card",
+    "summary": "A card that counts link battles.",
+    "when": ""
+   },
+   {
+    "key": "worlds-xp",
+    "group": "Wonder Cards",
+    "label": "Worlds XP",
+    "summary": "The Worlds card.",
+    "when": ""
+   },
+   {
+    "key": "nature-mint",
+    "group": "Change a Pokemon",
+    "label": "Nature mint",
+    "summary": "Pick which stat a Pokemon's nature raises and lowers.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "ability-capsule",
+    "group": "Change a Pokemon",
+    "label": "Ability capsule",
+    "summary": "Switches a Pokemon to its other ability.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "poke-ball-changer",
+    "group": "Change a Pokemon",
+    "label": "Poke Ball changer",
+    "summary": "Moves a Pokemon into the ball you choose.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "pokemon-gender",
+    "group": "Change a Pokemon",
+    "label": "Gender change",
+    "summary": "Switches a Pokemon between male and female.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "nickname",
+    "group": "Change a Pokemon",
+    "label": "Nickname change",
+    "summary": "A new nickname, or the species name back.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "stat-judge",
+    "group": "Change a Pokemon",
+    "label": "IV and EV judge",
+    "summary": "Shows a Pokemon's nature, six IVs and EVs on screen.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "hidden-power",
+    "group": "Change a Pokemon",
+    "label": "Hidden Power and max IVs",
+    "summary": "Shows its Hidden Power, then can set every IV to 31.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "hidden-power-type",
+    "group": "Change a Pokemon",
+    "label": "Hidden Power type",
+    "summary": "Gives Hidden Power the type you pick.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "ev-training",
+    "group": "Change a Pokemon",
+    "label": "EV training",
+    "summary": "Resets EVs or maxes the stats you pick, no battles.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "friendship",
+    "group": "Change a Pokemon",
+    "label": "Friendship checker",
+    "summary": "Shows friendship and can max it.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "pp-max",
+    "group": "Change a Pokemon",
+    "label": "PP Max",
+    "summary": "Every move in the party gets its most PP.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "max-conditions",
+    "group": "Change a Pokemon",
+    "label": "Max conditions",
+    "summary": "Contest stats to the max; Feebas then evolves.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "pokerus",
+    "group": "Change a Pokemon",
+    "label": "Pokerus",
+    "summary": "The party catches Pokerus, which doubles EVs earned.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "unown-letters",
+    "group": "Change a Pokemon",
+    "label": "Unown letter",
+    "summary": "Gives an Unown any letter.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "trade-evolution",
+    "group": "Change a Pokemon",
+    "label": "Trade evolution",
+    "summary": "Evolves a trade-evolution Pokemon, no trade.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "espeon-umbreon",
+    "group": "Change a Pokemon",
+    "label": "Espeon or Umbreon",
+    "summary": "A friendly Eevee evolves into the one you pick.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "move-tutor",
+    "group": "Change a Pokemon",
+    "label": "Move relearner and deleter",
+    "summary": "Relearn or forget a move; the move tutors teach again.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "speed-2",
+    "group": "Game changes",
+    "label": "Double speed",
+    "summary": "R turns double speed on and off. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "speed-3",
+    "group": "Game changes",
+    "label": "Triple speed",
+    "summary": "R turns triple speed on and off. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "speed-4",
+    "group": "Game changes",
+    "label": "Quadruple speed",
+    "summary": "R turns x4 speed on and off. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "speed-0-75",
+    "group": "Game changes",
+    "label": "Slower game",
+    "summary": "R plays a little slower. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "speed-0-5",
+    "group": "Game changes",
+    "label": "Half speed",
+    "summary": "R plays at half speed. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "fast-text",
+    "group": "Game changes",
+    "label": "Fast text",
+    "summary": "All text prints at once until the game is reset. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "travel-anywhere",
+    "group": "Game changes",
+    "label": "Fly with R",
+    "summary": "R flies from outdoors, no HM; run and bike anywhere. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "pc-anywhere",
+    "group": "Game changes",
+    "label": "PC anywhere",
+    "summary": "R opens the Pokemon boxes from anywhere. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "hm-moves",
+    "group": "Game changes",
+    "label": "HM moves without HMs",
+    "summary": "Cut, Surf, Strength and more with only the badge. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "reusable-tms",
+    "group": "Game changes",
+    "label": "Reusable TMs",
+    "summary": "Teaching a TM no longer uses it up. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "physical-special-split",
+    "group": "Game changes",
+    "label": "Physical/special split",
+    "summary": "Each move is physical or special as in later games. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "exp-share",
+    "group": "Game changes",
+    "label": "Exp. Share for all",
+    "summary": "The whole party gets Exp. from every battle. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "shiny-hunting",
+    "group": "Game changes",
+    "label": "Shiny chain",
+    "summary": "Meeting one species again and again makes it shiny more often; R shows the chain. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "roamer",
+    "group": "Game changes",
+    "label": "Roaming Pokemon finder",
+    "summary": "Says where the roaming Pokemon is and can lure it. Turns off any game boost that is on.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "no-encounters",
+    "group": "Game changes",
+    "label": "No encounters or repel",
+    "summary": "No wild Pokemon, or only stronger ones, until the game is reset.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "legendary-respawn",
+    "group": "Game changes",
+    "label": "Legendary respawn",
+    "summary": "Legendaries you beat without catching come back.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "instant-eggs",
+    "group": "Game changes",
+    "label": "Instant eggs",
+    "summary": "Hatches the eggs you carry, or readies the Day Care egg.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "gift-box",
+    "group": "More gifts",
+    "label": "Gift box",
+    "summary": "100,000 money, 99 Rare Candies and 1,000 coins.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "pocket-casino",
+    "group": "More gifts",
+    "label": "Pocket casino",
+    "summary": "Play the slot machines from the delivery man.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "gift-ribbons",
+    "group": "More gifts",
+    "label": "Gift ribbons",
+    "summary": "The party gets the seven event ribbons.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "trainer-ids",
+    "group": "More gifts",
+    "label": "Trainer ID and Secret ID on screen",
+    "summary": "The delivery man tells your Trainer ID and Secret ID.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "gender-swap",
+    "group": "More gifts",
+    "label": "New trainer name or look",
+    "summary": "Rename yourself, or switch between boy and girl.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "rival-name",
+    "group": "More gifts",
+    "label": "Rename your rival",
+    "summary": "Gives your rival a new name.",
+    "when": "After the card is saved, talk to the delivery man on 2F of any Pokemon Center."
+   },
+   {
+    "key": "news-pokeldn",
+    "group": "Wonder News",
+    "label": "One berry in Cerulean City",
+    "summary": "A short news; the man in Cerulean City hands over a berry.",
+    "when": ""
+   },
+   {
+    "key": "news-berry",
+    "group": "Wonder News",
+    "label": "Ten-line news",
+    "summary": "A long news that scrolls, with a berry.",
+    "when": ""
+   }
+  ],
+  "events": []
+ },
+ "swsh": {
+  "presets": [
+   {
+    "key": "pikachu",
+    "group": "Pokemon",
+    "label": "Pikachu",
+    "summary": "A level 25 Pikachu nicknamed POKELDN.",
+    "when": ""
+   },
+   {
+    "key": "gmax-pikachu",
+    "group": "Pokemon",
+    "label": "Gigantamax Pikachu",
+    "summary": "A level 25 Pikachu that can Gigantamax, at the top Dynamax level.",
+    "when": ""
+   },
+   {
+    "key": "egg",
+    "group": "Pokemon",
+    "label": "Pikachu egg",
+    "summary": "An egg that hatches into Pikachu.",
+    "when": ""
+   },
+   {
+    "key": "master-balls",
+    "group": "Items",
+    "label": "Three Master Balls",
+    "summary": "Three Master Balls in the bag.",
+    "when": ""
+   },
+   {
+    "key": "rare-candies",
+    "group": "Items",
+    "label": "Ten Rare Candies",
+    "summary": "Ten Rare Candies in the bag.",
+    "when": ""
+   },
+   {
+    "key": "training-kit",
+    "group": "Items",
+    "label": "Training kit",
+    "summary": "Rare Candies, Exp. Candy XL, PP Max, an Ability Capsule and Bottle Caps.",
+    "when": ""
+   },
+   {
+    "key": "bp",
+    "group": "Items",
+    "label": "10 Battle Points",
+    "summary": "Adds 10 BP, up to the game's 9999.",
+    "when": ""
+   },
+   {
+    "key": "money",
+    "group": "Items",
+    "label": "Pocket money",
+    "summary": "Adds 100,000 to the player's money.",
+    "when": ""
+   },
+   {
+    "key": "pikachu-uniform",
+    "group": "Clothing",
+    "label": "Pikachu uniform",
+    "summary": "The Pikachu outfit, in the wardrobe.",
+    "when": ""
+   },
+   {
+    "key": "eevee-uniform",
+    "group": "Clothing",
+    "label": "Eevee uniform",
+    "summary": "The Eevee outfit, in the wardrobe.",
+    "when": ""
+   },
+   {
+    "key": "tracksuit",
+    "group": "Clothing",
+    "label": "Tracksuit",
+    "summary": "The tracksuit set, in the wardrobe.",
+    "when": ""
+   },
+   {
+    "key": "leon-cap-tights",
+    "group": "Clothing",
+    "label": "Leon's cap and tights",
+    "summary": "Leon's cap and tights, in the wardrobe.",
+    "when": ""
+   },
+   {
+    "key": "gold-backpack",
+    "group": "Clothing",
+    "label": "Gold studded backpack",
+    "summary": "A gold studded backpack, in the wardrobe.",
+    "when": ""
+   },
+   {
+    "key": "tees",
+    "group": "Clothing",
+    "label": "Four Poke Ball tees",
+    "summary": "The four Poke Ball Guy and Pokemon Quest tees.",
+    "when": ""
+   }
+  ],
+  "events": [
+   {
+    "key": "armor-shiny-moltres-galar-2022-april-international-competition-j",
+    "group": "Pokemon",
+    "label": "Armor Shiny Moltres (Galar) (2022 April International Competition J)",
+    "summary": "Moltres, level 70, shiny"
+   },
+   {
+    "key": "armor-shiny-moltres-galar-2022-april-international-competition-m",
+    "group": "Pokemon",
+    "label": "Armor Shiny Moltres (Galar) (2022 April International Competition M)",
+    "summary": "Moltres, level 70, shiny"
+   },
+   {
+    "key": "arthur-shiny-zamazenta",
+    "group": "Pokemon",
+    "label": "Arthur Shiny Zamazenta",
+    "summary": "Zamazenta, level 100, shiny"
+   },
+   {
+    "key": "ash-pikachu-alola-cap",
+    "group": "Pokemon",
+    "label": "Ash Pikachu (Alola Cap)",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "ash-pikachu-hoenn-cap",
+    "group": "Pokemon",
+    "label": "Ash Pikachu (Hoenn Cap)",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "ash-pikachu-kalos-cap",
+    "group": "Pokemon",
+    "label": "Ash Pikachu (Kalos Cap)",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "ash-pikachu-original-cap",
+    "group": "Pokemon",
+    "label": "Ash Pikachu (Original Cap)",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "ash-pikachu-partner-cap",
+    "group": "Pokemon",
+    "label": "Ash Pikachu (Partner Cap)",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "ash-pikachu-sinnoh-cap",
+    "group": "Pokemon",
+    "label": "Ash Pikachu (Sinnoh Cap)",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "ash-pikachu-unova-cap",
+    "group": "Pokemon",
+    "label": "Ash Pikachu (Unova Cap)",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "ash-pikachu-world-cap",
+    "group": "Pokemon",
+    "label": "Ash Pikachu (World Cap)",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "center-happiny-pok",
+    "group": "Pokemon",
+    "label": "Center Happiny (Poké)",
+    "summary": "Happiny, level 5"
+   },
+   {
+    "key": "chansey",
+    "group": "Pokemon",
+    "label": "Chansey (ラッキー)",
+    "summary": "Chansey, level 7"
+   },
+   {
+    "key": "charizard",
+    "group": "Pokemon",
+    "label": "Charizard (지우)",
+    "summary": "Charizard, level 50"
+   },
+   {
+    "key": "clefairy",
+    "group": "Pokemon",
+    "label": "Clefairy (おつきみ２２)",
+    "summary": "Clefairy, level 15"
+   },
+   {
+    "key": "coalossal-gmax",
+    "group": "Pokemon",
+    "label": "Coalossal (Gmax)",
+    "summary": "Coalossal, level 50, can Gigantamax"
+   },
+   {
+    "key": "corsola-galar",
+    "group": "Pokemon",
+    "label": "Corsola (Galar)",
+    "summary": "Corsola, level 15"
+   },
+   {
+    "key": "crown-shiny-articuno-galar-2022-feb-international-competition-j",
+    "group": "Pokemon",
+    "label": "Crown Shiny Articuno (Galar) (2022 Feb International Competition J)",
+    "summary": "Articuno, level 70, shiny"
+   },
+   {
+    "key": "crown-shiny-articuno-galar-2022-feb-international-competition-m",
+    "group": "Pokemon",
+    "label": "Crown Shiny Articuno (Galar) (2022 Feb International Competition M)",
+    "summary": "Articuno, level 70, shiny"
+   },
+   {
+    "key": "dialga",
+    "group": "Pokemon",
+    "label": "Dialga (アラモス)",
+    "summary": "Dialga, level 70"
+   },
+   {
+    "key": "dracovish",
+    "group": "Pokemon",
+    "label": "Dracovish (サトシ)",
+    "summary": "Dracovish, level 80"
+   },
+   {
+    "key": "dragonite",
+    "group": "Pokemon",
+    "label": "Dragonite (サトシ)",
+    "summary": "Dragonite, level 80"
+   },
+   {
+    "key": "eevee-ver-1-dynamic-pid",
+    "group": "Pokemon",
+    "label": "Eevee (Ver 1. Dynamic PID) (ポケセン)",
+    "summary": "Eevee, level 5"
+   },
+   {
+    "key": "eevee-ver-2-static-pid",
+    "group": "Pokemon",
+    "label": "Eevee (Ver 2. Static PID) (ポケセン)",
+    "summary": "Eevee, level 5"
+   },
+   {
+    "key": "eric-gastrodon-east",
+    "group": "Pokemon",
+    "label": "Eric Gastrodon (East)",
+    "summary": "Gastrodon, level 50"
+   },
+   {
+    "key": "galar-shiny-eternatus",
+    "group": "Pokemon",
+    "label": "Galar Shiny Eternatus",
+    "summary": "Eternatus, level 100, shiny"
+   },
+   {
+    "key": "gastrodon-east",
+    "group": "Pokemon",
+    "label": "Gastrodon (East) (カ・エール)",
+    "summary": "Gastrodon, level 50"
+   },
+   {
+    "key": "genesect",
+    "group": "Pokemon",
+    "label": "Genesect (ゲッチャレ)",
+    "summary": "Genesect, level 60"
+   },
+   {
+    "key": "genesect-2",
+    "group": "Pokemon",
+    "label": "Genesect (어드벤처)",
+    "summary": "Genesect, level 60"
+   },
+   {
+    "key": "gengar-gmax",
+    "group": "Pokemon",
+    "label": "Gengar (Gmax) (サトシ)",
+    "summary": "Gengar, level 80, can Gigantamax"
+   },
+   {
+    "key": "gf-pikachu",
+    "group": "Pokemon",
+    "label": "GF Pikachu",
+    "summary": "Pikachu, level 25"
+   },
+   {
+    "key": "grimmsnarl",
+    "group": "Pokemon",
+    "label": "Grimmsnarl (정원석)",
+    "summary": "Grimmsnarl, level 50"
+   },
+   {
+    "key": "home-bulbasaur-gmax",
+    "group": "Pokemon",
+    "label": "HOME Bulbasaur (Gmax)",
+    "summary": "Bulbasaur, level 14, can Gigantamax"
+   },
+   {
+    "key": "home-squirtle-gmax",
+    "group": "Pokemon",
+    "label": "HOME Squirtle (Gmax)",
+    "summary": "Squirtle, level 14, can Gigantamax"
+   },
+   {
+    "key": "jirachi",
+    "group": "Pokemon",
+    "label": "Jirachi (ネガイボシ)",
+    "summary": "Jirachi, level 70"
+   },
+   {
+    "key": "jirawiwat-shiny-clefairy",
+    "group": "Pokemon",
+    "label": "Jirawiwat Shiny Clefairy",
+    "summary": "Clefairy, level 50, shiny"
+   },
+   {
+    "key": "jungle-shiny-celebi-japanese-release",
+    "group": "Pokemon",
+    "label": "Jungle Shiny Celebi (Japanese Release)",
+    "summary": "Celebi, level 60, shiny"
+   },
+   {
+    "key": "jungle-shiny-celebi-korean-release",
+    "group": "Pokemon",
+    "label": "Jungle Shiny Celebi (Korean Release)",
+    "summary": "Celebi, level 60, shiny"
+   },
+   {
+    "key": "jungle-shiny-celebi-western-release",
+    "group": "Pokemon",
+    "label": "Jungle Shiny Celebi (Western Release)",
+    "summary": "Celebi, level 60, shiny"
+   },
+   {
+    "key": "jungle-zarude-dada-japanese-release",
+    "group": "Pokemon",
+    "label": "Jungle Zarude (Dada) (Japanese Release)",
+    "summary": "Zarude, level 70"
+   },
+   {
+    "key": "jungle-zarude-dada-korean-release",
+    "group": "Pokemon",
+    "label": "Jungle Zarude (Dada) (Korean Release)",
+    "summary": "Zarude, level 70"
+   },
+   {
+    "key": "jungle-zarude-dada-western-release",
+    "group": "Pokemon",
+    "label": "Jungle Zarude (Dada) (Western Release)",
+    "summary": "Zarude, level 70"
+   },
+   {
+    "key": "jungle-zarude-japanese-release",
+    "group": "Pokemon",
+    "label": "Jungle Zarude (Japanese Release)",
+    "summary": "Zarude, level 60"
+   },
+   {
+    "key": "jungle-zarude-korean-release",
+    "group": "Pokemon",
+    "label": "Jungle Zarude (Korean Release)",
+    "summary": "Zarude, level 60"
+   },
+   {
+    "key": "jungle-zarude-western-release",
+    "group": "Pokemon",
+    "label": "Jungle Zarude (Western Release)",
+    "summary": "Zarude, level 60"
+   },
+   {
+    "key": "kibo-pikachu",
+    "group": "Pokemon",
+    "label": "KIBO Pikachu",
+    "summary": "Pikachu, level 21"
+   },
+   {
+    "key": "lancer-shiny-zacian",
+    "group": "Pokemon",
+    "label": "Lancer Shiny Zacian",
+    "summary": "Zacian, level 100, shiny"
+   },
+   {
+    "key": "lapras-gmax",
+    "group": "Pokemon",
+    "label": "Lapras (Gmax)",
+    "summary": "Lapras, level 50, can Gigantamax"
+   },
+   {
+    "key": "latias",
+    "group": "Pokemon",
+    "label": "Latias (アルトマーレ)",
+    "summary": "Latias, level 70"
+   },
+   {
+    "key": "leonardo-charizard-gmax",
+    "group": "Pokemon",
+    "label": "Leonardo Charizard (Gmax)",
+    "summary": "Charizard, level 100, can Gigantamax"
+   },
+   {
+    "key": "lucario",
+    "group": "Pokemon",
+    "label": "Lucario (サトシ)",
+    "summary": "Lucario, level 80"
+   },
+   {
+    "key": "marco-dracovish",
+    "group": "Pokemon",
+    "label": "Marco Dracovish",
+    "summary": "Dracovish, level 50"
+   },
+   {
+    "key": "marshadow",
+    "group": "Pokemon",
+    "label": "Marshadow (ゲッチャレ)",
+    "summary": "Marshadow, level 60"
+   },
+   {
+    "key": "marshadow-2",
+    "group": "Pokemon",
+    "label": "Marshadow (어드벤처)",
+    "summary": "Marshadow, level 60"
+   },
+   {
+    "key": "meowth-galar",
+    "group": "Pokemon",
+    "label": "Meowth (Galar)",
+    "summary": "Meowth, level 15"
+   },
+   {
+    "key": "meowth-gmax",
+    "group": "Pokemon",
+    "label": "Meowth (Gmax)",
+    "summary": "Meowth, level 5, can Gigantamax"
+   },
+   {
+    "key": "mew",
+    "group": "Pokemon",
+    "label": "Mew",
+    "summary": "Mew, level 1"
+   },
+   {
+    "key": "milcery-ribbon-sweet-ver-1-no-nickname",
+    "group": "Pokemon",
+    "label": "Milcery (Ribbon Sweet) (Ver. 1 No Nickname) (ポケセン)",
+    "summary": "Milcery, level 5"
+   },
+   {
+    "key": "milcery-ribbon-sweet-ver-2-nickname-set",
+    "group": "Pokemon",
+    "label": "Milcery (Ribbon Sweet) (Ver. 2 Nickname Set) (ポケセン)",
+    "summary": "Milcery, level 5"
+   },
+   {
+    "key": "milcery-star-sweet-ver-1-no-nickname",
+    "group": "Pokemon",
+    "label": "Milcery (Star Sweet) (Ver. 1 No Nickname) (ポケセン)",
+    "summary": "Milcery, level 5"
+   },
+   {
+    "key": "milcery-star-sweet-ver-2-set-nickname",
+    "group": "Pokemon",
+    "label": "Milcery (Star Sweet) (Ver. 2 Set Nickname) (ポケセン)",
+    "summary": "Milcery, level 5"
+   },
+   {
+    "key": "mr-mime-galar",
+    "group": "Pokemon",
+    "label": "Mr. Mime (Galar)",
+    "summary": "Mr. Mime, level 15"
+   },
+   {
+    "key": "mythical22-genesect",
+    "group": "Pokemon",
+    "label": "Mythical22 Genesect",
+    "summary": "Genesect, level 60"
+   },
+   {
+    "key": "mythical22-marshadow",
+    "group": "Pokemon",
+    "label": "Mythical22 Marshadow",
+    "summary": "Marshadow, level 60"
+   },
+   {
+    "key": "mythical22-volcanion",
+    "group": "Pokemon",
+    "label": "Mythical22 Volcanion",
+    "summary": "Volcanion, level 60"
+   },
+   {
+    "key": "palkia",
+    "group": "Pokemon",
+    "label": "Palkia (アラモス)",
+    "summary": "Palkia, level 70"
+   },
+   {
+    "key": "pcsg-eevee",
+    "group": "Pokemon",
+    "label": "PCSG Eevee",
+    "summary": "Eevee, level 5"
+   },
+   {
+    "key": "pcsg-milcery-ribbon-sweet",
+    "group": "Pokemon",
+    "label": "PCSG Milcery (Ribbon Sweet)",
+    "summary": "Milcery, level 5"
+   },
+   {
+    "key": "pcsg-milcery-star-sweet",
+    "group": "Pokemon",
+    "label": "PCSG Milcery (Star Sweet)",
+    "summary": "Milcery, level 5"
+   },
+   {
+    "key": "pcsg-pikachu",
+    "group": "Pokemon",
+    "label": "PCSG Pikachu",
+    "summary": "Pikachu, level 5"
+   },
+   {
+    "key": "pikachu-ver-1-dynamic-pid",
+    "group": "Pokemon",
+    "label": "Pikachu (Ver 1. Dynamic PID) (ポケセン)",
+    "summary": "Pikachu, level 5"
+   },
+   {
+    "key": "pikachu-ver-2-static-pid",
+    "group": "Pokemon",
+    "label": "Pikachu (Ver 2. Static PID) (ポケセン)",
+    "summary": "Pikachu, level 5"
+   },
+   {
+    "key": "pikachu-world-cap",
+    "group": "Pokemon",
+    "label": "Pikachu (World Cap) (サトシ)",
+    "summary": "Pikachu, level 80"
+   },
+   {
+    "key": "ponyta-galar",
+    "group": "Pokemon",
+    "label": "Ponyta (Galar)",
+    "summary": "Ponyta, level 15"
+   },
+   {
+    "key": "porygon-z",
+    "group": "Pokemon",
+    "label": "Porygon-Z (정상윤)",
+    "summary": "Porygon-Z, level 50"
+   },
+   {
+    "key": "rock-star-shiny-toxtricity",
+    "group": "Pokemon",
+    "label": "Rock Star Shiny Toxtricity",
+    "summary": "Toxtricity, level 50, shiny"
+   },
+   {
+    "key": "sableye",
+    "group": "Pokemon",
+    "label": "Sableye (コウ)",
+    "summary": "Sableye, level 50"
+   },
+   {
+    "key": "shiny-amoonguss",
+    "group": "Pokemon",
+    "label": "Shiny Amoonguss (백종윤)",
+    "summary": "Amoonguss, level 50, shiny"
+   },
+   {
+    "key": "sirfetch-d",
+    "group": "Pokemon",
+    "label": "Sirfetch’d (サトシ)",
+    "summary": "Sirfetch’d, level 80"
+   },
+   {
+    "key": "snorlax-gmax",
+    "group": "Pokemon",
+    "label": "Snorlax (Gmax)",
+    "summary": "Snorlax, level 50, can Gigantamax"
+   },
+   {
+    "key": "torkoal",
+    "group": "Pokemon",
+    "label": "Torkoal (クララ)",
+    "summary": "Torkoal, level 50"
+   },
+   {
+    "key": "vgc20-porygon2",
+    "group": "Pokemon",
+    "label": "VGC20 Porygon2",
+    "summary": "Porygon2, level 50"
+   },
+   {
+    "key": "victory-victini",
+    "group": "Pokemon",
+    "label": "Victory Victini",
+    "summary": "Victini, level 50"
+   },
+   {
+    "key": "volcanion",
+    "group": "Pokemon",
+    "label": "Volcanion (ゲッチャレ)",
+    "summary": "Volcanion, level 60"
+   },
+   {
+    "key": "volcanion-2",
+    "group": "Pokemon",
+    "label": "Volcanion (어드벤처)",
+    "summary": "Volcanion, level 60"
+   },
+   {
+    "key": "wcs22-sinistea-antique",
+    "group": "Pokemon",
+    "label": "WCS22 Sinistea (Antique)",
+    "summary": "Sinistea, level 50"
+   },
+   {
+    "key": "wild-shiny-zapdos-galar-2022-march-international-competition-j",
+    "group": "Pokemon",
+    "label": "Wild Shiny Zapdos (Galar) (2022 March International Competition J)",
+    "summary": "Zapdos, level 70, shiny"
+   },
+   {
+    "key": "wild-shiny-zapdos-galar-2022-march-international-competition-m",
+    "group": "Pokemon",
+    "label": "Wild Shiny Zapdos (Galar) (2022 March International Competition M)",
+    "summary": "Zapdos, level 70, shiny"
+   },
+   {
+    "key": "wolfe-coalossal-gmax",
+    "group": "Pokemon",
+    "label": "Wolfe Coalossal (Gmax)",
+    "summary": "Coalossal, level 50, can Gigantamax"
+   },
+   {
+    "key": "first-challenge-pichu",
+    "group": "Pokemon HOME",
+    "label": "First Challenge Pichu",
+    "summary": "Pichu, level 5"
+   },
+   {
+    "key": "first-gts-trade-rotom",
+    "group": "Pokemon HOME",
+    "label": "First GTS Trade Rotom",
+    "summary": "Rotom, level 5"
+   },
+   {
+    "key": "first-login-reward-pikachu",
+    "group": "Pokemon HOME",
+    "label": "First Login Reward Pikachu",
+    "summary": "Pikachu, level 5"
+   },
+   {
+    "key": "first-wonder-box-trade-eevee",
+    "group": "Pokemon HOME",
+    "label": "First Wonder Box Trade Eevee",
+    "summary": "Eevee, level 5"
+   },
+   {
+    "key": "hidden-ability-grookey",
+    "group": "Pokemon HOME",
+    "label": "Hidden Ability Grookey",
+    "summary": "Grookey, level 5"
+   },
+   {
+    "key": "hidden-ability-scorbunny",
+    "group": "Pokemon HOME",
+    "label": "Hidden Ability Scorbunny",
+    "summary": "Scorbunny, level 5"
+   },
+   {
+    "key": "hidden-ability-sobble",
+    "group": "Pokemon HOME",
+    "label": "Hidden Ability Sobble",
+    "summary": "Sobble, level 5"
+   },
+   {
+    "key": "home-starter-bulbasaur",
+    "group": "Pokemon HOME",
+    "label": "HOME Starter Bulbasaur",
+    "summary": "Bulbasaur, level 5"
+   },
+   {
+    "key": "home-starter-charmander",
+    "group": "Pokemon HOME",
+    "label": "HOME Starter Charmander",
+    "summary": "Charmander, level 5"
+   },
+   {
+    "key": "home-starter-squirtle",
+    "group": "Pokemon HOME",
+    "label": "HOME Starter Squirtle",
+    "summary": "Squirtle, level 5"
+   },
+   {
+    "key": "national-dex-completion-magearna",
+    "group": "Pokemon HOME",
+    "label": "National Dex Completion Magearna",
+    "summary": "Magearna, level 50"
+   },
+   {
+    "key": "pokemon-go-transfer-gift-melmetal",
+    "group": "Pokemon HOME",
+    "label": "Pokemon GO Transfer Gift Melmetal",
+    "summary": "Melmetal, level 100, can Gigantamax"
+   },
+   {
+    "key": "shiny-keldeo",
+    "group": "Pokemon HOME",
+    "label": "Shiny Keldeo",
+    "summary": "Keldeo, level 50"
+   },
+   {
+    "key": "shiny-zeraora",
+    "group": "Pokemon HOME",
+    "label": "Shiny Zeraora",
+    "summary": "Zeraora, level 100"
+   },
+   {
+    "key": "ver-1-4-0-home-bulbasaur",
+    "group": "Pokemon HOME",
+    "label": "Ver 1.4.0 HOME Bulbasaur",
+    "summary": "Bulbasaur, level 14, can Gigantamax"
+   },
+   {
+    "key": "ver-1-4-0-home-squirtle",
+    "group": "Pokemon HOME",
+    "label": "Ver 1.4.0 HOME Squirtle",
+    "summary": "Squirtle, level 14, can Gigantamax"
+   },
+   {
+    "key": "ability-capsule-x1-adamant-mint-x1-modest-mint-x1",
+    "group": "Items",
+    "label": "Ability Capsule x1, Adamant Mint x1, Modest Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-armorite-ore-x5",
+    "group": "Items",
+    "label": "Ability Capsule x1, Armorite Ore x5",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-armorite-ore-x5-bottle-cap-x3",
+    "group": "Items",
+    "label": "Ability Capsule x1, Armorite Ore x5, Bottle Cap x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-armorite-ore-x5-dynite-ore-x5",
+    "group": "Items",
+    "label": "Ability Capsule x1, Armorite Ore x5, Dynite Ore x5",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-bold-mint-x1-calm-mint-x1",
+    "group": "Items",
+    "label": "Ability Capsule x1, Bold Mint x1, Calm Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-bottle-cap-x3-armorite-ore-x5-dynite-ore-x5",
+    "group": "Items",
+    "label": "Ability Capsule x1, Bottle Cap x3, Armorite Ore x5, Dynite Ore x5",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-careful-mint-x1-impish-mint-x1",
+    "group": "Items",
+    "label": "Ability Capsule x1, Careful Mint x1, Impish Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-jolly-mint-x1-timid-mint-x1",
+    "group": "Items",
+    "label": "Ability Capsule x1, Jolly Mint x1, Timid Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-naive-mint-x1-hasty-mint-x1",
+    "group": "Items",
+    "label": "Ability Capsule x1, Naive Mint x1, Hasty Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-quiet-mint-x1-brave-mint-x1",
+    "group": "Items",
+    "label": "Ability Capsule x1, Quiet Mint x1, Brave Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ability-capsule-x1-relaxed-mint-x1-sassy-mint-x1",
+    "group": "Items",
+    "label": "Ability Capsule x1, Relaxed Mint x1, Sassy Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "armorite-ore-x8",
+    "group": "Items",
+    "label": "Armorite Ore x8",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "armorite-ore-x87-dynite-ore-x87",
+    "group": "Items",
+    "label": "Armorite Ore x87, Dynite Ore x87",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "beast-ball-x1",
+    "group": "Items",
+    "label": "Beast Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "berry-sweet-x1-shalour-sable-x1-lumiose-galette-x1-exp-candy-l-x3",
+    "group": "Items",
+    "label": "Berry Sweet x1, Shalour Sable x1, Lumiose Galette x1, Exp. Candy L x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "big-nugget-x12-exp-candy-xl-x12",
+    "group": "Items",
+    "label": "Big Nugget x12, Exp. Candy XL x12",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "big-nugget-x50",
+    "group": "Items",
+    "label": "Big Nugget x50",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "big-nugget-x50-exp-candy-l-x100",
+    "group": "Items",
+    "label": "Big Nugget x50, Exp. Candy L x100",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "boiled-egg-x3-chilan-berry-x3-charti-berry-x3-passho-berry-x3-kebia-berry-x3",
+    "group": "Items",
+    "label": "Boiled Egg x3, Chilan Berry x3, Charti Berry x3, Passho Berry x3, Kebia Berry x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "bottle-cap-x1",
+    "group": "Items",
+    "label": "Bottle Cap x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "bottle-cap-x3-ability-capsule-x1-adamant-mint-x1-modest-mint-x1",
+    "group": "Items",
+    "label": "Bottle Cap x3, Ability Capsule x1, Adamant Mint x1, Modest Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "bottle-cap-x3-ability-capsule-x1-bold-mint-x1-calm-mint-x1",
+    "group": "Items",
+    "label": "Bottle Cap x3, Ability Capsule x1, Bold Mint x1, Calm Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "bottle-cap-x3-ability-capsule-x1-careful-mint-x1-impish-mint-x1",
+    "group": "Items",
+    "label": "Bottle Cap x3, Ability Capsule x1, Careful Mint x1, Impish Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "bottle-cap-x3-ability-capsule-x1-jolly-mint-x1-timid-mint-x1",
+    "group": "Items",
+    "label": "Bottle Cap x3, Ability Capsule x1, Jolly Mint x1, Timid Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "bottle-cap-x3-ability-capsule-x1-naive-mint-x1-hasty-mint-x1",
+    "group": "Items",
+    "label": "Bottle Cap x3, Ability Capsule x1, Naive Mint x1, Hasty Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "bottle-cap-x3-ability-capsule-x1-quiet-mint-x1-brave-mint-x1",
+    "group": "Items",
+    "label": "Bottle Cap x3, Ability Capsule x1, Quiet Mint x1, Brave Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "bottle-cap-x3-ability-capsule-x1-relaxed-mint-x1-sassy-mint-x1",
+    "group": "Items",
+    "label": "Bottle Cap x3, Ability Capsule x1, Relaxed Mint x1, Sassy Mint x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "clover-sweet-x1-casteliacone-x1-pewter-crunchies-x1-exp-candy-l-x3",
+    "group": "Items",
+    "label": "Clover Sweet x1, Casteliacone x1, Pewter Crunchies x1, Exp. Candy L x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "dive-ball-x10",
+    "group": "Items",
+    "label": "Dive Ball x10",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "dream-ball-x1",
+    "group": "Items",
+    "label": "Dream Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "dynite-ore-x10",
+    "group": "Items",
+    "label": "Dynite Ore x10",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "dynite-ore-x5",
+    "group": "Items",
+    "label": "Dynite Ore x5",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "fancy-apple-x3-colbur-berry-x3-payapa-berry-x3-yache-berry-x3-aspear-berry-x3",
+    "group": "Items",
+    "label": "Fancy Apple x3, Colbur Berry x3, Payapa Berry x3, Yache Berry x3, Aspear Berry x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "fast-ball-x1-level-ball-x1-love-ball-x1",
+    "group": "Items",
+    "label": "Fast Ball x1, Level Ball x1, Love Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "fast-ball-x1-level-ball-x1-love-ball-x1-friend-ball-x1-beast-ball-x1",
+    "group": "Items",
+    "label": "Fast Ball x1, Level Ball x1, Love Ball x1, Friend Ball x1, Beast Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "flame-orb-x1-toxic-orb-x1-light-ball-x1-gold-bottle-cap-x1-bottle-cap-x3-pearl-string-x3",
+    "group": "Items",
+    "label": "Flame Orb x1, Toxic Orb x1, Light Ball x1, Gold Bottle Cap x1, Bottle Cap x3, Pearl String x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "flower-sweet-x1-moomoo-milk-x1-big-malasada-x1-exp-candy-l-x3",
+    "group": "Items",
+    "label": "Flower Sweet x1, Moomoo Milk x1, Big Malasada x1, Exp. Candy L x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "fruit-bunch-x3-roseli-berry-x3-kasib-berry-x3-wacan-berry-x3-shuca-berry-x3",
+    "group": "Items",
+    "label": "Fruit Bunch x3, Roseli Berry x3, Kasib Berry x3, Wacan Berry x3, Shuca Berry x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "galarica-wreath-x1",
+    "group": "Items",
+    "label": "Galarica Wreath x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "gigantamix-x1",
+    "group": "Items",
+    "label": "Gigantamix x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "gold-bottle-cap-x1",
+    "group": "Items",
+    "label": "Gold Bottle Cap x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "gold-bottle-cap-x1-armorite-ore-x10",
+    "group": "Items",
+    "label": "Gold Bottle Cap x1, Armorite Ore x10",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "gold-bottle-cap-x1-armorite-ore-x10-dynite-ore-x10",
+    "group": "Items",
+    "label": "Gold Bottle Cap x1, Armorite Ore x10, Dynite Ore x10",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "gold-bottle-cap-x3",
+    "group": "Items",
+    "label": "Gold Bottle Cap x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "gold-bottle-cap-x3-armorite-ore-x30",
+    "group": "Items",
+    "label": "Gold Bottle Cap x3, Armorite Ore x30",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "gold-bottle-cap-x3-armorite-ore-x30-dynite-ore-x30",
+    "group": "Items",
+    "label": "Gold Bottle Cap x3, Armorite Ore x30, Dynite Ore x30",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "heal-ball-x10",
+    "group": "Items",
+    "label": "Heal Ball x10",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "heavy-ball-x1-lure-ball-x1-beast-ball-x1",
+    "group": "Items",
+    "label": "Heavy Ball x1, Lure Ball x1, Beast Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "king-s-rock-x1",
+    "group": "Items",
+    "label": "King’s Rock x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "large-leek-x3-haban-berry-x3-coba-berry-x3-rindo-berry-x3-rawst-berry-x3",
+    "group": "Items",
+    "label": "Large Leek x3, Haban Berry x3, Coba Berry x3, Rindo Berry x3, Rawst Berry x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "level-ball-x1-moon-ball-x1-fast-ball-x1",
+    "group": "Items",
+    "label": "Level Ball x1, Moon Ball x1, Fast Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "life-orb-x1",
+    "group": "Items",
+    "label": "Life Orb x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "love-ball-x1-friend-ball-x1-dream-ball-x1",
+    "group": "Items",
+    "label": "Love Ball x1, Friend Ball x1, Dream Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "love-sweet-x1-sweet-heart-x1-berry-juice-x1-exp-candy-l-x3",
+    "group": "Items",
+    "label": "Love Sweet x1, Sweet Heart x1, Berry Juice x1, Exp. Candy L x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "lure-ball-x1-heavy-ball-x1-friend-ball-x1-moon-ball-x1",
+    "group": "Items",
+    "label": "Lure Ball x1, Heavy Ball x1, Friend Ball x1, Moon Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "lure-ball-x1-heavy-ball-x1-moon-ball-x1-dream-ball-x1",
+    "group": "Items",
+    "label": "Lure Ball x1, Heavy Ball x1, Moon Ball x1, Dream Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "luxury-ball-x10",
+    "group": "Items",
+    "label": "Luxury Ball x10",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "master-ball-x1",
+    "group": "Items",
+    "label": "Master Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "pok-ball-x100",
+    "group": "Items",
+    "label": "Poké Ball x100",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "premier-ball-x10",
+    "group": "Items",
+    "label": "Premier Ball x10",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "quick-ball-x12",
+    "group": "Items",
+    "label": "Quick Ball x12",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "ribbon-sweet-x1-whipped-dream-x1-exp-candy-xl-x3",
+    "group": "Items",
+    "label": "Ribbon Sweet x1, Whipped Dream x1, Exp. Candy XL x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "safari-ball-x1-sport-ball-x1",
+    "group": "Items",
+    "label": "Safari Ball x1, Sport Ball x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "smoke-poke-tail-x3-babiri-berry-x3-tanga-berry-x3-chople-berry-x3-occa-berry-x3",
+    "group": "Items",
+    "label": "Smoke-Poke Tail x3, Babiri Berry x3, Tanga Berry x3, Chople Berry x3, Occa Berry x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "star-sweet-x1-sachet-x1-exp-candy-xl-x3",
+    "group": "Items",
+    "label": "Star Sweet x1, Sachet x1, Exp. Candy XL x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "strawberry-sweet-x1-rage-candy-bar-x1-lava-cookie-x1-exp-candy-l-x3",
+    "group": "Items",
+    "label": "Strawberry Sweet x1, Rage Candy Bar x1, Lava Cookie x1, Exp. Candy L x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "tr94-x3",
+    "group": "Items",
+    "label": "TR94 x3",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "weakness-policy-x1",
+    "group": "Items",
+    "label": "Weakness Policy x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "whipped-dream-x1-sachet-x1-sweet-apple-x1-tart-apple-x1-cracked-pot-x1-chipped-pot-x1",
+    "group": "Items",
+    "label": "Whipped Dream x1, Sachet x1, Sweet Apple x1, Tart Apple x1, Cracked Pot x1, Chipped Pot x1",
+    "summary": "Into the bag"
+   },
+   {
+    "key": "10-battle-points",
+    "group": "Battle Points",
+    "label": "10 Battle Points",
+    "summary": "Added to the player's Battle Points"
+   },
+   {
+    "key": "20-battle-points",
+    "group": "Battle Points",
+    "label": "20 Battle Points",
+    "summary": "Added to the player's Battle Points"
+   },
+   {
+    "key": "50-battle-points",
+    "group": "Battle Points",
+    "label": "50 Battle Points",
+    "summary": "Added to the player's Battle Points"
+   },
+   {
+    "key": "100-battle-points",
+    "group": "Battle Points",
+    "label": "100 Battle Points",
+    "summary": "Added to the player's Battle Points"
+   },
+   {
+    "key": "300-battle-points",
+    "group": "Battle Points",
+    "label": "300 Battle Points",
+    "summary": "Added to the player's Battle Points"
+   },
+   {
+    "key": "600-battle-points",
+    "group": "Battle Points",
+    "label": "600 Battle Points",
+    "summary": "Added to the player's Battle Points"
+   },
+   {
+    "key": "casual-tee-great-ball-guy-2020-apr-international-competition-j-ver-1",
+    "group": "Clothing",
+    "label": "Casual Tee (Great Ball Guy) (2020 Apr International Competition J)(Ver 1)",
+    "summary": "1 piece of clothing"
+   },
+   {
+    "key": "casual-tee-poke-ball-guy-2020-feb-international-competition-j",
+    "group": "Clothing",
+    "label": "Casual Tee (Poke Ball Guy) (2020 Feb International Competition J)",
+    "summary": "1 piece of clothing"
+   },
+   {
+    "key": "casual-tee-pokemon-quest",
+    "group": "Clothing",
+    "label": "Casual Tee (Pokemon Quest)",
+    "summary": "1 piece of clothing"
+   },
+   {
+    "key": "casual-tee-ultra-ball-guy-2020-may-international-competition-j",
+    "group": "Clothing",
+    "label": "Casual Tee (Ultra Ball Guy) (2020 May International Competition J)",
+    "summary": "1 piece of clothing"
+   },
+   {
+    "key": "clothing-set-eevee-uniform",
+    "group": "Clothing",
+    "label": "Clothing Set Eevee Uniform",
+    "summary": "5 pieces of clothing"
+   },
+   {
+    "key": "clothing-set-leon-s-cap-tights",
+    "group": "Clothing",
+    "label": "Clothing Set Leon's Cap & Tights",
+    "summary": "2 pieces of clothing"
+   },
+   {
+    "key": "clothing-set-pikachu-uniform",
+    "group": "Clothing",
+    "label": "Clothing Set Pikachu Uniform",
+    "summary": "5 pieces of clothing"
+   },
+   {
+    "key": "clothing-set-tracksuit",
+    "group": "Clothing",
+    "label": "Clothing Set Tracksuit",
+    "summary": "6 pieces of clothing"
+   },
+   {
+    "key": "gold-studded-backpack",
+    "group": "Clothing",
+    "label": "Gold Studded Backpack",
+    "summary": "1 piece of clothing"
+   }
+  ]
+ }
+}

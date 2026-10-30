@@ -12,10 +12,17 @@ export function GameStep({
   game,
   onChange,
   available,
+  title,
+  sub,
+  games = GAMES,
 }: {
   game: TradeGame
   onChange: (game: TradeGame) => void
   available: (game: GameDef) => boolean
+  title?: string
+  sub?: string
+  /** Só estes jogos (as outras atividades: os que têm Mystery Gift local). */
+  games?: GameDef[]
 }) {
   const { t } = useTranslation()
   const current = gameOf(game)
@@ -23,11 +30,11 @@ export function GameStep({
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-[22px]">
       <div>
-        <div className="text-lg font-bold">{t('ui.trade.whichGame')}</div>
-        <div className="text-sm text-muted">{t('ui.trade.whichGameSub')}</div>
+        <div className="text-lg font-bold">{title ?? t('ui.trade.whichGame')}</div>
+        <div className="text-sm text-muted">{sub ?? t('ui.trade.whichGameSub')}</div>
       </div>
       <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr))]" role="radiogroup">
-        {GAMES.map((g) => {
+        {games.map((g) => {
           const on = current.family === g.family
           const ok = available(g)
           return (

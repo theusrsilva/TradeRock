@@ -23,6 +23,8 @@ const mainLinks = [
   { to: '/pokemon', key: 'nav.pokemon', icon: 'inventory_2' },
   { to: '/criar', key: 'nav.builder', icon: 'add_circle' },
   { to: '/historico', key: 'nav.history', icon: 'history' },
+  // Outras atividades (D26): só na janela do PC, como a configuração do rádio.
+  { to: '/atividades', key: 'nav.activities', icon: 'redeem', localOnly: true },
 ]
 
 /** Resumo da conexão para o menu e o Início. */
@@ -111,7 +113,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <div className="font-display text-xl font-bold tracking-[.2px]">{t('app.name')}</div>
           </div>
           <nav className="flex flex-col gap-0.5">
-            {mainLinks.map((l) => (
+            {mainLinks.filter((l) => !(remote && l.localOnly)).map((l) => (
               <NavLink key={l.to} to={l.to} end={l.end} className={sideLink}>
                 <Icon name={l.icon} className="text-[21px]" />
                 <span className="flex-1">{t(l.key)}</span>
@@ -211,7 +213,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <MobileTab
                 icon="menu"
                 label={t('ui.mobileNav.more')}
-                active={moreOpen || ['/historico', '/configuracoes', '/sobre'].includes(location.pathname)}
+                active={moreOpen || ['/atividades', '/historico', '/configuracoes', '/sobre'].includes(location.pathname)}
               />
               {status.missing > 0 && <span className="absolute top-1.5 right-[calc(50%-24px)] h-[9px] w-[9px] rounded-full bg-bad" />}
             </button>
@@ -226,6 +228,7 @@ export function Layout({ children }: { children: ReactNode }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mt-0.5 mb-2.5 h-1 w-10 rounded-sm bg-line" />
+            {!remote && <MoreItem to="/atividades" icon="redeem" label={t('nav.activities')} />}
             <MoreItem to="/historico" icon="history" label={t('nav.history')} />
             <MoreItem to="/configuracoes" icon="settings" label={t('nav.settings')} badge={status.missing || undefined} />
             <MoreItem to="/sobre" icon="info" label={t('about.link')} />

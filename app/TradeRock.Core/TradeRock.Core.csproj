@@ -26,6 +26,7 @@
     <EmbeddedResource Include="..\..\content\pt-BR\pkhex\*.json" LogicalName="pkhex/pt-BR/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Builder\Data\unverifiable.json" LogicalName="builder/unverifiable.json" />
     <EmbeddedResource Include="..\..\catalog\hardware-catalog.json" LogicalName="catalog/hardware-catalog.json" />
+    <EmbeddedResource Include="..\..\catalog\gifts.json" LogicalName="catalog/gifts.json" />
     <EmbeddedResource Include="..\..\packaging\linux\worker-setup.sh" LogicalName="worker-setup.sh" />
   </ItemGroup>
 
