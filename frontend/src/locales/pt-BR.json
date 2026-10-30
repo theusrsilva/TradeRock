@@ -23,7 +23,8 @@
     "cancel": "Cancelar",
     "optional": "opcional",
     "learnMore": "Saiba mais",
-    "close": "Fechar"
+    "close": "Fechar",
+    "clear": "Limpar"
   },
   "demo": {
     "badge": "Modo demonstração",
@@ -195,7 +196,7 @@
     "offered_slot_out_of_range": "um Pokémon marcado não está no time",
     "party_data_size": "um arquivo do time não é um Pokémon válido",
     "trainer_name_empty": "digite o nome do treinador",
-    "trainer_name_too_long": "o nome tem mais de 7 caracteres",
+    "trainer_name_too_long": "o nome é comprido demais para esse jogo",
     "trainer_name_invalid_chars": "o nome tem letras que o jogo não aceita (acentos, ç, _ …)",
     "unknown_pokemon": "um Pokémon do time não foi encontrado",
     "missing_fields": "faltam informações",
@@ -204,7 +205,16 @@
     "illegal_pokemon": "um Pokémon marcado para o Switch é ilegal. Corrija no construtor ou ative o modo avançado nas Configurações.",
     "illegal_needs_confirmation": "confirme que quer mandar um Pokémon ilegal",
     "setup_simulated": "a configuração da conexão está num cenário simulado (desenvolvimento). Volte para \"Sistema real\" para trocar de verdade.",
-    "setup_incomplete": "a configuração ainda não está completa. Abra Configurações → Conexão e resolva os itens essenciais."
+    "setup_incomplete": "a configuração ainda não está completa. Abra Configurações → Conexão e resolva os itens essenciais.",
+    "link_code_invalid": "o código de troca precisa ter 8 números (ou três Pokémon, no Let's Go)",
+    "pokemon_wrong_game": "um dos Pokémon é de outro jogo (dá para mover de jogo no cofre)",
+    "engine_game_unsupported": "a conexão escolhida ainda não troca com esse jogo; por enquanto, só no modo demonstração",
+    "game_invalid": "jogo desconhecido",
+    "trainer_id_invalid": "esse número de treinador não existe nesse jogo",
+    "format_ambiguous": "não dá para saber de qual jogo é o arquivo: use a extensão certa (.pb7, .pk8, .pb8, .pk9 ou .pa9)",
+    "game_mismatch": "o arquivo é de outro jogo",
+    "game_unsupported": "o Pokémon é de um jogo que o TradeRock não troca",
+    "save_game_unsupported": "só dá para colocar no save Pokémon do FireRed/LeafGreen"
   },
   "failures": {
     "no_network_found": "A sala do Switch não foi encontrada. Confira se o Direct Corner está aberto como Leader e se o Switch está perto.",
@@ -435,7 +445,13 @@
       "ability_not_gen3": "habilidade",
       "item_not_gen3": "item",
       "move_not_gen3": "golpe(s)",
-      "showdown_empty": "cole algum texto"
+      "showdown_empty": "cole algum texto",
+      "species_not_in_game": "essa espécie não existe nesse jogo",
+      "ability_not_in_game": "essa habilidade não existe para a espécie nesse jogo",
+      "item_not_in_game": "esse item não existe nesse jogo",
+      "move_not_in_game": "um dos golpes não existe nesse jogo",
+      "trainer_id_invalid": "esse número de treinador não existe nesse jogo",
+      "game_invalid": "jogo desconhecido"
     },
     "blockersTitle": "O que impede:",
     "blockers": {
@@ -549,6 +565,28 @@
       "color_invalid": "cor inválida",
       "pokemon_duplicate": "o resultado é igual a outro Pokémon do cofre",
       "pokemon_not_found": "o Pokémon não está mais no cofre"
+    },
+    "game": "Jogo",
+    "anyGame": "Qualquer jogo",
+    "exportSwitchNote": "Pokémon dos jogos do Switch (Let's Go a Legends: Z-A) saem no formato do próprio jogo (.pb7, .pk8, .pb8, .pa8, .pk9 ou .pa9), decriptados.",
+    "transfer": {
+      "action": "Mover para outro jogo",
+      "title": "Mover para outro jogo",
+      "help": "Como o Pokémon HOME faz: o Pokémon passa a ser do jogo escolhido, com o seu \"Meu treinador\" daquele jogo como treinador atual. Ele continua no mesmo lugar do cofre.",
+      "confirm": "Mover",
+      "done": "Agora ele é do {{game}}",
+      "tracker": "Ele fica sem o rastreador do Pokémon HOME, que só o HOME cria. Os jogos não conferem isso, mas o HOME não aceita o Pokémon depois.",
+      "refusal": {
+        "same_game": "É o jogo atual",
+        "home_no_destination": "O HOME não manda Pokémon para esse jogo",
+        "egg": "Ovos ficam no próprio jogo",
+        "frlg_held_item": "Tire o item segurado antes (o HOME não aceita Pokémon do FireRed/LeafGreen com item)",
+        "frlg_hm_move": "Esqueça os golpes de HM antes (o HOME não aceita Pokémon do FireRed/LeafGreen com HM)",
+        "species_not_in_game": "Essa espécie (ou forma) não existe nesse jogo",
+        "no_route": "O PKHeX não achou um jeito de converter",
+        "pokemon_duplicate": "Já existe um Pokémon igual no cofre",
+        "pokemon_in_trash": "Está na lixeira"
+      }
     }
   },
   "inject": {
@@ -1229,9 +1267,10 @@
       "title": "Trocar com o Switch",
       "steps": {
         "party": "Time",
-        "trainer": "Jogo e treinador",
+        "trainer": "Treinador",
         "reminder": "Preparar o Switch",
-        "queue": "Fila"
+        "queue": "Fila",
+        "game": "Jogo"
       },
       "demoBanner": "Tudo funciona, mas as trocas são simuladas até a conexão ficar pronta.",
       "setupConnection": "Configurar conexão",
@@ -1244,7 +1283,7 @@
       "goingCount_other": "{{count}} vão para o Switch",
       "fromVault": "Escolha do cofre",
       "searchVault": "Buscar no cofre",
-      "whichGame": "Qual jogo está no Switch?",
+      "whichGame": "Com qual jogo você vai trocar?",
       "nameOnSwitch": "Nome que vai aparecer no Switch",
       "nameTip": "É o nome que você vai aprovar no pedido para entrar na sala. Até 7 caracteres, sem acento (o jogo não tem “ã” ou “ç”). Pode usar . - ! ?",
       "moreOptions": "Mais opções (ID secreto)",
@@ -1275,7 +1314,19 @@
       "sending": "Enviando {{names}}",
       "nothingToSend": "Nada para enviar",
       "trainerLabel": "treinador",
-      "continue": "Continuar"
+      "continue": "Continuar",
+      "whichGameSub": "Escolha o jogo e a versão que estão no Switch.",
+      "games": {
+        "linkCode": "Código de troca",
+        "soon": "Com o Switch de verdade, em breve (no modo demonstração já funciona)"
+      },
+      "tradingWith": "Troca com o {{game}}",
+      "linkCode": "Código de troca",
+      "linkCodeTip": "Oito números. No Switch, use o mesmo código na troca. Em branco, a troca é sem código.",
+      "linkCodeLgpeTip": "No Let's Go, o código são três Pokémon escolhidos em ordem. Escolha aqui os mesmos que você vai escolher no Switch. Em branco, vale o padrão: três Pikachu.",
+      "offersTip": "Cada Pokémon escolhido vai para o Switch, um por troca, nesta ordem. Nesse jogo não precisa de Pokémon de preenchimento.",
+      "tradeNumber": "Troca {{n}}",
+      "otherGame": "É do {{game}}: dá para mover de jogo no cofre"
     },
     "live": {
       "running": "Troca em andamento",
@@ -1325,7 +1376,8 @@
       "savedIllegal": "Salvo, mas o PKHeX acusa problemas de legalidade",
       "errors": {
         "pokemon_duplicate": "O resultado é igual a outro Pokémon do cofre."
-      }
+      },
+      "exportFile": "Exportar arquivo"
     },
     "builder": {
       "forGame": "Para o jogo",
@@ -1336,7 +1388,9 @@
       "advancedBanner": "Dados brutos, como no PKHeX. Nada é corrigido sozinho: o painel ao lado mostra o que ficou errado.",
       "howItWorks": "Como funciona",
       "legalAttention": "Legal, com atenção",
-      "legalTip": "Verificado pelo PKHeX {{version}}. “Atenção” não torna o Pokémon ilegal."
+      "legalTip": "Verificado pelo PKHeX {{version}}. “Atenção” não torna o Pokémon ilegal.",
+      "form": "Forma",
+      "formNormal": "Normal"
     },
     "history": {
       "events": "Eventos",

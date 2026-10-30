@@ -1,6 +1,20 @@
 // Tipos da API (enums em snake_case, como o backend serializa).
 
-export type TradeGame = 'fire_red' | 'leaf_green'
+export type TradeGame =
+  | 'fire_red'
+  | 'leaf_green'
+  | 'lets_go_pikachu'
+  | 'lets_go_eevee'
+  | 'sword'
+  | 'shield'
+  | 'brilliant_diamond'
+  | 'shining_pearl'
+  | 'legends_arceus'
+  | 'scarlet'
+  | 'violet'
+  | 'legends_za'
+/** Jogo do Switch (as duas versões de um par juntas), como o backend agrupa (GameCatalog). */
+export type GameFamily = 'frlg' | 'lgpe' | 'swsh' | 'bdsp' | 'pla' | 'sv' | 'za'
 export type PokemonOrigin = 'imported' | 'received' | 'demo' | 'created'
 export type LegalityStatus = 'legal' | 'illegal' | 'unverifiable'
 export type TradeSessionStatus = 'running' | 'completed' | 'partially_completed' | 'failed' | 'cancelled'
@@ -47,7 +61,9 @@ export interface Health {
 
 export interface Pokemon {
   id: string
+  family: GameFamily
   species: number
+  form: number
   speciesName: string
   nickname: string
   level: number
@@ -173,6 +189,8 @@ export interface StartTrade {
   trainer: Trainer
   simulation: { scenario: SimulationScenario; failuresBeforeSuccess: number } | null
   acceptIllegal: boolean
+  /** Oito dígitos, ou no Let's Go três números da grade ("0,4,9"). Vazio = sem código. */
+  linkCode?: string | null
 }
 
 // ---- Construtor ----
@@ -190,6 +208,10 @@ export interface BuilderData {
   balls: Option[]
   languages: Option[]
   versions: string[]
+  maxEv: number
+  nicknameLength: number
+  /** Modo avançado (só FireRed/LeafGreen). */
+  advanced: boolean
 }
 
 export interface SpeciesDetails {
@@ -198,6 +220,8 @@ export interface SpeciesDetails {
   abilities: Option[]
   genderRatio: 'genderless' | 'male_only' | 'female_only' | 'mixed'
   inKantoDex: boolean
+  /** Formas que existem no jogo (Value = número da forma); null no FRLG. */
+  forms: Option[] | null
 }
 
 export interface EncounterOption {
@@ -222,6 +246,7 @@ export interface TrainerSpec {
 
 export interface PokemonSpec {
   species: number
+  form?: number
   nickname: string | null
   level: number
   nature: number | null
@@ -282,6 +307,7 @@ export interface LegalityReport {
 }
 
 export interface Pk3Summary {
+  family?: GameFamily
   species: number
   speciesName: string
   nickname: string

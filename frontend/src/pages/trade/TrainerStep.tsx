@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge, Button, Field, HelpTip, Icon, inputClass, selectClass } from '../../components/ui'
 import { api } from '../../lib/api'
-import { TRAINER_NAME_MAX, trainerNameErrors } from '../../lib/trainer'
+import { gameOf, idLimits, LGPE_CODE_SPECIES, linkCodeErrors, versionColor, versionName } from '../../lib/games'
+import { spriteUrl } from '../../lib/api'
+import { trainerNameErrors } from '../../lib/trainer'
 import type { SimulationScenario, TradeGame, Trainer, TrainerPreset } from '../../lib/types'
 
 export interface TrainerState {
@@ -10,6 +12,8 @@ export interface TrainerState {
   trainer: Trainer
   scenario: SimulationScenario
   failuresBeforeSuccess: number
+  /** Oito dígitos ou, no Let's Go, três índices da grade ("0,4,9"). Vazio = sem código. */
+  linkCode: string
 }
 
 const scenarios: SimulationScenario[] = [
@@ -23,12 +27,10 @@ const scenarios: SimulationScenario[] = [
   'connection_lost_mid_trade',
 ]
 
-export const gameDot: Record<TradeGame, string> = { fire_red: '#d8443a', leaf_green: '#3f9a4e' }
-
-const parseId = (value: string): number | null => {
+const parseId = (value: string, max: number): number | null => {
   if (value.trim() === '') return null
   const n = Number(value)
-  return Number.isInteger(n) && n >= 0 && n <= 65535 ? n : null
+  return Number.isInteger(n) && n >= 0 && n <= max ? n : null
 }
 
 export function TrainerStep({
@@ -52,7 +54,9 @@ export function TrainerStep({
     void loadPresets()
   }, [])
 
-  const nameErrors = trainerNameErrors(state.trainer.name)
+  const game = gameOf(state.game)
+  const limits = idLimits(game)
+  const nameErrors = trainerNameErrors(state.trainer.name, game)
   const setTrainer = (trainer: Partial<Trainer>) => onChange({ ...state, trainer: { ...state.trainer, ...trainer } })
 
   function applyPreset(p: TrainerPreset) {
@@ -68,33 +72,17 @@ export function TrainerStep({
     await loadPresets()
   }
 
+  // Só os treinadores salvos do mesmo jogo (os números mudam de formato entre FRLG e os jogos novos).
+  const samePresets = presets.filter((p) => gameOf(p.game).family === game.family)
   const isCurrent = (p: TrainerPreset) =>
     p.name === state.trainer.name && p.tid === state.trainer.tid && p.sid === state.trainer.sid && p.game === state.game
 
   return (
     <div className="grid items-start gap-[18px] [grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))]">
       <div className="flex flex-col gap-[18px] rounded-xl border border-line bg-surface p-[22px]">
-        <div className="flex flex-col gap-2">
-          <div className="font-bold">{t('ui.trade.whichGame')}</div>
-          <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr))]" role="radiogroup">
-            {(['fire_red', 'leaf_green'] as const).map((game) => {
-              const on = state.game === game
-              return (
-                <button
-                  key={game}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => onChange({ ...state, game })}
-                  className={`flex h-16 cursor-pointer items-center gap-3 rounded-lg border-2 px-4 text-left ${on ? 'border-accent bg-accent-soft' : 'border-line bg-bg'}`}
-                >
-                  <span className="h-[18px] w-[18px] rounded-full" style={{ background: gameDot[game] }} />
-                  <span className="flex-1 text-base font-bold">{t(`trade.trainer.${game}`)}</span>
-                  {on && <Icon name="check_circle" className="text-[22px] text-accent" />}
-                </button>
-              )
-            })}
-          </div>
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <span className="h-3 w-3 rounded-full" style={{ background: versionColor(state.game) }} />
+          {t('ui.trade.tradingWith', { game: versionName(state.game) })}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -109,12 +97,12 @@ export function TrainerStep({
               id="trainer-name"
               className="min-w-0 flex-1 bg-transparent text-[17px] font-bold tracking-[1px] outline-none"
               value={state.trainer.name}
-              maxLength={TRAINER_NAME_MAX + 3}
+              maxLength={game.trainerNameMax + 3}
               onChange={(e) => setTrainer({ name: e.target.value })}
               aria-invalid={nameErrors.length > 0}
             />
             <span className="text-[13px] text-muted">
-              {[...state.trainer.name].length}/{TRAINER_NAME_MAX}
+              {[...state.trainer.name].length}/{game.trainerNameMax}
             </span>
           </div>
           {nameErrors.map((e) => (
@@ -132,7 +120,7 @@ export function TrainerStep({
               value={tidText}
               onChange={(e) => {
                 setTidText(e.target.value)
-                const n = parseId(e.target.value)
+                const n = parseId(e.target.value, limits.tid)
                 if (n !== null) setTrainer({ tid: n })
               }}
             />
@@ -145,7 +133,7 @@ export function TrainerStep({
                 value={sidText}
                 onChange={(e) => {
                   setSidText(e.target.value)
-                  setTrainer({ sid: parseId(e.target.value) })
+                  setTrainer({ sid: parseId(e.target.value, limits.sid) })
                 }}
               />
             </Field>
@@ -155,21 +143,49 @@ export function TrainerStep({
           <Icon name={more ? 'expand_less' : 'expand_more'} />
           {more ? t('ui.trade.lessOptions') : t('ui.trade.moreOptions')}
         </button>
+
+        {game.linkCode !== 'none' && (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="flex-1 font-bold">
+                {t('ui.trade.linkCode')} <span className="font-normal text-muted">({t('common.optional')})</span>
+              </span>
+              <HelpTip>{t(game.linkCode === 'digits8' ? 'ui.trade.linkCodeTip' : 'ui.trade.linkCodeLgpeTip')}</HelpTip>
+            </div>
+            {game.linkCode === 'digits8' ? (
+              <input
+                className={`${inputClass} font-mono tracking-[3px]`}
+                inputMode="numeric"
+                maxLength={8}
+                placeholder="12345678"
+                value={state.linkCode}
+                onChange={(e) => onChange({ ...state, linkCode: e.target.value.replace(/\D/g, '').slice(0, 8) })}
+              />
+            ) : (
+              <LgpeCode value={state.linkCode} onChange={(linkCode) => onChange({ ...state, linkCode })} />
+            )}
+            {linkCodeErrors(state.game, state.linkCode).map((e) => (
+              <div key={e} className="text-[13px] text-bad">
+                {t(`errors.${e}`)}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-[18px]">
         <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
           <div className="font-bold">{t('trade.trainer.presets')}</div>
-          {presets.length === 0 && <p className="text-sm text-muted">{t('trade.trainer.noPresets')}</p>}
+          {samePresets.length === 0 && <p className="text-sm text-muted">{t('trade.trainer.noPresets')}</p>}
           <div className="flex flex-wrap gap-2">
-            {presets.map((p) => (
+            {samePresets.map((p) => (
               <span
                 key={p.id}
                 className={`flex h-9 items-center gap-1 rounded-full border pr-1 pl-3.5 text-[13.5px] font-semibold ${isCurrent(p) ? 'border-accent bg-accent-soft' : 'border-line bg-surface'}`}
               >
                 <button type="button" onClick={() => applyPreset(p)} className="flex cursor-pointer items-center gap-2" title={`${p.name} · ${p.tid}${p.sid !== null ? `:${p.sid}` : ''}`}>
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: gameDot[p.game] }} />
-                  {p.label} · {t(`trade.trainer.${p.game}`)}
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: versionColor(p.game) }} />
+                  {p.label} · {versionName(p.game)}
                 </button>
                 <button
                   type="button"
@@ -247,6 +263,41 @@ export function TrainerStep({
             )}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+/** Código do Let's Go: três Pokémon escolhidos, em ordem, na grade de dez. */
+function LgpeCode({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const { t } = useTranslation()
+  const picks = value === '' ? [] : value.split(',').map(Number)
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="flex h-12 w-12 items-center justify-center rounded-lg border border-line bg-bg">
+            {picks[i] !== undefined && <img src={spriteUrl(LGPE_CODE_SPECIES[picks[i]])} alt="" className="pixelated h-11 w-11" />}
+          </span>
+        ))}
+        {picks.length > 0 && (
+          <Button variant="ghost" onClick={() => onChange('')}>
+            {t('common.clear')}
+          </Button>
+        )}
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {LGPE_CODE_SPECIES.map((species, index) => (
+          <button
+            key={species}
+            type="button"
+            disabled={picks.length >= 3}
+            onClick={() => onChange([...picks, index].join(','))}
+            className="flex cursor-pointer items-center justify-center rounded-lg border border-line bg-tile p-1 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <img src={spriteUrl(species)} alt="" className="pixelated h-10 w-10" />
+          </button>
+        ))}
       </div>
     </div>
   )

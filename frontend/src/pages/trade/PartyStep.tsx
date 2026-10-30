@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { UploadArea } from '../../components/UploadArea'
 import { HelpTip, Icon } from '../../components/ui'
 import { spriteUrl } from '../../lib/api'
+import { familyOf, gameByFamily, type GameDef } from '../../lib/games'
 import type { Pokemon } from '../../lib/types'
 
 export interface PartyState {
@@ -12,9 +13,13 @@ export interface PartyState {
 
 export const MAX_PARTY = 6
 
-export function partyProblems(state: PartyState, illegalBlocked = false): string[] {
+/**
+ * FRLG: time simulado de 2 a 6, com um ou mais oferecidos. Jogos novos (pokeldn, D21): cada Pokémon escolhido é uma
+ * oferta, de 1 a 6, na ordem das trocas.
+ */
+export function partyProblems(state: PartyState, illegalBlocked = false, frlg = true): string[] {
   const problems: string[] = []
-  if (state.party.length < 2) problems.push('trade.party.needTwo')
+  if (frlg && state.party.length < 2) problems.push('trade.party.needTwo')
   if (state.offered.length < 1) problems.push('trade.party.needOffered')
   if (illegalBlocked) problems.push('trade.party.illegalBlocked')
   return problems
@@ -28,13 +33,16 @@ export function PartyStep({
   onChange,
   onReload,
   allowIllegal,
+  game,
 }: {
   pokemon: Pokemon[]
   state: PartyState
   onChange: (state: PartyState) => void
   onReload: () => void
   allowIllegal: boolean
+  game: GameDef
 }) {
+  const frlg = game.family === 'frlg'
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const byId = new Map(pokemon.map((p) => [p.id, p]))
@@ -47,16 +55,20 @@ export function PartyStep({
       offered: state.offered.includes(id) ? state.offered.filter((x) => x !== id) : [...state.offered, id],
     })
   const remove = (id: string) => onChange({ party: state.party.filter((x) => x !== id), offered: state.offered.filter((x) => x !== id) })
-  const add = (id: string) => !full && onChange({ ...state, party: [...state.party, id] })
+  // Nos jogos novos, todo Pokémon escolhido vai para o Switch (uma troca cada).
+  const add = (id: string) =>
+    !full && onChange({ party: [...state.party, id], offered: frlg ? state.offered : [...state.offered, id] })
 
+  const fits = (p: Pokemon) => familyOf(p) === game.family
   const q = query.trim().toLowerCase()
-  const list = q
+  const list = (q
     ? pokemon.filter((p) => [p.speciesName, p.nickname, p.otName, String(p.species)].some((s) => s?.toLowerCase().includes(q)))
     : pokemon
+  ).toSorted((a, b) => Number(fits(b)) - Number(fits(a)))
 
   const offeredIllegal = state.offered.some((id) => byId.get(id)?.legality === 'illegal')
   const checks = [
-    { ok: state.party.length >= 2, text: t('ui.trade.atLeastTwo') },
+    ...(frlg ? [{ ok: state.party.length >= 2, text: t('ui.trade.atLeastTwo') }] : []),
     {
       ok: state.offered.length >= 1,
       text: state.offered.length >= 1 ? t('ui.trade.goingCount', { count: state.offered.length }) : t('trade.party.needOffered'),
@@ -71,7 +83,7 @@ export function PartyStep({
           <div className="flex-1 text-[17px] font-bold">
             {t('trade.party.title')} <span className="font-medium text-muted">· {state.party.length}/6</span>
           </div>
-          <HelpTip>{t('ui.trade.teamTip')}</HelpTip>
+          <HelpTip>{frlg ? t('ui.trade.teamTip') : t('ui.trade.offersTip')}</HelpTip>
         </div>
         <div className="grid grid-cols-3 gap-2.5">
           {Array.from({ length: MAX_PARTY }, (_, i) => {
@@ -109,18 +121,25 @@ export function PartyStep({
                 )}
                 <img src={spriteUrl(p.species)} alt="" className="pixelated h-16 w-16" loading="lazy" />
                 <div className="max-w-full truncate text-[13px] font-bold">{displayName(p)}</div>
-                <button
-                  type="button"
-                  onClick={() => toggleOffered(p.id)}
-                  aria-pressed={offered}
-                  title={blocked ? t('trade.party.illegalBlocked') : undefined}
-                  className={`flex h-7 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-xs font-bold whitespace-nowrap ${
-                    offered ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-surface text-muted'
-                  }`}
-                >
-                  <Icon name={offered ? 'north_east' : 'home'} className="text-[15px]" />
-                  {offered ? `${t('ui.trade.send')}${offeredInOrder.length > 1 ? ` · ${order}` : ''}` : t('ui.trade.stays')}
-                </button>
+                {frlg ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleOffered(p.id)}
+                    aria-pressed={offered}
+                    title={blocked ? t('trade.party.illegalBlocked') : undefined}
+                    className={`flex h-7 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-xs font-bold whitespace-nowrap ${
+                      offered ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-surface text-muted'
+                    }`}
+                  >
+                    <Icon name={offered ? 'north_east' : 'home'} className="text-[15px]" />
+                    {offered ? `${t('ui.trade.send')}${offeredInOrder.length > 1 ? ` · ${order}` : ''}` : t('ui.trade.stays')}
+                  </button>
+                ) : (
+                  <span className="flex h-7 items-center gap-1 rounded-full bg-accent px-2.5 text-xs font-bold whitespace-nowrap text-accent-ink">
+                    <Icon name="north_east" className="text-[15px]" />
+                    {t('ui.trade.tradeNumber', { n: order })}
+                  </span>
+                )}
               </div>
             )
           })}
@@ -149,13 +168,15 @@ export function PartyStep({
           {list.map((p) => {
             const inTeam = state.party.includes(p.id)
             const warn = p.warnings?.[0] ? t(`warnings.${p.warnings[0].code}`, p.warnings[0].args) : null
+            // Pokémon de outro jogo aparece esmaecido, com o motivo (dá para mover no cofre).
+            const other = fits(p) ? null : t('ui.trade.otherGame', { game: gameByFamily(familyOf(p)).name })
             return (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => (inTeam ? remove(p.id) : add(p.id))}
-                disabled={!inTeam && full}
-                title={`${displayName(p)} · ${t('pokemon.level', { level: p.level })}${warn ? ` · ${warn}` : ''}`}
+                disabled={(!inTeam && full) || (other !== null && !inTeam)}
+                title={other ?? `${displayName(p)} · ${t('pokemon.level', { level: p.level })}${warn ? ` · ${warn}` : ''}`}
                 aria-pressed={inTeam}
                 className={`relative flex cursor-pointer flex-col items-center gap-0.5 rounded-lg border bg-tile px-1 py-2 disabled:cursor-not-allowed disabled:opacity-45 ${inTeam ? 'border-accent' : 'border-line'}`}
               >

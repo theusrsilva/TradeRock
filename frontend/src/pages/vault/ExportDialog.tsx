@@ -67,6 +67,7 @@ export function ExportDialog({ ids, onClose }: { ids: string[]; onClose: () => v
           </label>
         ))}
       </fieldset>
+      <p className="mt-3 text-[13px] text-muted">{t('vault.exportSwitchNote')}</p>
       {message && <p className="mt-3 text-ok">{message}</p>}
     </Modal>
   )

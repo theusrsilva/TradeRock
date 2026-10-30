@@ -10,7 +10,8 @@ namespace TradeRock.App.Api;
 
 public static class TradeEndpoints
 {
-    public sealed record TrainerDto(string Name, ushort Tid, ushort? Sid);
+    /// <summary>Treinador simulado com os números que o jogo mostra (6 e 4 dígitos da Gen 7 em diante).</summary>
+    public sealed record TrainerDto(string Name, uint Tid, uint? Sid);
 
     public sealed record StartTradeDto(
         IReadOnlyList<Guid> Party,
@@ -23,7 +24,7 @@ public static class TradeEndpoints
 
     public sealed record TradeHistoryItemDto(
         Guid Id, DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string EngineId, bool IsSimulation,
-        TradeGame Game, string TrainerName, ushort Tid, ushort? Sid, TradeSessionStatus Status, int Attempts,
+        TradeGame Game, string TrainerName, uint Tid, uint? Sid, TradeSessionStatus Status, int Attempts,
         int TradesPlanned, int TradesCompleted, string? FailureCode, string? FailureMessage,
         IReadOnlyList<TradeEntryDto> Entries);
 
@@ -95,9 +96,12 @@ public static class TradeEndpoints
                 if (!status.ReadyToTrade)
                     return Results.BadRequest(new { error = "invalid", errors = new[] { "setup_incomplete" } });
             }
+            if (TrainerIds.FromDisplay(game, body.Trainer.Tid, body.Trainer.Sid ?? 0) is not { } ids)
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "trainer_id_invalid" } });
+            ushort? sid16 = body.Trainer.Sid is null && !game.SixDigitTrainerId ? null : ids.Sid16;
             var request = new TradeRequest(
                 party, body.OfferedSlots, body.Game,
-                new TrainerProfile(body.Trainer.Name, body.Trainer.Tid, body.Trainer.Sid),
+                new TrainerProfile(body.Trainer.Name, ids.Tid16, sid16),
                 engine.IsSimulation ? body.Simulation : null,
                 string.IsNullOrWhiteSpace(body.LinkCode) ? null : body.LinkCode.Trim());
 
@@ -218,8 +222,15 @@ public static class TradeEndpoints
         }
     }
 
-    private static TradeHistoryItemDto ToDto(TradeRecord r) => new(
-        r.Id, r.StartedAt, r.EndedAt, r.EngineId, r.IsSimulation, r.Game, r.TrainerName, r.Tid, r.Sid, r.Status,
-        r.Attempts, r.TradesPlanned, r.TradesCompleted, r.FailureCode, r.FailureMessage,
-        r.Entries.OrderBy(e => e.TradeIndex).Select(e => new TradeEntryDto(e.TradeIndex, e.SentPokemonId, e.ReceivedPokemonId)).ToList());
+    private static TradeHistoryItemDto ToDto(TradeRecord r)
+    {
+        // Números como o jogo mostra; no FRLG o SID pode ficar em branco.
+        var game = GameCatalog.Of(r.Game);
+        var (tid, sid) = TrainerIds.Display(game, r.Tid, r.Sid ?? 0);
+        return new(
+            r.Id, r.StartedAt, r.EndedAt, r.EngineId, r.IsSimulation, r.Game, r.TrainerName, tid,
+            r.Sid is null && !game.SixDigitTrainerId ? null : sid, r.Status,
+            r.Attempts, r.TradesPlanned, r.TradesCompleted, r.FailureCode, r.FailureMessage,
+            r.Entries.OrderBy(e => e.TradeIndex).Select(e => new TradeEntryDto(e.TradeIndex, e.SentPokemonId, e.ReceivedPokemonId)).ToList());
+    }
 }

@@ -1,10 +1,12 @@
 using TradeRock.App.Server;
-using TradeRock.Core.Pokemon;
 
 namespace TradeRock.App.Api;
 
 public static class AppEndpoints
 {
+    /// <summary>Último sprite embutido (Pecharunt, fim da Gen 9).</summary>
+    public const int MaxSpriteSpecies = 1025;
+
     public static void MapAppEndpoints(this IEndpointRouteBuilder api)
     {
         var version = AppVersion.Current;
@@ -26,11 +28,12 @@ public static class AppEndpoints
             return Results.NoContent();
         });
 
-        // Sprites 1–386 do PokeAPI (via engines/frlg-ldn-trade-esp32/assets/sprites), embutidos.
+        // Sprites do PokeAPI, embutidos: 1–386 via engines/frlg-ldn-trade-esp32/assets/sprites e 387–1025 de
+        // assets/sprites (scripts/fetch-sprites.sh). Formas usam o sprite da forma normal.
         var assembly = typeof(AppEndpoints).Assembly;
         api.MapGet("/sprites/{species:int}", (int species, HttpContext context) =>
         {
-            if (species is < 1 or > Pk3Reader.MaxSpecies)
+            if (species is < 1 or > MaxSpriteSpecies)
                 return Results.NotFound();
             var stream = assembly.GetManifestResourceStream($"sprites/{species}.png");
             if (stream is null)

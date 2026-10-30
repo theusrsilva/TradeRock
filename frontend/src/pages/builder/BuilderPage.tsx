@@ -5,6 +5,7 @@ import { LegalityPanel } from '../../components/Legality'
 import { ContentFile } from '../../components/Markdown'
 import { Button, Callout, HelpTip, Icon, Modal, Toggle, inputClass, useToast } from '../../components/ui'
 import { ApiError, api, spriteUrl } from '../../lib/api'
+import { gameOf } from '../../lib/games'
 import type {
   AdvancedResult,
   BuildResult,
@@ -59,21 +60,43 @@ export default function BuilderPage() {
   const [showdownOpen, setShowdownOpen] = useState(false)
 
   useEffect(() => {
-    api.get<BuilderData>('/api/builder/data').then(setData).catch(() => undefined)
-    api.get<MyTrainer | undefined>('/api/settings/my-trainer').then((m) => setMyTrainer(m ?? null)).catch(() => undefined)
     if (id) {
       api
-        .get<{ spec: PokemonSpec; raw: RawPokemon }>(`/api/builder/from/${id}`)
+        .get<{ spec: PokemonSpec; raw: RawPokemon | null }>(`/api/builder/from/${id}`)
         .then((r) => {
           setSpec(r.spec)
           setRaw(r.raw)
-          setMode('advanced') // abrir do cofre mostra o arquivo exatamente como está
+          // Abrir do cofre mostra o arquivo exatamente como está (modo avançado, só no FireRed/LeafGreen).
+          if (r.raw) setMode('advanced')
         })
         .catch(() => undefined)
     } else {
       api.get<TrainerSpec>('/api/builder/default-trainer').then((tr) => setSpec(defaultSpec(tr))).catch(() => undefined)
     }
   }, [id])
+
+  // Listas e "Meu treinador" do jogo escolhido.
+  const game = spec?.game ?? 'fire_red'
+  const family = gameOf(game).family
+  useEffect(() => {
+    api.get<BuilderData>(`/api/builder/data?game=${game}`).then(setData).catch(() => undefined)
+  }, [game])
+  useEffect(() => {
+    api.get<MyTrainer | undefined>(`/api/settings/my-trainer?game=${family}`).then((m) => setMyTrainer(m ?? null)).catch(() => undefined)
+  }, [family])
+
+  /** Outro jogo: o treinador vem do jogo novo e o que só vale no jogo anterior volta para "tanto faz". */
+  async function changeGame(next: PokemonSpec['game']) {
+    if (!spec) return
+    if (gameOf(next).family === gameOf(spec.game).family) {
+      setSpec({ ...spec, game: next, encounterKey: null })
+      return
+    }
+    const trainer = await api.get<TrainerSpec>(`/api/builder/default-trainer?game=${next}`).catch(() => spec.trainer)
+    setMode('auto')
+    setRaw(null)
+    setSpec({ ...spec, game: next, form: 0, encounterKey: null, heldItem: 0, moves: [], ball: null, abilitySlot: null, evs: [0, 0, 0, 0, 0, 0], trainer })
+  }
 
   // Modo automático: gera a cada mudança.
   useDebouncedEffect(
@@ -139,7 +162,7 @@ export default function BuilderPage() {
   async function save() {
     if (!current?.data) return
     try {
-      const r = await api.post<{ created: boolean; pokemon: Pokemon }>('/api/builder/save', { data: current.data })
+      const r = await api.post<{ created: boolean; pokemon: Pokemon }>('/api/builder/save', { data: current.data, game: spec?.game })
       toast(t(r.created ? 'builder.saved' : 'builder.savedDuplicate'))
     } catch {
       toast(t('common.error'))
@@ -154,7 +177,13 @@ export default function BuilderPage() {
           {t('builder.importShowdown')}
         </Button>
         <span className="inline-flex h-10 items-center rounded-lg border border-line bg-surface px-3">
-          <Toggle small on={mode === 'advanced'} disabled={mode === 'auto' && !raw} onChange={(on) => setMode(on ? 'advanced' : 'auto')} label={t('builder.modeAdvanced')} />
+          <Toggle
+            small
+            on={mode === 'advanced'}
+            disabled={(mode === 'auto' && !raw) || !data.advanced}
+            onChange={(on) => setMode(on ? 'advanced' : 'auto')}
+            label={t('builder.modeAdvanced')}
+          />
         </span>
       </div>
       {mode === 'advanced' && (
@@ -173,7 +202,7 @@ export default function BuilderPage() {
             </div>
           </details>
           {mode === 'auto' ? (
-            <AutoForm data={data} spec={spec} onChange={setSpec} issues={issues} myTrainer={myTrainer} />
+            <AutoForm data={data} spec={spec} onChange={setSpec} issues={issues} myTrainer={myTrainer} onGameChange={(g) => void changeGame(g)} />
           ) : (
             raw && <AdvancedForm data={data} raw={raw} onChange={setRaw} issues={issues} />
           )}

@@ -23,7 +23,8 @@
     "cancel": "Cancel",
     "optional": "optional",
     "learnMore": "Learn more",
-    "close": "Close"
+    "close": "Close",
+    "clear": "Clear"
   },
   "demo": {
     "badge": "Demo mode",
@@ -195,7 +196,7 @@
     "offered_slot_out_of_range": "a marked Pokémon is not in the party",
     "party_data_size": "a party file is not a valid Pokémon",
     "trainer_name_empty": "type the trainer name",
-    "trainer_name_too_long": "the name has more than 7 characters",
+    "trainer_name_too_long": "the name is too long for this game",
     "trainer_name_invalid_chars": "the name has characters the game doesn't support (accents, _ …)",
     "unknown_pokemon": "a party Pokémon was not found",
     "missing_fields": "some information is missing",
@@ -204,7 +205,16 @@
     "illegal_pokemon": "a Pokémon marked for the Switch is illegal. Fix it in the builder or enable advanced mode in Settings.",
     "illegal_needs_confirmation": "confirm that you want to send an illegal Pokémon",
     "setup_simulated": "the connection setup is on a simulated scenario (development). Switch back to \"Real system\" to trade for real.",
-    "setup_incomplete": "setup isn't complete yet. Open Settings → Connection and fix the essential items."
+    "setup_incomplete": "setup isn't complete yet. Open Settings → Connection and fix the essential items.",
+    "link_code_invalid": "the link code needs 8 digits (or three Pokémon, in Let's Go)",
+    "pokemon_wrong_game": "one of the Pokémon is from another game (you can move it in the vault)",
+    "engine_game_unsupported": "the chosen connection cannot trade with this game yet; for now, only in demo mode",
+    "game_invalid": "unknown game",
+    "trainer_id_invalid": "this trainer number does not exist in this game",
+    "format_ambiguous": "the file's game cannot be told apart: use the right extension (.pb7, .pk8, .pb8, .pk9 or .pa9)",
+    "game_mismatch": "the file is from another game",
+    "game_unsupported": "the Pokémon is from a game TradeRock does not trade with",
+    "save_game_unsupported": "only FireRed/LeafGreen Pokémon can go into the save"
   },
   "failures": {
     "no_network_found": "The Switch's room was not found. Check that the Direct Corner is open as Leader and the Switch is close by.",
@@ -435,7 +445,13 @@
       "ability_not_gen3": "ability",
       "item_not_gen3": "item",
       "move_not_gen3": "move(s)",
-      "showdown_empty": "paste some text"
+      "showdown_empty": "paste some text",
+      "species_not_in_game": "this species is not in this game",
+      "ability_not_in_game": "this ability is not available to the species in this game",
+      "item_not_in_game": "this item is not in this game",
+      "move_not_in_game": "one of the moves is not in this game",
+      "trainer_id_invalid": "this trainer number does not exist in this game",
+      "game_invalid": "unknown game"
     },
     "blockersTitle": "What’s blocking:",
     "blockers": {
@@ -549,6 +565,28 @@
       "color_invalid": "invalid color",
       "pokemon_duplicate": "the result is the same as another Pokémon in the vault",
       "pokemon_not_found": "the Pokémon is no longer in the vault"
+    },
+    "game": "Game",
+    "anyGame": "Any game",
+    "exportSwitchNote": "Pokémon from the Switch games (Let's Go to Legends: Z-A) are saved in their own game's format (.pb7, .pk8, .pb8, .pa8, .pk9 or .pa9), decrypted.",
+    "transfer": {
+      "action": "Move to another game",
+      "title": "Move to another game",
+      "help": "Like Pokémon HOME does: the Pokémon becomes part of the chosen game, with your \"My trainer\" for that game as its current trainer. It stays in the same vault spot.",
+      "confirm": "Move",
+      "done": "It now belongs to {{game}}",
+      "tracker": "It will have no Pokémon HOME tracker, which only HOME creates. The games do not check it, but HOME will not accept the Pokémon afterwards.",
+      "refusal": {
+        "same_game": "It is the current game",
+        "home_no_destination": "HOME does not send Pokémon to this game",
+        "egg": "Eggs stay in their own game",
+        "frlg_held_item": "Take its held item first (HOME does not accept FireRed/LeafGreen Pokémon holding an item)",
+        "frlg_hm_move": "Forget its HM moves first (HOME does not accept FireRed/LeafGreen Pokémon with HMs)",
+        "species_not_in_game": "This species (or form) is not in that game",
+        "no_route": "PKHeX found no way to convert it",
+        "pokemon_duplicate": "An identical Pokémon is already in the vault",
+        "pokemon_in_trash": "It is in the trash"
+      }
     }
   },
   "inject": {
@@ -1229,9 +1267,10 @@
       "title": "Trade with the Switch",
       "steps": {
         "party": "Team",
-        "trainer": "Game and trainer",
+        "trainer": "Trainer",
         "reminder": "Prepare the Switch",
-        "queue": "Queue"
+        "queue": "Queue",
+        "game": "Game"
       },
       "demoBanner": "Everything works, but trades are simulated until the connection is ready.",
       "setupConnection": "Set up connection",
@@ -1244,7 +1283,7 @@
       "goingCount_other": "{{count}} go to the Switch",
       "fromVault": "Pick from the vault",
       "searchVault": "Search the vault",
-      "whichGame": "Which game is on the Switch?",
+      "whichGame": "Which game are you trading with?",
       "nameOnSwitch": "Name shown on the Switch",
       "nameTip": "It is the name you will approve in the request to join the room. Up to 7 characters, no accents (the game has no “ã” or “ç”). You can use . - ! ?",
       "moreOptions": "More options (secret ID)",
@@ -1275,7 +1314,19 @@
       "sending": "Sending {{names}}",
       "nothingToSend": "Nothing to send",
       "trainerLabel": "trainer",
-      "continue": "Continue"
+      "continue": "Continue",
+      "whichGameSub": "Pick the game and the version on the Switch.",
+      "games": {
+        "linkCode": "Link code",
+        "soon": "With a real Switch, coming soon (already works in demo mode)"
+      },
+      "tradingWith": "Trading with {{game}}",
+      "linkCode": "Link code",
+      "linkCodeTip": "Eight digits. On the Switch, use the same code for the trade. Leave it blank to trade without a code.",
+      "linkCodeLgpeTip": "In Let's Go, the code is three Pokémon picked in order. Pick here the same ones you will pick on the Switch. Left blank, the default is three Pikachu.",
+      "offersTip": "Each Pokémon you pick goes to the Switch, one per trade, in this order. This game needs no filler Pokémon.",
+      "tradeNumber": "Trade {{n}}",
+      "otherGame": "It is from {{game}}: you can move it to another game in the vault"
     },
     "live": {
       "running": "Trade in progress",
@@ -1325,7 +1376,8 @@
       "savedIllegal": "Saved, but PKHeX reports legality problems",
       "errors": {
         "pokemon_duplicate": "The result is the same as another Pokémon in the vault."
-      }
+      },
+      "exportFile": "Export file"
     },
     "builder": {
       "forGame": "For the game",
@@ -1336,7 +1388,9 @@
       "advancedBanner": "Raw data, like in PKHeX. Nothing is fixed automatically: the panel on the side shows what is wrong.",
       "howItWorks": "How it works",
       "legalAttention": "Legal, with notes",
-      "legalTip": "Checked by PKHeX {{version}}. “Notes” do not make the Pokémon illegal."
+      "legalTip": "Checked by PKHeX {{version}}. “Notes” do not make the Pokémon illegal.",
+      "form": "Form",
+      "formNormal": "Normal"
     },
     "history": {
       "events": "Events",

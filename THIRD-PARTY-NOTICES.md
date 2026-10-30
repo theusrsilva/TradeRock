@@ -36,7 +36,7 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | [GB-Link/GB-Link-Switch-LDN](https://github.com/GB-Link/GB-Link-Switch-LDN) | Referência (não distribuído) | AGPL-3.0, sem código incorporado |
 | [Material Symbols](https://github.com/google/material-design-icons) (Rounded, via o pacote npm `material-symbols`) | Ícones da interface (arquivo reduzido em `frontend/src/assets/fonts`) | Apache-2.0 |
 | [Nunito](https://github.com/googlefonts/nunito), [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans) e [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (via `@fontsource`) | Fontes da interface, embutidas no app | SIL OFL 1.1 |
-| [PokeAPI/sprites](https://github.com/PokeAPI/sprites) | Sprites 1–386 (via `assets/sprites` do easyworld) | Arte © Nintendo, Game Freak e The Pokémon Company; uso não autorizado por eles |
+| [PokeAPI/sprites](https://github.com/PokeAPI/sprites) | Sprites 1–386 (via `assets/sprites` do easyworld) e 387–1025 (`assets/sprites`, commit `1dd55c0`, `scripts/fetch-sprites.sh`) | Arte © Nintendo, Game Freak e The Pokémon Company; uso não autorizado por eles |
 | Pokémon de demonstração | `assets/party/mewtwo.pk3` e `deoxys.pk3` do easyworld | Fornecidos pelo autor do easyworld |
 
 O TradeRock nunca distribui `prod.keys`, chaves do Switch nem ROMs.

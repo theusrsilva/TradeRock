@@ -62,8 +62,8 @@ jogos que têm.
 
 | # | Entrega | Conteúdo |
 | --- | --- | --- |
-| 13 | Integração do pokeldn | Submódulo travado num commit, patch do modo TradeRock, trava de rede, pokeldn no build do worker, testes offline do pokeldn no `ci.sh`, levantamento por jogo, D21. O Python embutido fica no 3.12 (D21) |
-| 14 | Base multijogo | `GameId` e capacidades de cada jogo; seletor de jogo na troca; cofre com formato por Pokémon e filtro; construtor e legalidade por jogo (avisa sem bloquear); sprites até a Gen 9; textos por jogo |
+| 13 ✓ | Integração do pokeldn | Submódulo travado num commit, patch do modo TradeRock, trava de rede, pokeldn no build do worker, testes offline do pokeldn no `ci.sh`, levantamento por jogo, D21. O Python embutido fica no 3.12 (D21) |
+| 14 ✓ | Base multijogo | Catálogo de jogos; seletor de jogo na troca; cofre com formato por Pokémon e filtro; "Meu treinador" por jogo; construtor e legalidade por jogo (avisa sem bloquear); mover entre jogos como o HOME; sprites até a Gen 9; instruções por jogo (D22) |
 | 15 | Motor pokeldn pela placa Wi-Fi (Linux) | Adaptador no worker chamando os módulos do pokeldn (não os scripts), com os nossos eventos. Ordem: SV, SwSh, Z-A, BDSP, PLA, LGPE |
 | 16 | Modo LAN sem placa | Sword/Shield pela rede de casa, no Linux e no Windows, sem root |
 | 17 | ESP32 com o firmware do pokeldn e Windows | Gravação e detecção do firmware, motor pokeldn pela serial, Python embutido no instalador do Windows |

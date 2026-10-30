@@ -4,8 +4,9 @@ import { useSearchParams } from 'react-router'
 import { Badge, Button, Callout, Field, HelpTip, Icon, Segmented, Toggle, inputClass, selectClass, useToast } from '../components/ui'
 import { ApiError, api } from '../lib/api'
 import { languages } from '../i18n'
+import { familyOf, GAMES, gameByFamily, idLimits } from '../lib/games'
 import { trainerNameErrors } from '../lib/trainer'
-import type { MyTrainer, Pokemon, SetupStatus, TradeSettings } from '../lib/types'
+import type { GameFamily, MyTrainer, Pokemon, SetupStatus, TradeSettings } from '../lib/types'
 import { useTheme, type ThemeChoice } from '../theme'
 import { AppImageWorkerSettings } from './setup/AppImageWorker'
 import { AccountsCard, ServerModeCard } from './settings/ServerSettings'
@@ -111,22 +112,43 @@ function PanelTitle({ children, tip, sub, right }: { children: ReactNode; tip?: 
 function TrainerTab() {
   const { t } = useTranslation()
   const toast = useToast()
-  const [me, setMe] = useState<MyTrainer>({ name: '', tid: 0, sid: null, gender: 0, badges: 8, hasNationalDex: true })
+  const empty: MyTrainer = { name: '', tid: 0, sid: null, gender: 0, badges: 8, hasNationalDex: true }
+  // Um "Meu treinador" para cada jogo (decisão do autor, multijogos.md): os IDs e o nome mudam de formato.
+  const [family, setFamily] = useState<GameFamily>('frlg')
+  const game = gameByFamily(family)
+  const limits = idLimits(game)
+  const [me, setMe] = useState<MyTrainer>(empty)
   const [errors, setErrors] = useState<string[]>([])
   const [received, setReceived] = useState<Pokemon[]>([])
   const [pickOpen, setPickOpen] = useState(false)
 
   useEffect(() => {
-    api.get<MyTrainer | undefined>('/api/settings/my-trainer').then((m) => m && setMe(m)).catch(() => undefined)
     api.get<Pokemon[]>('/api/pokemon').then((list) => setReceived(list.filter((p) => p.origin === 'received'))).catch(() => undefined)
   }, [])
 
+  useEffect(() => {
+    setErrors([])
+    setPickOpen(false)
+    // Sem treinador nesse jogo: começa com o nome do FireRed/LeafGreen (o resto a pessoa preenche).
+    void Promise.all([
+      api.get<MyTrainer | undefined>(`/api/settings/my-trainer?game=${family}`),
+      family === 'frlg' ? Promise.resolve(undefined) : api.get<MyTrainer | undefined>('/api/settings/my-trainer?game=frlg'),
+    ])
+      .then(([mine, frlg]) => setMe(mine ?? { ...empty, name: frlg?.name ?? '' }))
+      .catch(() => setMe(empty))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family])
+
   async function save() {
-    const errs = trainerNameErrors(me.name)
+    const errs = trainerNameErrors(me.name, game)
     setErrors(errs)
     if (errs.length > 0) return
-    setMe(await api.put<MyTrainer>('/api/settings/my-trainer', me))
-    toast(t('common.saved'))
+    try {
+      setMe(await api.put<MyTrainer>(`/api/settings/my-trainer?game=${family}`, me))
+      toast(t('common.saved'))
+    } catch (e) {
+      if (e instanceof ApiError) setErrors(e.errors.length > 0 ? e.errors : [e.code ?? 'unknown'])
+    }
   }
 
   async function fromPokemon(id: string) {
@@ -135,19 +157,28 @@ function TrainerTab() {
     toast(t('common.saved'))
   }
 
-  const idValue = (v: string) => Math.max(0, Math.min(65535, Number(v.replace(/\D/g, '')) || 0))
+  const idValue = (v: string, max: number) => Math.max(0, Math.min(max, Number(v.replace(/\D/g, '')) || 0))
 
   return (
     <Panel className="max-w-[760px] gap-4">
       <PanelTitle tip={t('ui.settings.trainerTip')} sub={t('ui.settings.trainerSub')}>
         {t('settings.myTrainerTitle')}
       </PanelTitle>
+      <Field label={t('vault.game')}>
+        <select className={`${selectClass} max-w-xs`} value={family} onChange={(e) => setFamily(e.target.value as GameFamily)}>
+          {GAMES.map((g) => (
+            <option key={g.family} value={g.family}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      </Field>
       <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
         <Field label={t('trade.trainer.name')}>
-          <input className={inputClass} maxLength={7} placeholder={t('ui.settings.nameHint')} value={me.name} onChange={(e) => setMe({ ...me, name: e.target.value })} />
+          <input className={inputClass} maxLength={game.trainerNameMax} placeholder={t('ui.settings.nameHint')} value={me.name} onChange={(e) => setMe({ ...me, name: e.target.value })} />
         </Field>
         <Field label={t('trade.trainer.tid')}>
-          <input className={inputClass} inputMode="numeric" value={me.tid} onChange={(e) => setMe({ ...me, tid: idValue(e.target.value) })} />
+          <input className={inputClass} inputMode="numeric" value={me.tid} onChange={(e) => setMe({ ...me, tid: idValue(e.target.value, limits.tid) })} />
         </Field>
         <Field label={t('trade.trainer.sid')}>
           <input
@@ -155,7 +186,7 @@ function TrainerTab() {
             inputMode="numeric"
             placeholder={t('common.optional')}
             value={me.sid ?? ''}
-            onChange={(e) => setMe({ ...me, sid: e.target.value.trim() === '' ? null : idValue(e.target.value) })}
+            onChange={(e) => setMe({ ...me, sid: e.target.value.trim() === '' ? null : idValue(e.target.value, limits.sid) })}
           />
         </Field>
         <Field label={t('ui.settings.gender')}>
@@ -165,24 +196,26 @@ function TrainerTab() {
           </select>
         </Field>
       </div>
-      <div className="flex flex-wrap items-center gap-6">
-        <div className="flex items-center gap-2.5">
-          <span className="text-sm font-bold">{t('settings.badges')}</span>
-          <div className="flex gap-1">
-            {Array.from({ length: 8 }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                aria-label={t('ui.settings.badgeN', { n: i + 1 })}
-                onClick={() => setMe({ ...me, badges: me.badges === i + 1 ? i : i + 1 })}
-                className={`h-[22px] w-[22px] cursor-pointer rounded-full border-[1.5px] ${i < me.badges ? 'border-accent bg-accent' : 'border-line bg-transparent'}`}
-              />
-            ))}
+      {family === 'frlg' && (
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm font-bold">{t('settings.badges')}</span>
+            <div className="flex gap-1">
+              {Array.from({ length: 8 }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={t('ui.settings.badgeN', { n: i + 1 })}
+                  onClick={() => setMe({ ...me, badges: me.badges === i + 1 ? i : i + 1 })}
+                  className={`h-[22px] w-[22px] cursor-pointer rounded-full border-[1.5px] ${i < me.badges ? 'border-accent bg-accent' : 'border-line bg-transparent'}`}
+                />
+              ))}
+            </div>
+            <span className="text-[13px] text-muted">{me.badges}/8</span>
           </div>
-          <span className="text-[13px] text-muted">{me.badges}/8</span>
+          <Toggle small on={me.hasNationalDex} onChange={(on) => setMe({ ...me, hasNationalDex: on })} label={t('settings.nationalDex')} />
         </div>
-        <Toggle small on={me.hasNationalDex} onChange={(on) => setMe({ ...me, hasNationalDex: on })} label={t('settings.nationalDex')} />
-      </div>
+      )}
       {errors.length > 0 && (
         <ul className="text-sm text-bad">
           {errors.map((e) => (
@@ -192,14 +225,14 @@ function TrainerTab() {
       )}
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => void save()}>{t('common.save')}</Button>
-        <Button variant="secondary" icon="download" disabled={received.length === 0} onClick={() => setPickOpen(!pickOpen)}>
+        <Button variant="secondary" icon="download" disabled={!received.some((p) => familyOf(p) === family)} onClick={() => setPickOpen(!pickOpen)}>
           {t('settings.fromPokemon')}
         </Button>
       </div>
       {pickOpen && (
         <div className="flex flex-col gap-1">
           <p className="text-sm text-muted">{t('settings.choosePokemon')}</p>
-          {received.map((p) => (
+          {received.filter((p) => familyOf(p) === family).map((p) => (
             <button key={p.id} type="button" className="cursor-pointer rounded-lg px-3 py-2 text-left text-sm hover:bg-surface2" onClick={() => void fromPokemon(p.id)}>
               {p.nickname || p.speciesName} · {p.otName} · {p.tid}:{p.sid}
             </button>

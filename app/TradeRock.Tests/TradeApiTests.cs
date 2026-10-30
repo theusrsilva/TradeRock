@@ -235,7 +235,10 @@ public sealed class TradeApiTests : IAsyncLifetime
         Assert.Equal("image/png", ok.Content.Headers.ContentType?.MediaType);
 
         Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/sprites/0")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/sprites/387")).StatusCode);
+        // Até a Gen 9 (Sprigatito, Pecharunt).
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/sprites/906")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/sprites/1025")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/sprites/1026")).StatusCode);
     }
 
     [Fact]

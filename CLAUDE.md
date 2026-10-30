@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D21).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D22).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -54,6 +54,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Teste com o Switch | Até 30 s. Sessão de outro jogo decifrada não aprova. Vale até mudar a placa ou o prod.keys (não expira) |
 | Modo servidor | HTTP (só rede de casa, com aviso). Argon2id (Konscious). Fila começa a troca sozinha. Conta nova com os Pokémon de demonstração. Porta 8337. Começa desligado a cada abertura |
 | Windows | Só ESP32. Instalador Inno Setup com administrador (regra do firewall só em redes privadas). Sem assinatura digital por enquanto. Dados em `%LOCALAPPDATA%` com ACL só do usuário. Sem WebView2: abre no navegador |
+| Jogos do Switch | Todos os jogos com troca local (FRLG, Let's Go, SwSh, BDSP, Arceus, SV, Z-A) pelo pokeldn (submódulo, D21). Escopo todo (troca, raids, Mystery Gift, Union Circle). ESP32 passa a usar o firmware do pokeldn. Python embutido no Windows. Modo LAN só no SwSh. Legalidade avisa e não bloqueia nos jogos novos. Cofre único com filtro por jogo. "Meu treinador" por jogo. Mover entre jogos como o HOME (D22) |
 
 ## Estado das entregas
 
@@ -72,7 +73,8 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | 11 | Build e instalador Windows (só ESP32) | feita, **sem ESP32 real no Windows** |
 | 12 | Nova interface (protótipo "TradeRock v2" do Claude Design, visual A claro/escuro, celular). O assistente de 7 etapas virou a lista de Configurações → Conexão; edição no painel do cofre (`POST /api/vault/pokemon/{id}/replace`) | feita |
 | 13 | Integração do pokeldn (submódulo, patch do modo TradeRock, trava de rede, testes no CI, D21) | em PR |
-| 14–19 | Troca com todos os jogos do Switch: base multijogo, motor pokeldn (placa Wi-Fi), modo LAN do SwSh, ESP32 com o firmware do pokeldn e Windows, outras atividades, modo servidor | planejadas em [docs/multijogos.md](docs/multijogos.md) |
+| 14 | Base multijogo: catálogo, cofre e construtor por jogo, "Meu treinador" por jogo, mover entre jogos (HOME), sprites até a Gen 9 (D22) | em PR; troca real com os jogos novos só na 15 |
+| 15–19 | Motor pokeldn (placa Wi-Fi), modo LAN do SwSh, ESP32 com o firmware do pokeldn e Windows, outras atividades, modo servidor | planejadas em [docs/multijogos.md](docs/multijogos.md) |
 
 Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-lançamento é a tag `v0.00.01`. As branches das entregas foram apagadas depois do merge.
 
@@ -102,11 +104,12 @@ Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-l
 | --- | --- |
 | `app/TradeRock.App` | ASP.NET Core + Photino (API em `Api/`, DI em `ServiceSetup.cs`, modo servidor em `Server/`: contas, logins, `AccessPolicy`, liga/desliga) |
 | `app/Frlg.Trade.Core.Patched` | Núcleo C# do easyworld compilado com `engines/patches/frlg-ldn-trade-esp32` |
-| `app/TradeRock.Core` | Domínio: `Trading/`, `Engines/` (Fake, PythonLdn, Esp32Serial, `Worker/`), `Esp32/` (firmware, serial, esptool), `Pokemon/`, `Builder/`, `Storage/` (EF Core + SQLite), `Saves/`, `Setup/` (catálogo, probe do Linux, verificações, prod.keys) |
+| `app/TradeRock.Core` | Domínio: `Games/` (catálogo dos jogos do Switch, IDs de treinador), `Trading/`, `Engines/` (Fake, PythonLdn, Esp32Serial, `Worker/`), `Esp32/` (firmware, serial, esptool), `Pokemon/`, `Builder/`, `Storage/` (EF Core + SQLite), `Saves/`, `Setup/` (catálogo, probe do Linux, verificações, prod.keys) |
 | `app/TradeRock.Tests` | xUnit v3; worker falso em `FakeWorker.cs`, ESP32 falso em `fake_esp32.py` (pseudo-terminal) |
 | `worker/` | Worker Python: `traderock_worker/` (server, radio, trade_child, card_child, beacon_child, esp32_flash, events, protocol) e `tests/` (dublês de trio/ldn em `fake_ldn`) |
 | `frontend/` | React + Vite + TS + Tailwind; o build vai para `app/TradeRock.App/wwwroot`. Cores do tema em `src/index.css` (tokens `bg-surface`, `text-muted`, `bg-accent`...); componentes base em `src/components/ui.tsx`; fontes e ícones embutidos (`src/assets/fonts`) |
 | `catalog/hardware-catalog.json` | Catálogo de placas |
+| `assets/sprites` | Sprites 387–1025 do PokeAPI (`scripts/fetch-sprites.sh`); os 1–386 vêm do easyworld |
 | `engines/` | Submódulos (frlg-ldn-trade, frlg-ldn-trade-esp32, pokeldn, PKHeX-Plugins) e `patches/` |
 | `scripts/` | `ci.sh`, `dev-host.sh`, `build-worker.sh`, `stage-pokeldn.sh`, `test-pokeldn.sh`, `build-nettools.sh`, `install-worker.sh`, `package-linux.sh`, `smoke-linux.sh`, `package-windows.sh`, `smoke-windows.ps1` |
 | `packaging/linux/` | Atalho, ícone e `worker-setup.sh` (instalação do worker do AppImage como root) |

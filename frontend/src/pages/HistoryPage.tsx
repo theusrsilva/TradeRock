@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '../components/ui'
 import { api, spriteUrl } from '../lib/api'
+import { versionName } from '../lib/games'
 import type { Pokemon, TradeEvent, TradeHistoryItem } from '../lib/types'
 
 const statusLook = {
@@ -88,7 +89,7 @@ export default function HistoryPage() {
               <div className="min-w-[200px] flex-1">
                 <div className="text-[15.5px] font-bold [overflow-wrap:anywhere]">{title}</div>
                 <div className="text-[13px] text-muted">
-                  {new Date(item.startedAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' })} · {t(`trade.trainer.${item.game}`)} · {item.trainerName} ·{' '}
+                  {new Date(item.startedAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' })} · {versionName(item.game)} · {item.trainerName} ·{' '}
                   {t('history.trades', { done: item.tradesCompleted, planned: item.tradesPlanned })} · {t('history.attempts', { count: item.attempts })}
                 </div>
                 {item.failureCode && item.status !== 'completed' && (

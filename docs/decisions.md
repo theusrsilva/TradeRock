@@ -661,3 +661,69 @@ Plano e respostas do autor em [multijogos.md](multijogos.md).
 - **Fora:**
   - Ruby/Sapphire/Emerald: em prévia no pokeldn, ainda não lançado no Switch.
   - Pokémon Champions e Pokopia: o pokeldn não fala com eles.
+
+## D22. Base multijogo (Entrega 14)
+
+Respostas do autor em [multijogos.md](multijogos.md): um "Meu treinador" por jogo, mover entre jogos como o HOME,
+sprites até a Gen 9, cofre único com filtro, legalidade que avisa sem bloquear.
+
+- **Catálogo** (`Core/Games/GameCatalog.cs`, espelhado em `frontend/src/lib/games.ts`). Os sete jogos, cada um com:
+  - formato do PKHeX;
+  - versões;
+  - código de troca: nenhum no FRLG, três Pokémon no Let's Go e oito dígitos nos outros;
+  - modo LAN (só SwSh);
+  - atividades.
+
+  O `TradeGame` ganhou as versões novas no fim, porque é gravado como texto no banco.
+- **Leitura** (`PokemonReader`).
+  - A Gen 3 continua igual ao `Pk3Reader`, com o mesmo hash.
+  - Os outros formatos ficam guardados na forma "de caixa" decriptada (`SIZE_STORED`). Da Gen 8 em diante o PS atual
+    fica nessa parte do arquivo, então o hash muda com o PS.
+  - O `EntityFormat` do PKHeX confunde PB7 com PK7, PA9 com PK9, e PK8 com PB8. Por isso o jogo vem da extensão do
+    arquivo ou de quem chama (troca, construtor, transferência). Sem isso, o arquivo é recusado com `format_ambiguous`.
+    O Arceus (PA8) é reconhecido sozinho.
+- **Cofre.** Colunas novas `Family` e `Form` (migração `Games`; os antigos ficam como `Frlg`).
+  - O arquivo leva a extensão do jogo.
+  - Filtro `?game=` na busca.
+  - A exportação sai no formato do próprio jogo, decriptada. Os formatos `ek3` e 80/100 bytes são só da Gen 3.
+  - A injeção em `.sav` e a importação de `.sav` continuam só no FRLG: os saves do Switch só saem do console com
+    homebrew.
+- **IDs de treinador.** O arquivo e o banco guardam TID16/SID16. A API e a tela usam os números que o jogo mostra
+  (`TrainerIds`): da Gen 7 em diante, TID de 6 dígitos (ID32 % 1.000.000) e SID de 4 (ID32 / 1.000.000). Valem as
+  mesmas regras para o "Meu treinador" por jogo (`trainer.me` no FRLG, `trainer.me.<jogo>` nos outros), os treinadores
+  salvos, o histórico e o construtor. Nas linhas `TID:`/`SID:` do AutoMod, a partir do formato 7 ele lê esses números
+  e reempacota.
+- **Troca.**
+  - Os jogos novos não têm time simulado. Cada Pokémon escolhido é uma oferta, de 1 a 6, uma por troca.
+  - O pedido traz o código de troca.
+  - O nome do treinador vai até 12 caracteres, sem a tabela Gen III.
+  - Cada motor diz que jogos troca (`ITradeEngine.Supports`). Até a Entrega 15, só o motor de simulação troca os jogos
+    novos: o Switch simulado devolve uma cópia do oferecido com o treinador "DEMO".
+  - Nos jogos novos, Pokémon ilegal só pede a confirmação. No FRLG, a regra antiga continua (modo avançado mais
+    confirmação).
+- **Construtor.** O modo automático gera no formato do jogo escolhido (Pikachu legal verificado nos seis jogos novos).
+  - Listas por jogo: espécies que existem no jogo, golpes sem os "dummied", e itens e bolas do save vazio.
+  - Formas e habilidade oculta (posição 2).
+  - EV até 252 e apelido de até 12.
+  - O modo avançado (PID e IVs da Gen 3) continua só no FRLG. Nos jogos novos, editar no cofre gera o Pokémon de novo.
+- **Mover entre jogos** (`HomeTransfer`, regras adaptadas do ajudante PKHeX do pokeldn, AGPL-3.0):
+  - o Let's Go não recebe do HOME;
+  - ovo fica no próprio jogo;
+  - do FRLG, só sem item e sem HM;
+  - a espécie e a forma precisam existir no destino;
+  - o "Meu treinador" do destino vira o treinador atual;
+  - golpe que o destino não tem é trocado pela sugestão do PKHeX, com as marcas de TM/TR.
+
+  O registro do cofre é o mesmo: id, caixa, etiquetas e histórico.
+- **Rastreador do HOME.**
+  - Ele fica vazio, porque o HOME recusa um inventado e os jogos não o conferem.
+  - O status de legalidade é "não verificável" quando o único problema é o rastreador ausente, ou quando o Pokémon
+    seria válido com um rastreador. O PKHeX só aceita evoluir em outro jogo do HOME com rastreador.
+- **Sprites.** 387–1025 do PokeAPI/sprites, commit `1dd55c0`, em `assets/sprites`, conferidos por `SHA256SUMS`
+  (`scripts/fetch-sprites.sh`). As formas usam o sprite da forma normal.
+- **Instruções de cada jogo** em `content/{pt-BR,en}/trade/jogos/<jogo>.md`, a partir dos passos que o pokeldn testou
+  no console (`pokeldn/app/catalog.py`). Os nomes dos menus ficam em inglês, como no jogo.
+- **Verificado:** testes de API e de núcleo nos sete formatos, e build e testes do frontend.
+- **Não verificado:**
+  - a interface no navegador ou na janela (sem Playwright nesta sessão);
+  - qualquer troca real com os jogos novos (Entrega 15).
