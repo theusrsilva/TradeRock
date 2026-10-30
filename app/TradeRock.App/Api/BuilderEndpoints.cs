@@ -26,7 +26,8 @@ public static class BuilderEndpoints
 
     public sealed record GenerateDto(PokemonSpec Spec, string? Language);
     public sealed record AdvancedDto(RawPokemon Raw, string? Language);
-    public sealed record SaveDto(byte[] Data);
+    /// <param name="Game">Versão do jogo do Pokémon gerado (o formato de PK8/PB8 e PK9/PA9 não se distingue pelos bytes).</param>
+    public sealed record SaveDto(byte[] Data, TradeGame? Game = null);
     public sealed record ShowdownDto(string Text, TradeGame Game = TradeGame.FireRed);
     public sealed record SavImportDto(IReadOnlyList<int> Indices);
 
@@ -34,24 +35,41 @@ public static class BuilderEndpoints
     {
         var group = api.MapGroup("/builder");
 
-        group.MapGet("/data", () => new
+        // ?game=<versão> (fire_red, scarlet...). O modo avançado (versions) é só do FireRed/LeafGreen.
+        group.MapGet("/data", (string? game) =>
         {
-            species = BuilderData.Species,
-            natures = BuilderData.Natures,
-            moves = BuilderData.Moves,
-            items = BuilderData.Items,
-            balls = BuilderData.Balls,
-            languages = BuilderData.Languages,
-            versions = AdvancedEditor.Versions,
+            var info = GameCatalog.Of(ParseGame(game));
+            var data = BuilderData.For(info);
+            return new
+            {
+                species = data.Species,
+                natures = data.Natures,
+                moves = data.Moves,
+                items = data.Items,
+                balls = data.Balls,
+                languages = data.Languages,
+                versions = info.Family == GameFamily.Frlg ? AdvancedEditor.Versions : [],
+                maxEv = data.MaxEv,
+                nicknameLength = data.NicknameLength,
+                advanced = info.Family == GameFamily.Frlg,
+            };
         });
 
-        group.MapGet("/species/{species:int}", (int species) =>
-            species is < 1 or > BuilderData.MaxSpecies ? Results.NotFound() : Results.Ok(BuilderData.Details((ushort)species)));
+        group.MapGet("/species/{species:int}", (int species, string? game, byte? form) =>
+        {
+            var info = GameCatalog.Of(ParseGame(game));
+            return SpeciesExists(info, species, form ?? 0)
+                ? Results.Ok(BuilderData.Details((ushort)species, info, form ?? 0))
+                : Results.NotFound();
+        });
 
-        group.MapGet("/species/{species:int}/encounters", (int species, string? game) =>
-            species is < 1 or > BuilderData.MaxSpecies
-                ? Results.NotFound()
-                : Results.Ok(BuilderData.Encounters((ushort)species, ParseGame(game))));
+        group.MapGet("/species/{species:int}/encounters", (int species, string? game, byte? form) =>
+        {
+            var version = ParseGame(game);
+            return SpeciesExists(GameCatalog.Of(version), species, form ?? 0)
+                ? Results.Ok(BuilderData.Encounters((ushort)species, version, form ?? 0))
+                : Results.NotFound();
+        });
 
         group.MapGet("/locations", (string? version) =>
         {
@@ -69,7 +87,8 @@ public static class BuilderEndpoints
         {
             try
             {
-                var imported = await store.ImportAsync(body.Data, PokemonOrigin.Created, null, ct);
+                var family = body.Game is { } g && Enum.IsDefined(g) ? GameCatalog.Of(g).Family : (GameFamily?)null;
+                var imported = await store.ImportAsync(body.Data, PokemonOrigin.Created, null, ct, family);
                 var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
                 return Results.Ok(new { created = imported.Created, pokemon = PokemonEndpoints.PokemonDto.From(imported.Pokemon, me) });
             }
@@ -84,20 +103,23 @@ public static class BuilderEndpoints
         {
             if (await store.GetAsync(id, ct) is not { } p)
                 return Results.NotFound();
-            var pk = new PK3(await store.ReadDataAsync(p, ct));
-            return Results.Ok(new { spec = PokemonSpec.FromPk(pk), raw = RawPokemon.FromPk(pk) });
+            var pk = PokemonReader.ToEntity(await store.ReadDataAsync(p, ct), p.Family);
+            var info = GameCatalog.Get(p.Family);
+            // A versão do próprio Pokémon quando é do jogo (Scarlet ou Violet...), senão a primeira do par.
+            var version = info.Versions.FirstOrDefault(v => GameCatalog.ToVersion(v) == pk.Version, info.Versions[0]);
+            return Results.Ok(new { spec = PokemonSpec.FromPk(pk, version), raw = pk is PK3 pk3 ? RawPokemon.FromPk(pk3) : null });
         });
 
         group.MapPost("/showdown", async (ShowdownDto body, SettingsStore settings, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(body.Text) || body.Text.Length > 20_000)
                 return Results.BadRequest(new { error = "invalid", errors = new[] { "showdown_empty" } });
-            var trainer = await DefaultTrainerAsync(settings, ct);
+            var trainer = await DefaultTrainerAsync(settings, ct, body.Game);
             return Results.Ok(ShowdownImport.Parse(body.Text, trainer, body.Game));
         });
 
-        group.MapGet("/default-trainer", async (SettingsStore settings, CancellationToken ct) =>
-            await DefaultTrainerAsync(settings, ct));
+        group.MapGet("/default-trainer", async (string? game, SettingsStore settings, CancellationToken ct) =>
+            await DefaultTrainerAsync(settings, ct, ParseGame(game)));
 
         MapSaveImport(api);
         MapMyTrainer(api);
@@ -210,22 +232,36 @@ public static class BuilderEndpoints
         return new MyTrainerDto(me.Name, tid, me.Sid is null && !game.SixDigitTrainerId ? null : sid, me.Gender, me.Badges, me.HasNationalDex);
     }
 
-    /// <summary>OT padrão do construtor: "Meu treinador" ou, sem ele, o treinador padrão do motor (EMU).</summary>
-    public static async Task<TrainerSpec> DefaultTrainerAsync(SettingsStore settings, CancellationToken ct)
+    /// <summary>
+    /// OT padrão do construtor: o "Meu treinador" do jogo ou, sem ele, o treinador padrão do motor (EMU), com os
+    /// números como o jogo mostra.
+    /// </summary>
+    public static async Task<TrainerSpec> DefaultTrainerAsync(SettingsStore settings, CancellationToken ct,
+        TradeGame game = TradeGame.FireRed)
     {
-        var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
+        var info = GameCatalog.Of(game);
+        var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKeyFor(info.Family)), null, ct);
         if (me is not null)
-            return new TrainerSpec(me.Name, me.Tid, me.Sid ?? 0, me.Gender);
+        {
+            var (tid, sid) = TrainerIds.Display(info, me.Tid, me.Sid ?? 0);
+            return new TrainerSpec(me.Name, tid, sid, me.Gender);
+        }
         var d = TrainerProfile.Default;
-        return new TrainerSpec(d.Name, d.Tid, d.Sid ?? 0);
+        var (dt, ds) = TrainerIds.Display(info, d.Tid, d.Sid ?? 0);
+        return new TrainerSpec(d.Name, dt, ds);
     }
 
-    /// <summary>Query string não passa pelo conversor JSON: aceita "fire_red"/"leaf_green" (e os nomes do enum).</summary>
-    private static TradeGame ParseGame(string? game) => game?.Replace("_", "", StringComparison.Ordinal).ToLowerInvariant() switch
+    /// <summary>Query string não passa pelo conversor JSON: aceita o snake_case ("fire_red", "legends_za") e os nomes do enum.</summary>
+    private static TradeGame ParseGame(string? game)
     {
-        "leafgreen" => TradeGame.LeafGreen,
-        _ => TradeGame.FireRed,
-    };
+        var key = game?.Replace("_", "", StringComparison.Ordinal);
+        return Enum.GetValues<TradeGame>().FirstOrDefault(
+            g => string.Equals(g.ToString(), key, StringComparison.OrdinalIgnoreCase), TradeGame.FireRed);
+    }
+
+    private static bool SpeciesExists(SwitchGame game, int species, byte form) =>
+        game.Family == GameFamily.Frlg ? species is >= 1 and <= BuilderData.MaxSpecies && form == 0
+            : species is >= 1 and <= ushort.MaxValue && game.HasSpecies((ushort)species, form);
 
     private static string Lang(string? language) => language is "en" ? "en" : "pt-BR";
 }

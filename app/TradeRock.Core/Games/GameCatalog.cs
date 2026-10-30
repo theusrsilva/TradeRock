@@ -73,6 +73,16 @@ public sealed record SwitchGame(
         _ => throw new ArgumentOutOfRangeException(nameof(Family)),
     };
 
+    /// <summary>Pokémon vazio do formato do jogo (um novo a cada chamada).</summary>
+    public PKM Blank() => (PKM)Activator.CreateInstance(EntityType)!;
+
+    /// <summary>Formato do PKHeX (3, 7, 8 ou 9), que o AutoMod usa como "geração" do pedido.</summary>
+    public byte Format => _format ??= Blank().Format;
+    private byte? _format;
+
+    public ushort MaxMoveId => _maxMove ??= Blank().MaxMoveID;
+    private ushort? _maxMove;
+
     /// <summary>A espécie (e a forma) existe neste jogo.</summary>
     public bool HasSpecies(ushort species, byte form = 0) =>
         species is > 0 && species <= PersonalTable.MaxSpeciesID && PersonalTable.IsPresentInGame(species, form);

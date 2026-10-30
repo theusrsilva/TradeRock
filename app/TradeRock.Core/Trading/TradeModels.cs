@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using TradeRock.Core.Games;
 
 namespace TradeRock.Core.Trading;
@@ -70,6 +71,7 @@ public sealed record TradeRequest(
 
     public int Trades => OfferedSlots.Count;
 
+    [JsonIgnore]
     public SwitchGame GameInfo => GameCatalog.Of(Game);
 
     /// <summary>Lista de problemas (códigos estáveis, traduzidos pelo frontend). Vazia = válido.</summary>

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.TestHost;
 using PKHeX.Core;
 using TradeRock.App;
 using TradeRock.Core;
+using TradeRock.Core.Builder;
 using TradeRock.Core.Games;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Storage;
@@ -346,6 +347,40 @@ public sealed class MultiGameApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Construtor_gera_salva_e_reabre_um_pokemon_do_scarlet()
+    {
+        var data = await _client.GetFromJsonAsync<JsonElement>("/api/builder/data?game=scarlet");
+        Assert.Equal(252, data.GetProperty("maxEv").GetInt32());
+        Assert.False(data.GetProperty("advanced").GetBoolean());
+        var raichu = await _client.GetFromJsonAsync<JsonElement>("/api/builder/species/26?game=scarlet");
+        Assert.True(raichu.GetProperty("forms").GetArrayLength() >= 2);
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/builder/species/906?game=fire_red")).StatusCode);
+
+        await _client.PutAsJsonAsync("/api/settings/my-trainer?game=sv", new { name = "Treinadora", tid = 123456, sid = 1234 });
+        var trainer = await _client.GetFromJsonAsync<JsonElement>("/api/builder/default-trainer?game=scarlet");
+        Assert.Equal(123456u, trainer.GetProperty("tid").GetUInt32());
+
+        var generated = await _client.PostAsJsonAsync("/api/builder/generate", new
+        {
+            spec = new { species = 25, level = 30, game = "scarlet", trainer },
+            language = "pt-BR",
+        });
+        generated.EnsureSuccessStatusCode();
+        var result = await generated.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("sv", result.GetProperty("summary").GetProperty("family").GetString());
+
+        var saved = await _client.PostAsJsonAsync("/api/builder/save", new { data = result.GetProperty("data").GetString(), game = "scarlet" });
+        saved.EnsureSuccessStatusCode();
+        var pokemon = (await saved.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("pokemon");
+        Assert.Equal("sv", pokemon.GetProperty("family").GetString());
+        Assert.Equal(123456u, pokemon.GetProperty("tid").GetUInt32());
+
+        var reopened = await _client.GetFromJsonAsync<JsonElement>($"/api/builder/from/{pokemon.GetProperty("id").GetGuid()}");
+        Assert.Equal("scarlet", reopened.GetProperty("spec").GetProperty("game").GetString());
+        Assert.Equal(JsonValueKind.Null, reopened.GetProperty("raw").ValueKind);
+    }
+
+    [Fact]
     public async Task Pokemon_de_outro_jogo_e_codigo_invalido_sao_recusados()
     {
         var demo = (await _client.GetFromJsonAsync<JsonElement>("/api/pokemon")).EnumerateArray()
@@ -372,5 +407,70 @@ public sealed class MultiGameApiTests : IAsyncLifetime
         });
         Assert.Equal(HttpStatusCode.BadRequest, badCode.StatusCode);
         Assert.Contains("link_code_invalid", await badCode.Content.ReadAsStringAsync());
+    }
+}
+
+/// <summary>Construtor nos jogos novos (Entrega 14b): listas por jogo e geração pelo AutoMod no formato do jogo.</summary>
+public sealed class MultiGameBuilderTests
+{
+    private static readonly TrainerSpec Me = new("ROCHA", 123456, 1234);
+
+    [Fact]
+    public void Listas_sao_do_jogo()
+    {
+        var sv = BuilderData.For(GameCatalog.Get(GameFamily.Sv));
+        Assert.Contains(sv.Species, s => s.Value == 906); // Sprigatito
+        Assert.Contains(sv.Moves, m => m.Text == "Tera Blast");
+        Assert.Equal(252, sv.MaxEv);
+        Assert.Equal(12, sv.NicknameLength);
+        Assert.Contains(sv.Items, i => i.Text == "Leftovers");
+
+        var frlg = BuilderData.For(GameCatalog.Get(GameFamily.Frlg));
+        Assert.DoesNotContain(frlg.Species, s => s.Value == 906);
+        Assert.Equal(255, frlg.MaxEv);
+    }
+
+    [Fact]
+    public void Especie_traz_habilidade_oculta_e_formas()
+    {
+        var raichu = BuilderData.Details(26, GameCatalog.Get(GameFamily.Sv));
+        Assert.Contains(raichu.Forms!, f => f.Value == 1); // Raichu de Alola existe no SV
+        Assert.Contains(raichu.Abilities, a => a.Value == 2); // habilidade oculta
+    }
+
+    [Theory]
+    [InlineData(TradeGame.Scarlet)]
+    [InlineData(TradeGame.Sword)]
+    [InlineData(TradeGame.BrilliantDiamond)]
+    [InlineData(TradeGame.LegendsArceus)]
+    [InlineData(TradeGame.LegendsZA)]
+    [InlineData(TradeGame.LetsGoPikachu)]
+    public async Task Gera_pikachu_legal_no_formato_do_jogo(TradeGame game)
+    {
+        var spec = new PokemonSpec { Species = 25, Level = 30, Game = game, Trainer = Me };
+        Assert.Empty(spec.Validate());
+        var result = await PokemonBuilder.GenerateAsync(spec, "pt-BR", default);
+
+        Assert.True(result.Usable, $"{result.Generation}: {string.Join("; ", result.Legality?.Problems.Select(p => p.Message) ?? [])}");
+        var family = GameCatalog.Of(game).Family;
+        Assert.Equal(family, result.Summary!.Family);
+        var read = PokemonReader.Read(result.Data!, family);
+        Assert.Equal(25, read.Summary.Species);
+        Assert.Equal("ROCHA", read.Summary.OtName);
+        // O treinador volta com os números que o jogo mostra.
+        Assert.Equal((123456u, 1234u), (result.Obtained!.Trainer.Tid, result.Obtained.Trainer.Sid));
+        Assert.Null(result.Raw); // modo avançado só no FRLG
+    }
+
+    [Fact]
+    public void Limites_do_jogo_na_validacao()
+    {
+        var sv = new PokemonSpec { Species = 25, Game = TradeGame.Scarlet, Trainer = Me, Evs = [253, 0, 0, 0, 0, 0] };
+        Assert.Contains("evs_invalid", sv.Validate());
+        // Sprigatito não existe no Let's Go.
+        Assert.Contains("species_invalid", (sv with { Evs = [0, 0, 0, 0, 0, 0], Species = 906, Game = TradeGame.LetsGoPikachu }).Validate());
+        Assert.Contains("trainer_id_invalid", (sv with { Evs = [0, 0, 0, 0, 0, 0], Trainer = new("ROCHA", 1_000_000, 0) }).Validate());
+        // No FRLG o TID de 6 dígitos não cabe.
+        Assert.Contains("trainer_id_invalid", new PokemonSpec { Species = 25, Trainer = Me }.Validate());
     }
 }

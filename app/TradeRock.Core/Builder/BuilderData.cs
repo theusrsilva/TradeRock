@@ -1,4 +1,5 @@
 using PKHeX.Core;
+using TradeRock.Core.Games;
 using TradeRock.Core.Trading;
 
 namespace TradeRock.Core.Builder;
@@ -8,9 +9,21 @@ public sealed record Option(int Value, string Text);
 public sealed record SpeciesDetails(
     ushort Species,
     string Name,
-    IReadOnlyList<Option> Abilities, // Value = slot (0 ou 1)
+    IReadOnlyList<Option> Abilities, // Value = slot (0 ou 1; 2 = habilidade oculta, da Gen 5 em diante)
     string GenderRatio, // "genderless" | "male_only" | "female_only" | "mixed"
-    bool InKantoDex);
+    bool InKantoDex,
+    IReadOnlyList<Option>? Forms = null); // formas que existem no jogo (Value = número da forma)
+
+/// <summary>Listas do formulário do construtor para um jogo (Entrega 14).</summary>
+public sealed record GameBuilderData(
+    IReadOnlyList<Option> Species,
+    IReadOnlyList<Option> Natures,
+    IReadOnlyList<Option> Moves,
+    IReadOnlyList<Option> Items,
+    IReadOnlyList<Option> Balls,
+    IReadOnlyList<Option> Languages,
+    int MaxEv,
+    int NicknameLength);
 
 /// <summary>Um encontro possível (origem) para a espécie, vindo da base do PKHeX.</summary>
 public sealed record EncounterOption(
@@ -64,7 +77,102 @@ public static class BuilderData
         new((int)LanguageID.Spanish, "Español"),
     ];
 
-    public static GameVersion ToVersion(TradeGame game) => game == TradeGame.LeafGreen ? GameVersion.LG : GameVersion.FR;
+    public static GameVersion ToVersion(TradeGame game) => GameCatalog.ToVersion(game);
+
+    private static readonly Dictionary<GameFamily, GameBuilderData> PerGame = [];
+
+    /// <summary>
+    /// Listas de um jogo: espécies que existem nele (alguma forma), golpes que ele usa (sem os "dummied"),
+    /// itens e bolas do save vazio do jogo. O FireRed/LeafGreen mantém as listas da Gen 3 acima.
+    /// </summary>
+    public static GameBuilderData For(SwitchGame game)
+    {
+        lock (PerGame)
+        {
+            if (PerGame.TryGetValue(game.Family, out var cached))
+                return cached;
+            GameBuilderData data;
+            if (game.Family == GameFamily.Frlg)
+            {
+                data = new GameBuilderData(Species, Natures, Moves, Items, Balls, Languages, 255, 10);
+            }
+            else
+            {
+                var sav = BlankSaveFile.Get(GameCatalog.ToVersion(game.Versions[0]), "TRADEROCK", LanguageID.English);
+                var source = new FilteredGameDataSource(sav, GameInfo.Sources, false);
+                var table = game.PersonalTable;
+                var species = Enumerable.Range(1, table.MaxSpeciesID)
+                    .Where(i => Enumerable.Range(0, Math.Max(1, (int)table[(ushort)i].FormCount)).Any(f => table.IsPresentInGame((ushort)i, (byte)f)))
+                    .Select(i => new Option(i, Strings.specieslist[i])).ToList();
+                var dummied = MoveInfo.GetDummiedMovesHashSet(game.Context);
+                var moves = new List<Option>();
+                for (ushort m = 1; m <= game.MaxMoveId; m++)
+                {
+                    if (!MoveInfo.IsDummiedMove(dummied, m))
+                        moves.Add(new Option(m, Strings.movelist[m]));
+                }
+                moves = moves.OrderBy(o => o.Text).ToList();
+                var blank = game.Blank();
+                data = new GameBuilderData(
+                    species, Natures, moves,
+                    source.Items.Where(i => i.Value > 0).Select(i => new Option(i.Value, i.Text)).ToList(),
+                    source.Balls.Where(b => b.Value > 0).Select(b => new Option(b.Value, b.Text)).ToList(),
+                    [.. Languages, new((int)LanguageID.Korean, "한국어"), new((int)LanguageID.ChineseS, "简体中文"),
+                     new((int)LanguageID.ChineseT, "繁體中文")],
+                    blank.MaxEV, blank.MaxStringLengthNickname);
+            }
+            PerGame[game.Family] = data;
+            return data;
+        }
+    }
+
+    /// <summary>Espécie, habilidades e formas num jogo. No FRLG é o mesmo que <see cref="Details(ushort)"/>.</summary>
+    public static SpeciesDetails Details(ushort species, SwitchGame game, byte form = 0)
+    {
+        if (game.Family == GameFamily.Frlg)
+            return Details(species);
+        var table = game.PersonalTable;
+        var pi = table.GetFormEntry(species, form);
+        var abilities = new List<Option>();
+        for (var slot = 0; slot < pi.AbilityCount; slot++)
+        {
+            var ability = pi.GetAbilityAtIndex(slot);
+            if (ability > 0 && abilities.All(a => a.Text != Strings.abilitylist[ability]))
+                abilities.Add(new Option(slot, Strings.abilitylist[ability]));
+        }
+        var names = FormConverter.GetFormList(species, Strings.types, Strings.forms, game.Context);
+        var forms = Enumerable.Range(0, Math.Max(1, (int)table[species].FormCount))
+            .Where(f => table.IsPresentInGame(species, (byte)f))
+            .Select(f => new Option(f, f < names.Length && names[f].Length > 0 ? names[f] : f == 0 ? "" : $"#{f}"))
+            .ToList();
+        var ratio = pi.Genderless ? "genderless" : pi.OnlyMale ? "male_only" : pi.OnlyFemale ? "female_only" : "mixed";
+        return new SpeciesDetails(species, Strings.specieslist[species], abilities, ratio, false, forms);
+    }
+
+    /// <summary>Encontros possíveis da espécie nas versões de um jogo novo (no FRLG, ver a sobrecarga da Gen 3).</summary>
+    public static IReadOnlyList<EncounterOption> Encounters(ushort species, TradeGame target, byte form)
+    {
+        var game = GameCatalog.Of(target);
+        if (game.Family == GameFamily.Frlg)
+            return Encounters(species, target);
+        AutoModEnvironment.EnsureInitialized();
+        var pk = game.Blank();
+        pk.Species = species;
+        pk.Form = form;
+        pk.Language = (int)LanguageID.English;
+        pk.SetGender(pk.GetSaneGender());
+        // A versão escolhida primeiro, depois a outra do par.
+        var versions = game.Versions.OrderBy(v => v == target ? 0 : 1).Select(GameCatalog.ToVersion).ToArray();
+        var result = new List<EncounterOption>();
+        var seen = new HashSet<string>();
+        foreach (var enc in EncounterMovesetGenerator.GenerateEncounters(pk, ReadOnlyMemory<ushort>.Empty, versions))
+        {
+            var option = ToOption(enc, game.Format);
+            if (seen.Add(option.Key))
+                result.Add(option);
+        }
+        return result.OrderBy(e => e.Type is "event" ? 1 : 0).ToList();
+    }
 
     public static SpeciesDetails Details(ushort species)
     {
@@ -125,7 +233,10 @@ public static class BuilderData
             .ToList();
     }
 
-    public static EncounterOption ToOption(IEncounterable enc)
+    public static EncounterOption ToOption(IEncounterable enc) => ToOption(enc, 3);
+
+    /// <param name="format">Formato do PKHeX do jogo de destino (3 = Gen 3), para o nome do local.</param>
+    public static EncounterOption ToOption(IEncounterable enc, byte format)
     {
         var type = enc switch
         {
@@ -142,10 +253,12 @@ public static class BuilderData
             },
         };
         var location = enc.Location;
-        var locationName = Strings.GetLocationName(false, location, 3, 3, enc.Version);
+        var locationName = format == 3
+            ? Strings.GetLocationName(false, location, 3, 3, enc.Version)
+            : Strings.GetLocationName(false, location, format, enc.Generation, enc.Version);
         var fateful = enc is IFatefulEncounterReadOnly { FatefulEncounter: true };
         // Na Gen 3, o local 255 é "encontro fatídico": presentes ali são distribuições de evento (ex.: WISHMKR).
-        if (type == "gift" && location == EventLocation)
+        if (format == 3 && type == "gift" && location == EventLocation)
             type = "event";
         var key = $"{enc.Version}|{location}|{enc.LevelMin}|{enc.Species}|{type}";
         return new EncounterOption(key, type, enc.Version.ToString(), enc.Species, Strings.specieslist[enc.Species],
