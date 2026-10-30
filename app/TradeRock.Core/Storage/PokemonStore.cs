@@ -140,6 +140,70 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
         return stored;
     }
 
+    /// <summary>
+    /// Move o Pokémon para outro jogo, como o HOME (<see cref="HomeTransfer"/>). O registro continua o mesmo (id,
+    /// caixa, etiquetas, histórico); mudam o jogo e os dados. Recusa com <see cref="VaultException"/> (código do HOME).
+    /// </summary>
+    public async Task<(StoredPokemon Pokemon, IReadOnlyList<string> Notes)> TransferAsync(
+        Guid id, GameFamily to, ITrainerInfo owner, CancellationToken ct)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var stored = await db.Pokemon.Include(p => p.Tags).SingleOrDefaultAsync(p => p.Id == id, ct)
+            ?? throw new VaultException("pokemon_not_found");
+        if (stored.DeletedAt is not null)
+            throw new VaultException("pokemon_in_trash");
+        if (stored.Family == to)
+            throw new VaultException("same_game");
+
+        var source = PokemonReader.ToEntity(await ReadDataAsync(stored, ct), stored.Family);
+        var moved = HomeTransfer.Move(source, GameCatalog.Get(to), owner);
+        if (!moved.Ok)
+            throw new VaultException(moved.Refusal ?? "no_route");
+
+        var data = new byte[moved.Pokemon!.SIZE_STORED];
+        moved.Pokemon.WriteDecryptedDataStored(data);
+        var pk = PokemonReader.Read(data, to);
+        if (await db.Pokemon.AnyAsync(p => p.Sha256 == pk.Sha256 && p.Id != id, ct))
+            throw new VaultException("pokemon_duplicate");
+
+        await WriteFileAsync(pk, ct);
+        var (oldSha, oldFamily) = (stored.Sha256, stored.Family);
+        var s = pk.Summary;
+        stored.Sha256 = pk.Sha256;
+        stored.Size = pk.Data.Length;
+        stored.Family = s.Family;
+        stored.Species = s.Species;
+        stored.Form = s.Form;
+        stored.SpeciesName = s.SpeciesName;
+        stored.Nickname = s.Nickname;
+        stored.Level = s.Level;
+        stored.IsShiny = s.IsShiny;
+        stored.IsEgg = s.IsEgg;
+        stored.Gender = s.Gender;
+        stored.OtName = s.OtName;
+        stored.Tid = s.Tid;
+        stored.Sid = s.Sid;
+        stored.OriginGame = s.OriginGame;
+        stored.HeldItem = s.HeldItem;
+        stored.Fateful = s.Fateful;
+        stored.Pid = s.Pid;
+        stored.Legality = AnalyzeLegality(pk.Data, s.Family);
+        stored.LegalityPkhexVersion = LegalityReporter.PkhexVersion;
+        await db.SaveChangesAsync(ct);
+
+        if (!await db.Pokemon.IgnoreQueryFilters().AnyAsync(p => p.Sha256 == oldSha, ct))
+        {
+            var path = FilePath(oldSha, oldFamily);
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        return (stored, moved.Notes);
+    }
+
+    /// <summary>Para quais jogos o Pokémon pode ir (null = pode; senão o código da recusa).</summary>
+    public async Task<IReadOnlyDictionary<GameFamily, string?>> DestinationsAsync(StoredPokemon pokemon, CancellationToken ct) =>
+        HomeTransfer.Destinations(PokemonReader.ToEntity(await ReadDataAsync(pokemon, ct), pokemon.Family), pokemon.Family);
+
     public async Task<IReadOnlyList<StoredPokemon>> ListAsync(CancellationToken ct)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);

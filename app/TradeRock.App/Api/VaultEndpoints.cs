@@ -1,3 +1,4 @@
+using PKHeX.Core;
 using TradeRock.App.Server;
 using System.IO.Compression;
 using TradeRock.Core.Games;
@@ -16,6 +17,9 @@ public static class VaultEndpoints
     public sealed record TagDto(string Name, string Color);
     public sealed record AssignTagsDto(IReadOnlyList<Guid> PokemonIds, IReadOnlyList<Guid>? Add, IReadOnlyList<Guid>? Remove);
     public sealed record ReplaceDto(byte[] Data);
+
+    /// <summary>Jogo de destino (chave do catálogo: sv, swsh, za...).</summary>
+    public sealed record TransferDto(string? Game);
     public sealed record ExportDto(IReadOnlyList<Guid> Ids, string Format = "pk3", int Size = 100);
 
     public static void MapVault(this IEndpointRouteBuilder api)
@@ -81,6 +85,44 @@ public static class VaultEndpoints
             catch (InvalidPokemonFileException ex)
             {
                 return Results.BadRequest(new { error = "invalid", errors = new[] { ex.Code } });
+            }
+        });
+
+        // Mover entre jogos, como o Pokémon HOME (Entrega 14d): destinos possíveis e a transferência.
+        vault.MapGet("/pokemon/{id:guid}/destinations", async (Guid id, PokemonStore store, CancellationToken ct) =>
+        {
+            if (await store.GetAsync(id, ct) is not { DeletedAt: null } p)
+                return Results.NotFound();
+            var destinations = await store.DestinationsAsync(p, ct);
+            return Results.Ok(destinations.Select(d => new { game = d.Key, refusal = d.Value }));
+        });
+
+        vault.MapPost("/pokemon/{id:guid}/transfer", async (Guid id, TransferDto body, PokemonStore store, SettingsStore settings,
+            CancellationToken ct) =>
+        {
+            if (GameCatalog.ByKey(body.Game ?? "") is not { } to)
+                return Results.BadRequest(new { error = "game_invalid" });
+            if (await store.GetAsync(id, ct) is not { } current)
+                return Results.NotFound();
+            // O "Meu treinador" do jogo de destino recebe o Pokémon (sem ele, o treinador padrão do motor).
+            var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(BuilderEndpoints.MyTrainerKeyFor(to.Family)), null, ct);
+            var owner = new SimpleTrainerInfo(GameCatalog.ToVersion(to.Versions[0]))
+            {
+                OT = me?.Name ?? TradeRock.Core.Trading.TrainerProfile.Default.Name,
+                TID16 = me?.Tid ?? TradeRock.Core.Trading.TrainerProfile.Default.Tid,
+                SID16 = me?.Sid ?? TradeRock.Core.Trading.TrainerProfile.Default.Sid ?? 0,
+                Gender = me?.Gender ?? 0,
+                Language = (int)LanguageID.English, // o "Meu treinador" não guarda o idioma do jogo
+            };
+            try
+            {
+                var (moved, notes) = await store.TransferAsync(id, to.Family, owner, ct);
+                var mine = await settings.GetAsync<MyTrainer?>(UserSettings.Key(BuilderEndpoints.MyTrainerKey), null, ct);
+                return Results.Ok(new { pokemon = PokemonEndpoints.PokemonDto.From(moved, mine), notes });
+            }
+            catch (VaultException ex)
+            {
+                return Results.BadRequest(new { error = ex.Code });
             }
         });
 

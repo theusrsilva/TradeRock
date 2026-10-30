@@ -381,6 +381,34 @@ public sealed class MultiGameApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Mover_do_scarlet_para_o_sword_no_cofre()
+    {
+        var generated = await _client.PostAsJsonAsync("/api/builder/generate", new
+        {
+            spec = new { species = 25, level = 30, game = "scarlet", trainer = new { name = "ROCHA", tid = 123456, sid = 1234 } },
+        });
+        var data = (await generated.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").GetString();
+        var saved = await _client.PostAsJsonAsync("/api/builder/save", new { data, game = "scarlet" });
+        var id = (await saved.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("pokemon").GetProperty("id").GetGuid();
+
+        var destinations = await _client.GetFromJsonAsync<JsonElement>($"/api/vault/pokemon/{id}/destinations");
+        var swsh = destinations.EnumerateArray().Single(d => d.GetProperty("game").GetString() == "swsh");
+        Assert.Equal(JsonValueKind.Null, swsh.GetProperty("refusal").ValueKind);
+
+        await _client.PutAsJsonAsync("/api/settings/my-trainer?game=swsh", new { name = "Treinadora", tid = 654321, sid = 4321 });
+        var moved = await _client.PostAsJsonAsync($"/api/vault/pokemon/{id}/transfer", new { game = "swsh" });
+        moved.EnsureSuccessStatusCode();
+        var pokemon = (await moved.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("pokemon");
+        Assert.Equal(id, pokemon.GetProperty("id").GetGuid()); // o mesmo registro do cofre
+        Assert.Equal("swsh", pokemon.GetProperty("family").GetString());
+        Assert.NotEqual("illegal", pokemon.GetProperty("legality").GetString());
+
+        var refused = await _client.PostAsJsonAsync($"/api/vault/pokemon/{id}/transfer", new { game = "lgpe" });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("home_no_destination", await refused.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task Pokemon_de_outro_jogo_e_codigo_invalido_sao_recusados()
     {
         var demo = (await _client.GetFromJsonAsync<JsonElement>("/api/pokemon")).EnumerateArray()
@@ -472,5 +500,62 @@ public sealed class MultiGameBuilderTests
         Assert.Contains("trainer_id_invalid", (sv with { Evs = [0, 0, 0, 0, 0, 0], Trainer = new("ROCHA", 1_000_000, 0) }).Validate());
         // No FRLG o TID de 6 dígitos não cabe.
         Assert.Contains("trainer_id_invalid", new PokemonSpec { Species = 25, Trainer = Me }.Validate());
+    }
+}
+
+/// <summary>Mover entre jogos como o HOME (Entrega 14d).</summary>
+public sealed class HomeTransferTests
+{
+    private static readonly SimpleTrainerInfo Owner = new(GameVersion.SL) { OT = "ROCHA", TID16 = 0xE240, SID16 = 1, Language = 2 };
+
+    private static async Task<PKM> LegalAsync(TradeGame game, ushort species = 25, byte level = 30)
+    {
+        var trainer = GameCatalog.Of(game).SixDigitTrainerId ? new TrainerSpec("ROCHA", 123456, 1234) : new TrainerSpec("ROCHA", 24680, 13579);
+        var result = await PokemonBuilder.GenerateAsync(new PokemonSpec { Species = species, Level = level, Game = game, Trainer = trainer }, "en", default);
+        Assert.True(result.Usable);
+        return PokemonReader.ToEntity(result.Data!, GameCatalog.Of(game).Family);
+    }
+
+    [Fact]
+    public async Task Do_firered_para_o_scarlet()
+    {
+        var pk = await LegalAsync(TradeGame.FireRed, 25, 10);
+        var moved = HomeTransfer.Move(pk, GameCatalog.Get(GameFamily.Sv), Owner);
+        Assert.True(moved.Ok, moved.Refusal);
+        Assert.IsType<PK9>(moved.Pokemon);
+        Assert.Equal(25, moved.Pokemon!.Species);
+        // Sem o rastreador do HOME: "não verificável", nunca "ilegal" por isso.
+        var report = LegalityReporter.Analyze(moved.Pokemon, "pt-BR");
+        Assert.NotEqual(LegalityStatus.Illegal, report.Status);
+    }
+
+    [Fact]
+    public async Task Do_scarlet_para_o_sword_e_recusas()
+    {
+        var pk = await LegalAsync(TradeGame.Scarlet);
+        var moved = HomeTransfer.Move(pk, GameCatalog.Get(GameFamily.Swsh), Owner);
+        Assert.True(moved.Ok, moved.Refusal);
+        Assert.IsType<PK8>(moved.Pokemon);
+        var report = LegalityReporter.Analyze(moved.Pokemon!, "en");
+        Assert.True(report.Status != LegalityStatus.Illegal, string.Join(" | ", report.Problems.Select(p => $"{p.Identifier}/{p.Code}: {p.Message}")));
+
+        var destinations = HomeTransfer.Destinations(pk, GameFamily.Sv);
+        Assert.Equal("same_game", destinations[GameFamily.Sv]);
+        Assert.Equal("home_no_destination", destinations[GameFamily.Lgpe]); // o Let's Go não recebe do HOME
+        Assert.Equal("home_no_destination", destinations[GameFamily.Frlg]); // não volta para a Gen 3
+
+        var sprigatito = await LegalAsync(TradeGame.Scarlet, 906, 10);
+        Assert.Equal("species_not_in_game", HomeTransfer.Destinations(sprigatito, GameFamily.Sv)[GameFamily.Swsh]);
+    }
+
+    [Fact]
+    public async Task Do_firered_so_sem_item_e_sem_hm()
+    {
+        var pk = await LegalAsync(TradeGame.FireRed, 25, 10);
+        pk.HeldItem = 1;
+        Assert.Equal("frlg_held_item", HomeTransfer.Move(pk, GameCatalog.Get(GameFamily.Sv), Owner).Refusal);
+        pk.HeldItem = 0;
+        pk.Move1 = 148; // Flash
+        Assert.Equal("frlg_hm_move", HomeTransfer.Move(pk, GameCatalog.Get(GameFamily.Sv), Owner).Refusal);
     }
 }

@@ -100,8 +100,50 @@ public static class LegalityReporter
             status = LegalityStatus.Unverifiable;
             reason = Rule.Reason;
         }
+        else if (OnlyHomeTrackerMissing(pk, la))
+        {
+            // Movido entre jogos pelo TradeRock (como o HOME): o rastreador do HOME só o HOME cria, e o HOME
+            // recusa um inventado. Os jogos não conferem o rastreador (decisão D22).
+            status = LegalityStatus.Unverifiable;
+            reason = language == "en"
+                ? "It moved between games without Pokémon HOME, so it has no HOME tracker. The games do not check it; HOME does."
+                : "Mudou de jogo sem passar pelo Pokémon HOME, então não tem o rastreador do HOME. Os jogos não conferem isso; o HOME confere.";
+        }
 
         return new LegalityReport(status, checks, encounter, location, reason, PkhexVersion);
+    }
+
+    /// <summary>
+    /// O único problema é o rastreador do HOME ausente: ou só o TransferTrackerMissing (com golpes válidos), ou o
+    /// Pokémon seria válido com um rastreador (o PKHeX só aceita evoluir em outro jogo do HOME, ou a habilidade que o
+    /// HOME realinha no Z-A, com rastreador). Regras adaptadas do ajudante PKHeX do pokeldn (services/pkhex,
+    /// OnlyTrackerMissing e ValidWithTracker; AGPL-3.0).
+    /// </summary>
+    public static bool OnlyHomeTrackerMissing(PKM pk, LegalityAnalysis la)
+    {
+        if (la.Valid || !la.Parsed || !la.Results.Any(r => r.Result == LegalityCheckResultCode.TransferTrackerMissing))
+            return false;
+        if (la.Results.All(r => r.Valid || r.Result == LegalityCheckResultCode.TransferTrackerMissing)
+            && la.Info.Moves.All(m => m.Valid) && la.Info.Relearn.All(m => m.Valid))
+            return true;
+        if (pk is not IHomeTrack { HasTracker: false })
+            return false;
+        var tracked = pk.Clone();
+        ((IHomeTrack)tracked).Tracker = 1;
+        // O que o HOME grava ao ver o Pokémon (Scarlet/Violet e Z-A).
+        switch (tracked)
+        {
+            case PK9 sv:
+                sv.HeightScalar = sv.Scale;
+                break;
+            case PA9 za:
+                za.HeightScalar = za.WeightScalar = za.Scale;
+                if (za.IsAlpha)
+                    za.RibbonMarkAlpha = true;
+                break;
+        }
+        tracked.RefreshChecksum();
+        return new LegalityAnalysis(tracked).Valid;
     }
 
     private static string SeverityName(Severity s) => s switch
