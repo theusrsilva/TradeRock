@@ -1,6 +1,15 @@
 --- pokeldn/pokemon.py
 +++ pokeldn/pokemon.py
-@@ -409,6 +409,10 @@
+@@ -389,6 +389,8 @@
+ 
+ 
+ def validate(game, data):
++    if os.environ.get("TRADEROCK") == "1":
++        return data         # TradeRock: checked by the app's own PKHeX (the Legends: Arceus offer comes here)
+     prepare(game, data)
+     return data
+ 
+@@ -409,6 +411,10 @@
      data = entity_bytes(game, data)
      if transform is not None:
          data = entity_bytes(game, transform(data))

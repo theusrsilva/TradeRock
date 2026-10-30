@@ -79,6 +79,18 @@ class PokeldnPatchTests(unittest.TestCase):
         # Sem TRADEROCK=1 o pokeldn segue o upstream: exige o ajudante PKHeX dele.
         self.assertIn("bloqueado:", self.run_engine(code, traderock=False).stdout)
 
+    def test_oferta_do_pla_sem_pkhex_do_pokeldn(self):
+        # O pla_host chama pokemon.validate direto, fora do prepare_offer.
+        code = """
+            from pokeldn import pokemon
+            try:
+                print(len(pokemon.validate("pla", bytes(376))))
+            except pokemon.BuilderError as e:
+                print("bloqueado:", e)
+            """
+        self.assertEqual(self.run_engine(code, traderock=True).stdout.strip(), "376")
+        self.assertIn("bloqueado:", self.run_engine(code, traderock=False).stdout)
+
 
 class NetguardTests(unittest.TestCase):
     def guarded(self, code):
