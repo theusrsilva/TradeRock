@@ -894,3 +894,16 @@ o ajudante do pokeldn; nada gravado na placa; sem backup nem restauração do sa
 - **Verificado:** testes do worker (validação, comando de cada presente, marcos), da API (catálogo, presente
   simulado, rádio ocupado, pedido ao pokeldn pelo ESP32) e das traduções.
 - **Não verificado:** a entrega num console de verdade e a tela num navegador.
+
+## D27. Modo servidor com os jogos novos (Entrega 19)
+
+- **Já funcionava.** A troca pela fila, o cofre por conta e o "Meu treinador" usam o jogo desde a Entrega 14: o
+  seletor de jogo é a mesma tela no celular, a fila guarda o pedido inteiro (jogo, código, trocar de volta) e o
+  "Meu treinador" de cada jogo fica nas configurações da conta (`UserSettings`).
+- **Teste novo** (`ServerModeTests.Conta_pela_rede_troca_com_o_scarlet_com_o_proprio_treinador`): uma conta pela
+  rede envia um .pk9, grava o próprio treinador do SV, troca com o Scarlet pela fila e recebe no próprio cofre; a
+  outra conta não vê o recebido nem o treinador.
+- **Outras atividades só na janela do PC** (`/api/activities` em `Caller.IsLocalOnly`). Elas não passam pela fila:
+  quem está no PC escolhe o presente ou a raid e acompanha. Liberar pela rede pediria uma fila de atividades; fica
+  para quando o autor quiser.
+- **Não verificado:** com um celular de verdade (como a Entrega 10).
