@@ -57,6 +57,7 @@ public sealed record SimulationOptions(SimulationScenario Scenario, int Failures
 /// - de 1 a 6 trocas, cada uma oferecendo uma posição diferente do time.
 /// Nos outros jogos (pokeldn, D21) não há time simulado: <see cref="Party"/> são as ofertas, uma por troca, de 1 a 6.
 /// <see cref="LinkCode"/>: oito dígitos (vazio = sem código) ou, no Let's Go, três Pokémon da grade ("0,4,9").
+/// <see cref="TradeBack"/>: depois de cada troca, devolve ao Switch o Pokémon recebido para ele evoluir lá (pokeldn).
 /// </summary>
 public sealed record TradeRequest(
     IReadOnlyList<PartyMember> Party,
@@ -64,7 +65,8 @@ public sealed record TradeRequest(
     TradeGame Game,
     TrainerProfile Trainer,
     SimulationOptions? Simulation = null,
-    string? LinkCode = null)
+    string? LinkCode = null,
+    bool TradeBack = false)
 {
     public const int MinParty = 2;
     public const int MaxParty = 6;

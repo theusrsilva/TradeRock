@@ -498,7 +498,7 @@ public sealed class SetupChecksTests
 
         Assert.Equal("esp32_chip_ok", Code(State(chip: new(port, "esp32s3", "ESP32-S3 (revision v0.2)", 2, "16MB", now)), "esp32_chip"));
         Assert.Equal("esp32_board_mismatch", Code(State(chip: new(port, "esp32c6", "ESP32-C6", 1, "16MB", now)), "esp32_chip"));
-        Assert.Equal("esp32_flash_too_small", Code(State(chip: new(port, "esp32s3", "ESP32-S3", 2, "8MB", now)), "esp32_flash_size"));
+        Assert.Equal("esp32_flash_too_small", Code(State(chip: new(port, "esp32s3", "ESP32-S3", 2, "2MB", now)), "esp32_flash_size"));
 
         var classic = new SetupState { Radio = "esp32", Esp32Board = "esp32-wroom-32e", Esp32ModuleConfirmed = true, SerialPort = port,
             Esp32Chip = new(port, "esp32", "ESP32-D0WDQ6 (revision v1.0)", 100, "4MB", now) };

@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Frlg.Trade.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TradeRock.App;
 using TradeRock.Core;
 using TradeRock.Core.Engines;
+using TradeRock.Core.Engines.Pokeldn;
 using TradeRock.Core.Esp32;
 using TradeRock.Core.Setup;
 using TradeRock.Core.Trading;
@@ -307,6 +309,7 @@ public sealed class Esp32ApiTests : IAsyncLifetime
     private readonly SessionToken _token = SessionToken.Generate();
     private readonly string _dataDir = Directory.CreateTempSubdirectory("traderock-esp32api-").FullName;
     private readonly FakeEsp32Session _session = new("ok");
+    private readonly FakePokeldn _pokeldn = new();
     private WebApplication _app = null!;
     private HttpClient _client = null!;
 
@@ -317,6 +320,7 @@ public sealed class Esp32ApiTests : IAsyncLifetime
             b.WebHost.UseTestServer();
             b.Services.AddSingleton<IEsp32Session>(_ => _session);
             b.Services.AddSingleton<IEsp32Link, NoopLink>();
+            b.Services.AddSingleton<IPokeldnProcess>(_ => _pokeldn);
         });
         await _app.StartAsync();
         _client = _app.GetTestClient();
@@ -392,7 +396,7 @@ public sealed class Esp32ApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Motor_esp32_passa_trocas_treinador_e_chaves_ao_nucleo()
+    public async Task Motor_esp32_passa_o_time_o_treinador_e_as_chaves_ao_pokeldn()
     {
         var keys = "aes_kek_generation_source = 00112233445566778899aabbccddeeff\naes_key_generation_source = 00112233445566778899aabbccddeeff\nmaster_key_00 = 00112233445566778899aabbccddeeff\n";
         using var form = new MultipartFormDataContent { { new ByteArrayContent(Encoding.UTF8.GetBytes(keys)), "file", "prod.keys" } };
@@ -401,24 +405,69 @@ public sealed class Esp32ApiTests : IAsyncLifetime
 
         var engine = _app.Services.GetServices<ITradeEngine>().Single(e => e.Id == "esp32");
         Assert.True((await engine.CheckAvailabilityAsync(CancellationToken.None)).Available);
+        Assert.True(engine.Supports(TradeRock.Core.Games.GameFamily.Sv));
 
         var events = new List<TradeEvent>();
-        var pokemon = await Json(await _client.GetAsync("/api/pokemon"));
-        var party = pokemon.EnumerateArray().Select(p => new PartyMember(p.GetProperty("id").GetGuid(), TradeRock.Core.Pokemon.DemoPokemon.All[0].Data, "x")).ToList();
+        var demo = TradeRock.Core.Pokemon.DemoPokemon.All;
+        var party = new List<PartyMember> { new(Guid.NewGuid(), demo[0].Data, "a"), new(Guid.NewGuid(), demo[1].Data, "b"), new(Guid.NewGuid(), demo[0].Data, "c") };
+        _pokeldn.Script = [Event("starting"), Event("joined"), Done(1, demo[1].Data), Done(2, demo[0].Data), Result(2)];
         var request = new TradeRequest(party, [1, 0], TradeGame.FireRed, new TradeRock.Core.Trading.TrainerProfile("ROCHA", 12345, 54321));
         var result = await engine.RunAttemptAsync(request, e => { events.Add(e); return ValueTask.CompletedTask; }, CancellationToken.None);
 
         Assert.Equal(AttemptOutcome.Completed, result.Outcome);
-        Assert.Equal(2, events.Count(e => e.Kind == TradeEventKind.TradeDone));
-        var sent = _session.Last!;
-        Assert.Equal("/dev/ttyUSB0", sent.Port);
-        Assert.Equal(2, sent.TradeLimit);
-        Assert.Equal(1, sent.Selected);
-        Assert.Equal(12345u | (54321u << 16), sent.Profile.TrainerId);
-        Assert.Equal(4, sent.Profile.GameVersion);
-        Assert.EndsWith("prod.keys", sent.KeysPath);
-        Assert.StartsWith(Path.Combine(_dataDir, "logs", "esp32"), sent.LogDir);
+        Assert.Equal([0, 1], events.Where(e => e.Kind == TradeEventKind.TradeDone).Select(e => e.TradeIndex!.Value));
+        var sent = _pokeldn.Last!;
+        Assert.Equal("trade", _pokeldn.LastMode);
+        Assert.Equal("frlg", sent["game"]!.GetValue<string>());
+        Assert.Equal("esp32:/dev/ttyUSB0", sent["radio"]!.GetValue<string>());
+        Assert.EndsWith("prod.keys", sent["keys"]!.GetValue<string>());
+        Assert.Equal(2, sent["trades"]!.GetValue<int>());
+        Assert.Equal("firered", sent["version"]!.GetValue<string>());
+        Assert.Equal((12345u, 54321u), (sent["trainer"]!["tid"]!.GetValue<uint>(), sent["trainer"]!["sid"]!.GetValue<uint>()));
+        // Oferecidos primeiro (na ordem das trocas), depois o preenchimento; .pk3 de 100 bytes decriptado.
+        var offers = sent["offers"]!.AsArray().Select(o => Convert.FromBase64String(o!.GetValue<string>())).ToList();
+        Assert.Equal(3, offers.Count);
+        Assert.Equal(TradeRock.Core.Pokemon.Pk3Reader.Read(demo[1].Data).Sha256, TradeRock.Core.Pokemon.Pk3Reader.Read(offers[0]).Sha256);
+        Assert.Equal(TradeRock.Core.Pokemon.Pk3Reader.Read(demo[0].Data).Sha256, TradeRock.Core.Pokemon.Pk3Reader.Read(offers[1]).Sha256);
     }
+
+    [Fact]
+    public async Task Motor_esp32_scarlet_com_codigo_e_troca_de_volta()
+    {
+        await Json(await _client.PutAsJsonAsync("/api/setup/state", new { radio = "esp32", serialPort = "COM3" }));
+        var keys = "aes_kek_generation_source = 00112233445566778899aabbccddeeff\naes_key_generation_source = 00112233445566778899aabbccddeeff\nmaster_key_00 = 00112233445566778899aabbccddeeff\n";
+        using var form = new MultipartFormDataContent { { new ByteArrayContent(Encoding.UTF8.GetBytes(keys)), "file", "prod.keys" } };
+        await Json(await _client.PostAsync("/api/setup/keys", form));
+        var engine = _app.Services.GetServices<ITradeEngine>().Single(e => e.Id == "esp32");
+
+        var mine = SwitchPokemon.Stored(SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Sv));
+        var theirs = SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Sv, species: 93, ot: "RIVAL");
+        var request = new TradeRequest([new PartyMember(Guid.NewGuid(), mine, "Pikachu")], [0], TradeGame.Scarlet,
+            new TradeRock.Core.Trading.TrainerProfile("Ana", 0xE240, 1), LinkCode: "12345678", TradeBack: true);
+        // Troca de volta: na 1ª o Switch manda o Haunter; na 2ª ele volta (evolui lá) e o Pikachu volta para o app.
+        _pokeldn.Script = [Event("joined"), Done(1, SwitchPokemon.EncryptedParty(theirs)), Done(2, mine), Result(2)];
+        var events = new List<TradeEvent>();
+        var result = await engine.RunAttemptAsync(request, e => { events.Add(e); return ValueTask.CompletedTask; }, CancellationToken.None);
+
+        Assert.Equal(AttemptOutcome.Completed, result.Outcome);
+        var done = Assert.Single(events, e => e.Kind == TradeEventKind.TradeDone);
+        Assert.Equal(mine, done.ReceivedData);
+        var sent = _pokeldn.Last!;
+        Assert.Equal("sv", sent["game"]!.GetValue<string>());
+        Assert.Equal("12345678", sent["code"]!.GetValue<string>());
+        Assert.True(sent["tradeBack"]!.GetValue<bool>());
+        Assert.Equal(123456u, sent["trainer"]!["tid"]!.GetValue<uint>()); // como o jogo mostra
+        // Oferta do SV: forma de equipe criptografada (344 bytes), como o ajudante PKHeX do pokeldn grava.
+        Assert.Equal(344, Convert.FromBase64String(sent["offers"]![0]!.GetValue<string>()).Length);
+
+        _pokeldn.Script = [Event("starting"), Result(0)];
+        var nobody = await engine.RunAttemptAsync(request with { TradeBack = false }, _ => ValueTask.CompletedTask, CancellationToken.None);
+        Assert.Equal("console_never_joined", nobody.Failure!.Code);
+    }
+
+    private static JsonObject Event(string kind) => new() { ["type"] = "event", ["kind"] = kind };
+    private static JsonObject Done(int index, byte[] data) => new() { ["type"] = "trade_done", ["index"] = index, ["data"] = Convert.ToBase64String(data) };
+    private static JsonObject Result(int trades) => new() { ["type"] = "result", ["exitCode"] = 0, ["trades"] = trades };
 
     [Fact]
     public async Task Sala_nao_encontrada_e_cancelamento()
@@ -440,5 +489,25 @@ public sealed class Esp32ApiTests : IAsyncLifetime
             new FakeEsp32Session("hang"), new Esp32EngineOptions { LogsDir = Path.Combine(_dataDir, "logs", "esp32") });
         var result = await hang.RunAttemptAsync(request, _ => ValueTask.CompletedTask, cts.Token);
         Assert.Equal(AttemptOutcome.Cancelled, result.Outcome);
+    }
+}
+
+/// <summary>pokeldn falso: grava o último pedido e devolve as mensagens de <see cref="Script"/>.</summary>
+internal sealed class FakePokeldn : IPokeldnProcess
+{
+    public List<JsonObject> Script { get; set; } = [];
+    public JsonObject? Last { get; private set; }
+    public string? LastMode { get; private set; }
+
+    public bool Available => true;
+
+    public async IAsyncEnumerable<JsonObject> RunAsync(string mode, JsonObject request, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
+        (LastMode, Last) = (mode, request);
+        foreach (var message in Script)
+        {
+            await Task.Yield();
+            yield return (JsonObject)message.DeepClone();
+        }
     }
 }

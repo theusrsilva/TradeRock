@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Badge, Button, Field, HelpTip, Icon, inputClass, selectClass } from '../../components/ui'
+import { Badge, Button, Field, HelpTip, Icon, Toggle, inputClass, selectClass } from '../../components/ui'
 import { api } from '../../lib/api'
 import { gameOf, idLimits, LGPE_CODE_SPECIES, linkCodeErrors, versionColor, versionName } from '../../lib/games'
 import { spriteUrl } from '../../lib/api'
@@ -14,6 +14,8 @@ export interface TrainerState {
   failuresBeforeSuccess: number
   /** Oito dígitos ou, no Let's Go, três índices da grade ("0,4,9"). Vazio = sem código. */
   linkCode: string
+  /** Depois de cada troca, devolve ao Switch o Pokémon recebido para ele evoluir lá (só nos motores com o pokeldn). */
+  tradeBack: boolean
 }
 
 const scenarios: SimulationScenario[] = [
@@ -37,10 +39,12 @@ export function TrainerStep({
   state,
   onChange,
   simulation,
+  canTradeBack,
 }: {
   state: TrainerState
   onChange: (state: TrainerState) => void
   simulation: boolean
+  canTradeBack: boolean
 }) {
   const { t } = useTranslation()
   const [presets, setPresets] = useState<TrainerPreset[]>([])
@@ -169,6 +173,13 @@ export function TrainerStep({
                 {t(`errors.${e}`)}
               </div>
             ))}
+          </div>
+        )}
+
+        {canTradeBack && (
+          <div className="flex items-center gap-1.5">
+            <Toggle small on={state.tradeBack} onChange={(tradeBack) => onChange({ ...state, tradeBack })} label={t('ui.trade.tradeBack')} />
+            <HelpTip>{t('ui.trade.tradeBackTip')}</HelpTip>
           </div>
         )}
       </div>

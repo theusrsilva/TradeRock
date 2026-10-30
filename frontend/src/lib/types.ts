@@ -168,6 +168,10 @@ export interface Engine {
   available: boolean
   reasonCode: string | null
   selected: boolean
+  /** Jogos que o motor troca (GameFamily). */
+  games: GameFamily[]
+  /** Roda o pokeldn: o TradeRock cria a sala (também no FRLG) e existe o "trocar de volta". */
+  usesPokeldn: boolean
 }
 
 export interface Trainer {
@@ -191,6 +195,7 @@ export interface StartTrade {
   acceptIllegal: boolean
   /** Oito dígitos, ou no Let's Go três números da grade ("0,4,9"). Vazio = sem código. */
   linkCode?: string | null
+  tradeBack?: boolean
 }
 
 // ---- Construtor ----

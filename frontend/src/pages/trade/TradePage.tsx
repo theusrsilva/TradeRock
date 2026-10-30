@@ -34,7 +34,10 @@ export default function TradePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { session, events, connected, refresh } = useTradeSession()
-  const { demo: simulation, ready } = useConnection()
+  const { demo: simulation, ready, engines } = useConnection()
+  // Jogos que o motor escolhido troca (o ESP32 com o pokeldn troca todos; a placa Wi-Fi, por enquanto, só o FRLG).
+  const engineGames = engines.find((e) => e.selected)?.games
+  const pokeldn = engines.find((e) => e.selected)?.usesPokeldn ?? false
   const [startedHere, setStartedHere] = useState<string | null>(null)
   // "Usar na troca" no cofre já sabe o jogo: começa no time.
   const [step, setStep] = useState(GAME)
@@ -50,6 +53,7 @@ export default function TradePage() {
     scenario: 'success',
     failuresBeforeSuccess: 2,
     linkCode: '',
+    tradeBack: false,
   })
   const game = gameOf(trainer.game)
   const [startErrors, setStartErrors] = useState<string[]>([])
@@ -187,6 +191,7 @@ export default function TradePage() {
       simulation: simulation ? { scenario: trainer.scenario, failuresBeforeSuccess: trainer.failuresBeforeSuccess } : null,
       acceptIllegal,
       linkCode: trainer.linkCode || null,
+      tradeBack: pokeldn && trainer.tradeBack,
     }
     setLeftQueue(false)
     try {
@@ -255,18 +260,19 @@ export default function TradePage() {
         </ol>
       </div>
 
-      {step === GAME && <GameStep game={trainer.game} onChange={(g) => void chooseGame(g)} available={(g) => simulation || g.family === 'frlg'} />}
+      {step === GAME && <GameStep game={trainer.game} onChange={(g) => void chooseGame(g)} available={(g) => simulation || (engineGames ?? ['frlg']).includes(g.family)} />}
       {step === PARTY && (
         <PartyStep pokemon={pokemon} state={party} onChange={setParty} onReload={loadPokemon} allowIllegal={illegalAllowed} game={game} />
       )}
-      {step === TRAINER && <TrainerStep state={trainer} onChange={setTrainer} simulation={simulation} />}
+      {step === TRAINER && <TrainerStep state={trainer} onChange={setTrainer} simulation={simulation} canTradeBack={pokeldn} />}
       {step === REMINDER && (
         <div className="flex flex-col gap-[18px] rounded-xl border border-line bg-surface p-[22px]">
           <div>
             <div className="text-lg font-bold">{t('trade.reminder.title')}</div>
             <div className="text-sm text-muted">{t('ui.trade.prepSub')}</div>
           </div>
-          {game.family !== 'frlg' ? (
+          {/* Jogos novos, e o FRLG pelo ESP32 (o TradeRock cria a sala): passos do jogo. Placa Wi-Fi no FRLG: o console é o líder. */}
+          {game.family !== 'frlg' || pokeldn ? (
             <div className="rounded-lg bg-surface2 p-4">
               <ContentFile name={`trade/jogos/${game.family}`} />
             </div>

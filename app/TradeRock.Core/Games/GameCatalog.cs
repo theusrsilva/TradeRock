@@ -117,6 +117,22 @@ public static class GameCatalog
 
     public static SwitchGame Get(GameFamily family) => All[(int)family];
 
+    /// <summary>
+    /// Local communication ids das salas de troca de cada jogo (D21; o FRLG também com o id do frlg-ldn-trade).
+    /// O Shield usa o id do Sword, o Violet o do Scarlet e o Eevee o do Pikachu.
+    /// </summary>
+    public static IReadOnlyDictionary<ulong, GameFamily> CommunicationIds { get; } = new Dictionary<ulong, GameFamily>
+    {
+        [0x01006fa0233f8000] = GameFamily.Frlg,
+        [0x0100610011000000] = GameFamily.Frlg,
+        [0x010003F003A34000] = GameFamily.Lgpe,
+        [0x0100ABF008968000] = GameFamily.Swsh,
+        [0x0100000011D90000] = GameFamily.Bdsp,
+        [0x01001f5010dfa000] = GameFamily.Pla,
+        [0x0100a3d008c5c000] = GameFamily.Sv,
+        [0x0100f43008c44000] = GameFamily.Za,
+    };
+
     public static SwitchGame Of(TradeGame version) => All.First(g => g.Versions.Contains(version));
 
     public static SwitchGame? ByKey(string key) => All.FirstOrDefault(g => g.Key == key);

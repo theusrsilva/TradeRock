@@ -727,3 +727,61 @@ sprites até a Gen 9, cofre único com filtro, legalidade que avisa sem bloquear
 - **Não verificado:**
   - a interface no navegador ou na janela (sem Playwright nesta sessão);
   - qualquer troca real com os jogos novos (Entrega 15).
+
+## D23. Motor pokeldn e ESP32 com o firmware do pokeldn (Entrega 15)
+
+- **O TradeRock é sempre o anfitrião.** Pedido do autor: o jogador escolhe o código no console e digita o mesmo no
+  app.
+  - Em todos os jogos, o console que procura com um código entra numa sala anunciada com esse código (docs do
+    pokeldn).
+  - Por isso o app roda o `bin/<jogo>_host.py` (no FRLG, o `frlg_trade_host.py`). No BDSP, o código é a senha da
+    Union Room.
+  - A sala fica aberta 10 min (`RoomSeconds`). Se o console não entra, o resultado é `console_never_joined`, sem
+    nova tentativa.
+- **Comando.** O adaptador não copia as flags. Ele usa a própria função do pokeldn (`pokeldn.app.command.build`,
+  com o catálogo dele), que monta as flags testadas no console. Ajustes nossos:
+  - sem `--capture`, que grava chaves de sessão;
+  - sem `--fresh-pid`, que passa pelo ajudante PKHeX do pokeldn e que o TradeRock não leva;
+  - o código e o "trocar de volta";
+  - no FRLG, `--trades` e `--version` (vale o último valor).
+- **Processo** (`worker/traderock_worker/pokeldn_trade.py`, `run.py --pokeldn trade`).
+  - Um processo por sessão. Ele roda o `main(argv)` do script, carregado com importlib.
+  - Marcos: as linhas `[link] waiting|joined|left` e `[done] trade N complete`. Em cada `[done]` vai junto o arquivo
+    mais novo da pasta de recebidos.
+  - O log é a saída do pokeldn, com as sequências hexadecimais longas apagadas.
+  - Cancelar manda SIGINT no Linux (o Ctrl+C do pokeldn sai com educação) e espera 20 s. No Windows não dá para
+    mandar SIGINT a outro processo: o processo é encerrado.
+- **Oferta.** O C# monta no formato do ajudante PKHeX do pokeldn (`PokeldnOffer`):
+  - forma de equipe decriptada no FRLG e no Z-A;
+  - forma de caixa criptografada no BDSP;
+  - forma de equipe criptografada nos outros.
+
+  No FRLG vão primeiro os oferecidos, na ordem das trocas, e depois o preenchimento.
+- **Trocar de volta** (`--trade-back` do pokeldn, para o Pokémon do Switch que evolui por troca). Cada troca vira
+  duas:
+  - na primeira, o Switch manda o Pokémon;
+  - na segunda, o app o devolve (ele evolui no Switch) e recebe de volta o que tinha mandado.
+
+  Só a segunda entra no cofre, e é o mesmo arquivo, então não duplica. Vale em todo motor que roda o pokeldn
+  (`ITradeEngine.UsesPokeldn`).
+- **ESP32 só com o firmware do pokeldn (decisão da D21).**
+  - Imagens 1.9.1 do Release `v0.49.1` em `assets/firmware/pokeldn`, conferidas por `SHA256SUMS.txt`
+    (`scripts/fetch-pokeldn-firmware.sh`).
+  - Gravadas em 0x0 com modo, frequência e tamanho da flash `keep`, como o pokeldn grava.
+  - Placas: clássico (UART), S3, C3 e C6 (USB nativo), com no mínimo 4 MB.
+  - O HELLO e a varredura do teste com o Switch também passam pelo pokeldn (`pokeldn_board.py`, `PokeldnEsp32Link`).
+    O teste aceita a sala de troca de qualquer jogo do catálogo (`GameCatalog.CommunicationIds`).
+  - O motor `esp32` agora é o `PokeldnEngine` e troca todos os jogos, o FRLG inclusive. No FRLG, o app cria a sala e
+    o console entra pelo "Join Group", com outras instruções (`content/*/trade/jogos/frlg.md`).
+  - O motor C# do easyworld (`Esp32SerialEngine`, `Frlg.Trade.Core.Patched`) saiu do registro de motores e fica no
+    código até a limpeza.
+- **Windows.**
+  - O `esp32-runtime` leva o pokeldn (cópia com os patches) e os módulos do worker.
+  - Leva também as rodas `win_amd64` do pokeldn (pycryptodome, trio e dependências, zstandard), com hash fixo.
+  - O python-netlink, como o esptool, vira roda a partir do código-fonte conferido pelo `requirements.lock`. O LDN
+    vendorizado o importa, mas só o usa na placa Wi-Fi.
+  - Verificado pelo WSL no Python do Windows: todos os módulos de protocolo importam, e `run.py --pokeldn board|trade`
+    roda de ponta a ponta até o erro esperado (porta COM inexistente, oferta falsa).
+- **Não verificado:**
+  - gravação, HELLO e troca com uma placa real e um console real;
+  - o cancelamento educado no Windows.

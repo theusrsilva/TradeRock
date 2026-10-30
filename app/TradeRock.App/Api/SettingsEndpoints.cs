@@ -11,7 +11,9 @@ public static class SettingsEndpoints
 {
     public const string TradeSettingsKey = "trade.settings";
 
-    public sealed record EngineDto(string Id, bool IsSimulation, bool Available, string? ReasonCode, bool Selected);
+    /// <summary>Motor e os jogos que ele troca (chaves do catálogo: frlg, sv...).</summary>
+    public sealed record EngineDto(string Id, bool IsSimulation, bool Available, string? ReasonCode, bool Selected, IReadOnlyList<string> Games,
+        bool UsesPokeldn);
 
     public sealed record SelectEngineDto(string Id);
 
@@ -46,7 +48,8 @@ public static class SettingsEndpoints
             {
                 var availability = await engine.CheckAvailabilityAsync(ct);
                 result.Add(new EngineDto(engine.Id, engine.IsSimulation, availability.Available,
-                    availability.ReasonCode, engine.Id == selected.Id));
+                    availability.ReasonCode, engine.Id == selected.Id,
+                    GameCatalog.All.Where(g => engine.Supports(g.Family)).Select(g => g.Key).ToList(), engine.UsesPokeldn));
             }
             return result;
         });

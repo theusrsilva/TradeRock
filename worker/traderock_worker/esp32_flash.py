@@ -94,11 +94,12 @@ def validate(params):
     if op != "identify":
         if not isinstance(params.get("image"), str) or not os.path.isfile(params["image"]):
             raise ValueError("imagem ausente")
-        if not SIZE_RE.match(str(params.get("flashSize", ""))):
+        # "keep": usa o que está no cabeçalho da imagem (as do pokeldn, D23).
+        if params.get("flashSize") != "keep" and not SIZE_RE.match(str(params.get("flashSize", ""))):
             raise ValueError("flashSize inválido")
-        if params.get("flashMode") not in ("dio", "qio", "dout", "qout"):
+        if params.get("flashMode") not in ("keep", "dio", "qio", "dout", "qout"):
             raise ValueError("flashMode inválido")
-        if params.get("flashFreq") not in ("80m", "40m", "26m", "20m"):
+        if params.get("flashFreq") not in ("keep", "80m", "40m", "26m", "20m"):
             raise ValueError("flashFreq inválido")
     return op
 

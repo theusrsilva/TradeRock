@@ -235,7 +235,7 @@
     "radio_rx_failed": "The join authenticated, but the card stopped receiving the Switch's advertisements. Set up NetworkManager in Settings → Connection and try again.",
     "engine_broken": "The trade engine is incomplete in this install. Reinstall TradeRock.",
     "trade_incomplete": "Only some of the trades were completed.",
-    "engine_error": "The trade engine stopped with an error.",
+    "engine_error": "The Switch games engine stopped with an error. Details are in the log.",
     "invalid_request": "The trade request has data the engine doesn't accept.",
     "missing_tools": "System programs the engine uses are missing. See Settings → Connection.",
     "phy_not_found": "The chosen Wi-Fi card is no longer in the PC. Was it unplugged?",
@@ -275,7 +275,10 @@
     "esptool_error": "The firmware flasher stopped with an error.",
     "boot_mode_required": "The board didn't enter flashing mode by itself. Follow the BOOT button steps and try again.",
     "esp32_firmware_not_checked": "Check the ESP32 firmware before the test.",
-    "keys_invalid": "prod.keys isn't valid."
+    "keys_invalid": "prod.keys isn't valid.",
+    "console_never_joined": "The Switch never joined the room. Check that it searched for the trade with the same code and try again.",
+    "pokeldn_missing": "The Switch games engine (pokeldn) was not found in this install.",
+    "received_missing": "The trade finished, but the received Pokémon did not show up."
   },
   "history": {
     "title": "Trade history",
@@ -916,7 +919,7 @@
     },
     "esp32fw": {
       "title": "ESP32 firmware",
-      "help": "The ESP32 needs the TradeRock firmware (from the easyworld project) to talk to the Switch. TradeRock ships the right firmware for each chip and flashes it by itself, over USB.",
+      "help": "The ESP32 needs the pokeldn firmware to talk to the Switch (every game uses the same one). TradeRock ships the right firmware for each chip and flashes it by itself, over USB.",
       "probe": "Check the firmware",
       "identify": "Identify the board",
       "verify": "Check the version",
@@ -1326,7 +1329,9 @@
       "linkCodeLgpeTip": "In Let's Go, the code is three Pokémon picked in order. Pick here the same ones you will pick on the Switch. Left blank, the default is three Pikachu.",
       "offersTip": "Each Pokémon you pick goes to the Switch, one per trade, in this order. This game needs no filler Pokémon.",
       "tradeNumber": "Trade {{n}}",
-      "otherGame": "It is from {{game}}: you can move it to another game in the vault"
+      "otherGame": "It is from {{game}}: you can move it to another game in the vault",
+      "tradeBack": "Trade back to evolve",
+      "tradeBackTip": "For a Switch Pokémon that evolves by trade: after each trade, TradeRock sends the Pokémon it received straight back (it evolves on the Switch) and gets back the one it sent. In the end, the vault is unchanged."
     },
     "live": {
       "running": "Trade in progress",

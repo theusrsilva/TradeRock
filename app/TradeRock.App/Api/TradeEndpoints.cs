@@ -20,7 +20,8 @@ public static class TradeEndpoints
         TrainerDto Trainer,
         SimulationOptions? Simulation,
         bool AcceptIllegal = false,
-        string? LinkCode = null);
+        string? LinkCode = null,
+        bool TradeBack = false);
 
     public sealed record TradeHistoryItemDto(
         Guid Id, DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string EngineId, bool IsSimulation,
@@ -103,7 +104,8 @@ public static class TradeEndpoints
                 party, body.OfferedSlots, body.Game,
                 new TrainerProfile(body.Trainer.Name, ids.Tid16, sid16),
                 engine.IsSimulation ? body.Simulation : null,
-                string.IsNullOrWhiteSpace(body.LinkCode) ? null : body.LinkCode.Trim());
+                string.IsNullOrWhiteSpace(body.LinkCode) ? null : body.LinkCode.Trim(),
+                body.TradeBack);
 
             // Um rádio, uma troca por vez: com o rádio livre começa agora; senão espera a vez na fila.
             var caller = Caller.Of(context);

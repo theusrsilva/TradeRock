@@ -235,7 +235,7 @@
     "radio_rx_failed": "A entrada autenticou, mas a placa parou de receber os anúncios do Switch. Configure o NetworkManager em Configurações → Conexão e tente de novo.",
     "engine_broken": "O motor de troca está incompleto nesta instalação. Instale o TradeRock de novo.",
     "trade_incomplete": "Só parte das trocas foi concluída.",
-    "engine_error": "O motor de troca parou com um erro.",
+    "engine_error": "O motor dos jogos do Switch parou com um erro. Os detalhes estão no log.",
     "invalid_request": "O pedido de troca tem um dado que o motor não aceita.",
     "missing_tools": "Faltam programas do sistema que o motor usa. Veja Configurações → Conexão.",
     "phy_not_found": "A placa Wi-Fi escolhida não está mais no PC. Ela foi desconectada?",
@@ -275,7 +275,10 @@
     "esptool_error": "O gravador de firmware parou com um erro.",
     "boot_mode_required": "A placa não entrou no modo de gravação sozinha. Siga as instruções do botão BOOT e tente de novo.",
     "esp32_firmware_not_checked": "Confira o firmware do ESP32 antes do teste.",
-    "keys_invalid": "O prod.keys não é válido."
+    "keys_invalid": "O prod.keys não é válido.",
+    "console_never_joined": "O Switch não entrou na sala. Confira se ele procurou a troca com o mesmo código e tente de novo.",
+    "pokeldn_missing": "O motor dos jogos do Switch (pokeldn) não foi encontrado nesta instalação.",
+    "received_missing": "A troca terminou, mas o Pokémon recebido não apareceu."
   },
   "history": {
     "title": "Histórico de trocas",
@@ -916,7 +919,7 @@
     },
     "esp32fw": {
       "title": "Firmware do ESP32",
-      "help": "O ESP32 precisa do firmware do TradeRock (do projeto easyworld) para conversar com o Switch. O TradeRock traz o firmware certo para cada chip e grava sozinho, pelo USB.",
+      "help": "O ESP32 precisa do firmware do pokeldn para conversar com o Switch (todos os jogos usam o mesmo). O TradeRock traz o firmware certo para cada chip e grava sozinho, pelo USB.",
       "probe": "Verificar o firmware",
       "identify": "Identificar a placa",
       "verify": "Conferir a versão",
@@ -1326,7 +1329,9 @@
       "linkCodeLgpeTip": "No Let's Go, o código são três Pokémon escolhidos em ordem. Escolha aqui os mesmos que você vai escolher no Switch. Em branco, vale o padrão: três Pikachu.",
       "offersTip": "Cada Pokémon escolhido vai para o Switch, um por troca, nesta ordem. Nesse jogo não precisa de Pokémon de preenchimento.",
       "tradeNumber": "Troca {{n}}",
-      "otherGame": "É do {{game}}: dá para mover de jogo no cofre"
+      "otherGame": "É do {{game}}: dá para mover de jogo no cofre",
+      "tradeBack": "Trocar de volta para evoluir",
+      "tradeBackTip": "Para o Pokémon do Switch que evolui por troca: depois de cada troca, o TradeRock devolve na hora o Pokémon que recebeu (ele evolui no Switch) e recebe de volta o que tinha mandado. No fim, nada muda no cofre."
     },
     "live": {
       "running": "Troca em andamento",

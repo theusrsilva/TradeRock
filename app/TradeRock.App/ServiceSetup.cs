@@ -7,6 +7,7 @@ using TradeRock.Core;
 using TradeRock.Core.Games;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Engines;
+using TradeRock.Core.Engines.Pokeldn;
 using TradeRock.Core.Engines.Worker;
 using TradeRock.Core.Esp32;
 using TradeRock.Core.Pokemon;
@@ -58,17 +59,15 @@ public static class ServiceSetup
         services.AddSingleton<IPrivilegedShell, PkexecShell>();
         services.AddSingleton(sp => new BundledWorker(sp.GetRequiredService<IPrivilegedShell>(), payload));
 
-        // ESP32: a serial pelo núcleo do easyworld (com os patches) e o esptool pelo Python embutido do
-        // worker, rodando como o usuário. Em desenvolvimento, o runtime também vale de build/worker/stage.
+        // ESP32: firmware, placa e troca pelo pokeldn (D23) e o esptool, os dois no Python embutido do worker,
+        // rodando como o usuário. Em desenvolvimento, o runtime também vale de build/worker/stage.
         var esp32Runtime = config["Engines:Esp32:Runtime"];
         var devStage = development ? FindDevStage() : null;
-        services.AddSingleton<IEsp32Link, SerialEsp32Link>();
-        services.AddSingleton<IEsp32Flasher>(sp => new PythonEsp32Flasher(
-            () => esp32Runtime ?? PythonEsp32Flasher.FindRuntime(payload, development, devStage),
-            Path.Combine(paths.DataDir, "tmp")));
+        Func<string?> runtime = () => esp32Runtime ?? PythonEsp32Flasher.FindRuntime(payload, development, devStage);
+        services.AddSingleton<IPokeldnProcess>(new PokeldnProcess(runtime, Path.Combine(paths.DataDir, "tmp")));
+        services.AddSingleton<IEsp32Link, PokeldnEsp32Link>();
+        services.AddSingleton<IEsp32Flasher>(sp => new PythonEsp32Flasher(runtime, Path.Combine(paths.DataDir, "tmp")));
         services.AddSingleton<TradeRock.Core.Setup.Esp32Setup>();
-        services.AddSingleton<IEsp32Session, UpstreamEsp32Session>();
-        services.AddSingleton(new Esp32EngineOptions { LogsDir = Path.Combine(paths.LogsDir, "esp32") });
 
         // Motores: o primeiro registrado é o padrão (simulação).
         var fake = new FakeEngineOptions
@@ -83,7 +82,7 @@ public static class ServiceSetup
             ApprovalSeconds = config.GetValue("Engines:PythonLdn:ApprovalSeconds", 100),
         });
         services.AddSingleton<ITradeEngine, PythonLdnEngine>();
-        services.AddSingleton<ITradeEngine, Esp32SerialEngine>();
+        services.AddSingleton<ITradeEngine, PokeldnEngine>();
         services.AddSingleton<EngineRegistry>();
     }
 

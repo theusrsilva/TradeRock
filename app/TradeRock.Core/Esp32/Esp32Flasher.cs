@@ -82,7 +82,7 @@ public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir
         ["op"] = op,
         ["port"] = port,
         ["image"] = path,
-        ["flashSize"] = image.FlashSize,
+        ["flashSize"] = FirmwareImage.FlashSizeParam,
         ["flashMode"] = FirmwareImage.FlashMode,
         ["flashFreq"] = FirmwareImage.FlashFreq,
     };
@@ -109,9 +109,12 @@ public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir
         r["revision"]?.GetValue<int>() ?? 0,
         r["flashSize"]?.GetValue<string>());
 
-    private async Task<JsonObject> RunAsync(JsonObject request, Action<Esp32Progress>? progress, CancellationToken ct)
+    /// <summary>
+    /// O Python embutido rodando worker/run.py com <paramref name="args"/>, como o usuário, com ambiente mínimo:
+    /// pedido e respostas em JSON UTF-8 pela entrada e saída padrão (esptool e pokeldn).
+    /// </summary>
+    public static ProcessStartInfo StartInfo(string root, string tempDir, params string[] args)
     {
-        var root = runtimeRoot() ?? throw new Esp32Exception("esptool_missing", "O esptool embutido não foi encontrado.");
         var start = new ProcessStartInfo(PythonPath(root))
         {
             RedirectStandardInput = true,
@@ -124,9 +127,10 @@ public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir
             StandardOutputEncoding = System.Text.Encoding.UTF8,
             StandardErrorEncoding = System.Text.Encoding.UTF8,
         };
-        foreach (var arg in new[] { "-I", "-B", Path.Combine(root, "worker", "run.py"), "--esp32" })
+        foreach (var arg in new[] { "-I", "-B", Path.Combine(root, "worker", "run.py") }.Concat(args))
             start.ArgumentList.Add(arg);
         start.Environment.Clear();
+        Directory.CreateDirectory(tempDir);
         if (OperatingSystem.IsWindows())
         {
             // O Python do Windows precisa do SystemRoot (criptografia, sockets) e de uma pasta temporária.
@@ -137,14 +141,21 @@ public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir
             // Sem a pasta pessoal o Python falha ("Could not determine home directory") ao carregar a
             // configuração do esptool. Aponta para uma pasta do próprio TradeRock, vazia, para que o
             // esptool também não leia arquivos de configuração soltos do usuário.
-            Directory.CreateDirectory(tempDir);
             start.Environment["USERPROFILE"] = tempDir;
         }
         else
         {
             start.Environment["PATH"] = "/usr/bin:/bin";
             start.Environment["LANG"] = "C.UTF-8";
+            start.Environment["HOME"] = tempDir; // idem no Linux (esptool e pokeldn)
         }
+        return start;
+    }
+
+    private async Task<JsonObject> RunAsync(JsonObject request, Action<Esp32Progress>? progress, CancellationToken ct)
+    {
+        var root = runtimeRoot() ?? throw new Esp32Exception("esptool_missing", "O esptool embutido não foi encontrado.");
+        var start = StartInfo(root, tempDir, "--esp32");
 
         using var process = Process.Start(start) ?? throw new Esp32Exception("esptool_missing", "Não foi possível iniciar o esptool.");
         using var kill = ct.Register(() => { try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } });

@@ -1,5 +1,6 @@
-"""Ponto de entrada: o servidor (padrão), um dos processos filhos (--child trade|card|beacon) ou a
-gravação do ESP32 (--esp32, roda como o usuário: o app chama o Python embutido direto, sem pkexec)."""
+"""Ponto de entrada: o servidor (padrão), um dos processos filhos (--child trade|card|beacon), a gravação do ESP32
+(--esp32) ou o pokeldn (--pokeldn board|trade). Os dois últimos rodam como o usuário: o app chama o Python embutido
+direto, sem pkexec."""
 
 import json
 import os
@@ -21,6 +22,13 @@ def run(argv, root):
     if argv == ["--esp32"]:
         from . import esp32_flash
         return esp32_flash.main()
+    # pokeldn (D23): placa ESP32 e troca com os jogos do Switch, como o usuário (sem pkexec) no ESP32.
+    if argv == ["--pokeldn", "board"]:
+        from . import pokeldn_board
+        return pokeldn_board.main(root)
+    if argv == ["--pokeldn", "trade"]:
+        from . import pokeldn_trade
+        return pokeldn_trade.main(root)
     from . import server
     return server.main(install_info(root))
 

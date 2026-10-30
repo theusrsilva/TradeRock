@@ -47,6 +47,12 @@ public interface ITradeEngine
     /// <summary>Jogos que o motor sabe trocar. Os motores reais do FRLG só trocam com o FireRed/LeafGreen.</summary>
     bool Supports(GameFamily family) => family == GameFamily.Frlg;
 
+    /// <summary>
+    /// O motor roda o pokeldn (D23): o TradeRock cria a sala e o console entra (também no FRLG), e existe o
+    /// "trocar de volta". Os motores antigos do FRLG entram na sala do console.
+    /// </summary>
+    bool UsesPokeldn => false;
+
     Task<TradeAttemptResult> RunAttemptAsync(
         TradeRequest request,
         Func<TradeEvent, ValueTask> emit,

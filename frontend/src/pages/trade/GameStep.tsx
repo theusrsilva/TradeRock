@@ -5,8 +5,8 @@ import { GAMES, gameOf, type GameDef } from '../../lib/games'
 import type { TradeGame } from '../../lib/types'
 
 /**
- * Primeiro passo da troca: o jogo e a versão. Com o motor real, só o FireRed/LeafGreen troca até a Entrega 15
- * (motor do pokeldn); os outros jogos já funcionam no modo demonstração.
+ * Primeiro passo da troca: o jogo e a versão. Cada motor diz os jogos que troca (o ESP32 com o pokeldn, todos;
+ * a placa Wi-Fi, por enquanto, só o FRLG). No modo demonstração, todos.
  */
 export function GameStep({
   game,

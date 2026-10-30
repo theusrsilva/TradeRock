@@ -247,8 +247,8 @@ public sealed class Esp32Setup(SetupService setup, SettingsStore settings, IEsp3
             : scan.Rooms.Count > 0 ? "other_session"
             : "not_found";
         var networks = scan.Rooms.Select(r => new SwitchTestNetwork($"0x{r.CommunicationId:x16}", r.Channel, r.Protocol,
-            SerialEsp32Link.IsFrlg(r.CommunicationId), r.Members, r.Maximum)).ToList();
-        var channels = SerialEsp32Link.Channels.Select(c => new SwitchTestChannel(c, true, null)).ToList();
+            PokeldnEsp32Link.IsPokemon(r.CommunicationId), r.Members, r.Maximum)).ToList();
+        var channels = PokeldnEsp32Link.Channels.Select(c => new SwitchTestChannel(c, true, null)).ToList();
         return new SwitchTestResult(port, scan.FoundFrlg, code, at, networks, channels, scan.Undecryptable,
             scan.UndecryptableChannels, scan.Sweeps, Math.Round(scan.Seconds, 1), Radio: "esp32");
     }

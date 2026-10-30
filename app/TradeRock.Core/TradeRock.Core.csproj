@@ -35,8 +35,9 @@
 
   <!-- Firmware do ESP32 (binários completos publicados pelo easyworld, gravados em 0x0) e os SHA256 deles. -->
   <ItemGroup>
-    <EmbeddedResource Include="..\..\engines\frlg-ldn-trade-esp32\firmware\release\*.bin" LogicalName="firmware/%(Filename)%(Extension)" />
-    <EmbeddedResource Include="..\..\engines\frlg-ldn-trade-esp32\firmware\release\SHA256SUMS.txt" LogicalName="firmware/SHA256SUMS.txt" />
+    <!-- Firmware do ESP32: o do pokeldn para todos os jogos (D23), de scripts/fetch-pokeldn-firmware.sh. -->
+    <EmbeddedResource Include="..\..\assets\firmware\pokeldn\*.bin" LogicalName="firmware/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\assets\firmware\pokeldn\SHA256SUMS.txt" LogicalName="firmware/SHA256SUMS.txt" />
   </ItemGroup>
 
   <!-- Pokémon de demonstração (modo demonstração e testes), lidos do submódulo do easyworld. -->
