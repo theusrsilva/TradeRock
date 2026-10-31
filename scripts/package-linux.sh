@@ -30,10 +30,10 @@ fi
 DEB_VERSION=${VERSION/-/\~} # 1.0.0-rc.1 → 1.0.0~rc.1 (vem antes da 1.0.0 no dpkg)
 
 # Runtime do AppImage (AppImage/type2-runtime, MIT): estático, não precisa da libfuse2 do sistema.
-# O upstream só publica o "continuous"; o arquivo fica no cache pelo sha256, e uma mudança lá fora
-# falha aqui com uma mensagem clara (atualize o sha256 depois de conferir a origem).
-RUNTIME_URL=https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64
-RUNTIME_SHA256=${TRADEROCK_APPIMAGE_RUNTIME_SHA256:-156f4bdbde9c52d01814600013e0a273f0118dc2de98975f3c8c63427ec79074}
+# Versão fixa (o "continuous" muda sem aviso e quebrava o CI); o arquivo fica no cache pelo sha256, que
+# é o mesmo que o GitHub mostra no Release. Para atualizar, troque a versão e o sha256 juntos.
+RUNTIME_URL=https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+RUNTIME_SHA256=${TRADEROCK_APPIMAGE_RUNTIME_SHA256:-2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d}
 MAINTAINER=${TRADEROCK_MAINTAINER:-"TradeRock <https://github.com/theusrsilva/TradeRock/issues>"}
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/traderock"
 BUILD=build/package
