@@ -12,9 +12,10 @@ import subprocess
 from dataclasses import dataclass
 
 # Nomes das interfaces virtuais: as do motor (ldn, ldn-mon, ldn-tap, ldnclient, ldnc0..9, ldnrx) e
-# a do teste da placa (ldntest). Todas começam com "ldn", o que casa com o NetworkManager e o udev.
+# as do teste da placa (ldntest e ldntestap). Todas começam com "ldn", o que casa com o NetworkManager e o udev.
 LDN_PREFIX = "ldn"
 TEST_VIF = "ldntest"
+AP_VIF = "ldntestap"
 
 NM_CONF_PATH = "/etc/NetworkManager/conf.d/zz-ldn-unmanaged.conf"
 NM_CONF = """\

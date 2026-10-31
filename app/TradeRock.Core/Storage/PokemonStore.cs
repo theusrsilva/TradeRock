@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using PKHeX.Core;
 using TradeRock.Core.Builder;
+using TradeRock.Core.Games;
 using TradeRock.Core.Pokemon;
 
 namespace TradeRock.Core.Storage;
@@ -9,16 +10,19 @@ namespace TradeRock.Core.Storage;
 public sealed record ImportResult(StoredPokemon Pokemon, bool Created, bool Restored = false);
 
 /// <summary>
-/// Guarda Pokémon: o .pk3 decriptado vai para vault/&lt;hh&gt;/&lt;sha256&gt;.pk3 e o resumo para o SQLite.
-/// Arquivos idênticos (mesmo hash, inclusive .pk3 vs .ek3 do mesmo Pokémon) viram um só registro por cofre;
+/// Guarda Pokémon de qualquer jogo do catálogo: o arquivo decriptado vai para vault/&lt;hh&gt;/&lt;sha256&gt;.&lt;ext&gt;
+/// (.pk3, .pk8, .pk9...) e o resumo para o SQLite. Arquivos idênticos (mesmo hash, inclusive o mesmo Pokémon
+/// criptografado ou não) viram um só registro por cofre;
 /// o arquivo em disco é um só, mesmo que esteja em vários cofres.
 /// </summary>
 public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPaths paths, TimeProvider time)
 {
+    /// <param name="family">Jogo do arquivo quando o conteúdo e o nome não dizem (Pokémon recebido numa troca).</param>
     public async Task<ImportResult> ImportAsync(
-        ReadOnlyMemory<byte> file, PokemonOrigin origin, string? sourceFileName, CancellationToken ct)
+        ReadOnlyMemory<byte> file, PokemonOrigin origin, string? sourceFileName, CancellationToken ct,
+        GameFamily? family = null)
     {
-        var pk = Pk3Reader.Read(file.Span);
+        var pk = PokemonReader.Read(file.Span, family, sourceFileName);
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var existing = await db.Pokemon.SingleOrDefaultAsync(p => p.Sha256 == pk.Sha256, ct);
@@ -43,7 +47,9 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
             Id = Guid.CreateVersion7(),
             Sha256 = pk.Sha256,
             Size = pk.Data.Length,
+            Family = s.Family,
             Species = s.Species,
+            Form = s.Form,
             SpeciesName = s.SpeciesName,
             Nickname = s.Nickname,
             Level = s.Level,
@@ -56,8 +62,8 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
             OriginGame = s.OriginGame,
             HeldItem = s.HeldItem,
             Fateful = s.Fateful,
-            Pid = new PK3(pk.Data.ToArray()).PID,
-            Legality = AnalyzeLegality(pk.Data),
+            Pid = s.Pid,
+            Legality = AnalyzeLegality(pk.Data, s.Family),
             LegalityPkhexVersion = LegalityReporter.PkhexVersion,
             Origin = origin,
             SourceFileName = sourceFileName is null ? null : Path.GetFileName(sourceFileName),
@@ -87,13 +93,13 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
     /// </summary>
     public async Task<StoredPokemon> ReplaceAsync(Guid id, ReadOnlyMemory<byte> file, CancellationToken ct)
     {
-        var pk = Pk3Reader.Read(file.Span);
-
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var stored = await db.Pokemon.Include(p => p.Tags).SingleOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new VaultException("pokemon_not_found");
         if (stored.DeletedAt is not null)
             throw new VaultException("pokemon_in_trash");
+        // A edição não muda o jogo do Pokémon (mover entre jogos é outra operação).
+        var pk = PokemonReader.Read(file.Span, stored.Family);
         if (stored.Sha256 == pk.Sha256)
             return stored;
         // O resultado já existe como outro Pokémon deste cofre (mesmo arquivo): não dá para ter dois iguais.
@@ -106,6 +112,7 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
         stored.Sha256 = pk.Sha256;
         stored.Size = pk.Data.Length;
         stored.Species = s.Species;
+        stored.Form = s.Form;
         stored.SpeciesName = s.SpeciesName;
         stored.Nickname = s.Nickname;
         stored.Level = s.Level;
@@ -118,20 +125,84 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
         stored.OriginGame = s.OriginGame;
         stored.HeldItem = s.HeldItem;
         stored.Fateful = s.Fateful;
-        stored.Pid = new PK3(pk.Data.ToArray()).PID;
-        stored.Legality = AnalyzeLegality(pk.Data);
+        stored.Pid = s.Pid;
+        stored.Legality = AnalyzeLegality(pk.Data, s.Family);
         stored.LegalityPkhexVersion = LegalityReporter.PkhexVersion;
         await db.SaveChangesAsync(ct);
 
         // O arquivo antigo é compartilhado entre cofres: só sai quando ninguém mais o usa.
         if (!await db.Pokemon.IgnoreQueryFilters().AnyAsync(p => p.Sha256 == oldSha, ct))
         {
-            var path = FilePath(oldSha);
+            var path = FilePath(oldSha, stored.Family);
             if (File.Exists(path))
                 File.Delete(path);
         }
         return stored;
     }
+
+    /// <summary>
+    /// Move o Pokémon para outro jogo, como o HOME (<see cref="HomeTransfer"/>). O registro continua o mesmo (id,
+    /// caixa, etiquetas, histórico); mudam o jogo e os dados. Recusa com <see cref="VaultException"/> (código do HOME).
+    /// </summary>
+    public async Task<(StoredPokemon Pokemon, IReadOnlyList<string> Notes)> TransferAsync(
+        Guid id, GameFamily to, ITrainerInfo owner, CancellationToken ct)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var stored = await db.Pokemon.Include(p => p.Tags).SingleOrDefaultAsync(p => p.Id == id, ct)
+            ?? throw new VaultException("pokemon_not_found");
+        if (stored.DeletedAt is not null)
+            throw new VaultException("pokemon_in_trash");
+        if (stored.Family == to)
+            throw new VaultException("same_game");
+
+        var source = PokemonReader.ToEntity(await ReadDataAsync(stored, ct), stored.Family);
+        var moved = HomeTransfer.Move(source, GameCatalog.Get(to), owner);
+        if (!moved.Ok)
+            throw new VaultException(moved.Refusal ?? "no_route");
+
+        var data = new byte[moved.Pokemon!.SIZE_STORED];
+        moved.Pokemon.WriteDecryptedDataStored(data);
+        var pk = PokemonReader.Read(data, to);
+        if (await db.Pokemon.AnyAsync(p => p.Sha256 == pk.Sha256 && p.Id != id, ct))
+            throw new VaultException("pokemon_duplicate");
+
+        await WriteFileAsync(pk, ct);
+        var (oldSha, oldFamily) = (stored.Sha256, stored.Family);
+        var s = pk.Summary;
+        stored.Sha256 = pk.Sha256;
+        stored.Size = pk.Data.Length;
+        stored.Family = s.Family;
+        stored.Species = s.Species;
+        stored.Form = s.Form;
+        stored.SpeciesName = s.SpeciesName;
+        stored.Nickname = s.Nickname;
+        stored.Level = s.Level;
+        stored.IsShiny = s.IsShiny;
+        stored.IsEgg = s.IsEgg;
+        stored.Gender = s.Gender;
+        stored.OtName = s.OtName;
+        stored.Tid = s.Tid;
+        stored.Sid = s.Sid;
+        stored.OriginGame = s.OriginGame;
+        stored.HeldItem = s.HeldItem;
+        stored.Fateful = s.Fateful;
+        stored.Pid = s.Pid;
+        stored.Legality = AnalyzeLegality(pk.Data, s.Family);
+        stored.LegalityPkhexVersion = LegalityReporter.PkhexVersion;
+        await db.SaveChangesAsync(ct);
+
+        if (!await db.Pokemon.IgnoreQueryFilters().AnyAsync(p => p.Sha256 == oldSha, ct))
+        {
+            var path = FilePath(oldSha, oldFamily);
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        return (stored, moved.Notes);
+    }
+
+    /// <summary>Para quais jogos o Pokémon pode ir (null = pode; senão o código da recusa).</summary>
+    public async Task<IReadOnlyDictionary<GameFamily, string?>> DestinationsAsync(StoredPokemon pokemon, CancellationToken ct) =>
+        HomeTransfer.Destinations(PokemonReader.ToEntity(await ReadDataAsync(pokemon, ct), pokemon.Family), pokemon.Family);
 
     public async Task<IReadOnlyList<StoredPokemon>> ListAsync(CancellationToken ct)
     {
@@ -146,10 +217,10 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
         return await db.Pokemon.AsNoTracking().Include(p => p.Tags).SingleOrDefaultAsync(p => p.Id == id, ct);
     }
 
-    /// <summary>Lê o .pk3 do disco e confere o hash (arquivo adulterado ou corrompido = erro).</summary>
+    /// <summary>Lê o arquivo do disco e confere o hash (arquivo adulterado ou corrompido = erro).</summary>
     public async Task<byte[]> ReadDataAsync(StoredPokemon pokemon, CancellationToken ct)
     {
-        var data = await File.ReadAllBytesAsync(FilePath(pokemon.Sha256), ct);
+        var data = await File.ReadAllBytesAsync(FilePath(pokemon.Sha256, pokemon.Family), ct);
         var hash = Convert.ToHexStringLower(SHA256.HashData(data));
         if (hash != pokemon.Sha256)
             throw new InvalidDataException($"O arquivo do Pokémon {pokemon.Id} não confere com o hash guardado.");
@@ -160,7 +231,7 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
     public async Task<LegalityReport> GetLegalityReportAsync(StoredPokemon pokemon, string language, CancellationToken ct)
     {
         var data = await ReadDataAsync(pokemon, ct);
-        return LegalityReporter.Analyze(new PK3(data), language);
+        return LegalityReporter.Analyze(PokemonReader.ToEntity(data, pokemon.Family), language);
     }
 
     /// <summary>
@@ -178,9 +249,10 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
             try
             {
                 var data = await ReadDataAsync(p, ct);
-                p.Legality = AnalyzeLegality(data);
-                p.Fateful = Pk3Reader.Read(data).Summary.Fateful;
-                p.Pid = new PK3(data.ToArray()).PID;
+                var summary = PokemonReader.Summarize(PokemonReader.ToEntity(data, p.Family), p.Family);
+                p.Legality = AnalyzeLegality(data, p.Family);
+                p.Fateful = summary.Fateful;
+                p.Pid = summary.Pid;
             }
             catch (Exception e) when (e is IOException or InvalidDataException)
             {
@@ -193,14 +265,15 @@ public sealed class PokemonStore(IDbContextFactory<TradeRockDb> dbFactory, AppPa
         return stale.Count;
     }
 
-    public static string AnalyzeLegality(byte[] data) =>
-        LegalityReporter.Analyze(new PK3(data.ToArray())).Status.ToString().ToLowerInvariant();
+    public static string AnalyzeLegality(byte[] data, GameFamily family) =>
+        LegalityReporter.Analyze(PokemonReader.ToEntity(data, family)).Status.ToString().ToLowerInvariant();
 
-    public string FilePath(string sha256) => Path.Combine(paths.VaultDir, sha256[..2], sha256 + ".pk3");
+    public string FilePath(string sha256, GameFamily family) =>
+        Path.Combine(paths.VaultDir, sha256[..2], sha256 + "." + GameCatalog.Get(family).Extension);
 
-    private async Task WriteFileAsync(Pk3File pk, CancellationToken ct)
+    private async Task WriteFileAsync(PokemonFile pk, CancellationToken ct)
     {
-        var target = FilePath(pk.Sha256);
+        var target = FilePath(pk.Sha256, pk.Summary.Family);
         if (File.Exists(target))
             return;
 

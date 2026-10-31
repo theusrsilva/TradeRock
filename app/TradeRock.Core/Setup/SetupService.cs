@@ -27,7 +27,6 @@ public sealed record SetupStatePatch(
     string? Phy = null,
     string? SerialPort = null,
     string? Esp32Board = null,
-    bool? Esp32ModuleConfirmed = null,
     bool? KeysSkipped = null,
     bool? Completed = null);
 
@@ -80,13 +79,9 @@ public sealed class SetupService(SettingsStore settings, ProdKeys keys, ISystemP
             Phy = patch.Phy ?? state.Phy,
             SerialPort = patch.SerialPort ?? state.SerialPort,
             Esp32Board = patch.Esp32Board ?? state.Esp32Board,
-            Esp32ModuleConfirmed = patch.Esp32ModuleConfirmed ?? state.Esp32ModuleConfirmed,
             KeysSkipped = patch.KeysSkipped ?? state.KeysSkipped,
             Completed = patch.Completed ?? state.Completed,
         };
-        // Trocar de placa ESP32 exige confirmar o módulo de novo.
-        if (patch.Esp32Board is not null && patch.Esp32ModuleConfirmed is null)
-            state = state with { Esp32ModuleConfirmed = false };
         await settings.SetAsync(StateKey, state, ct);
         return state;
     }
@@ -109,7 +104,7 @@ public sealed class SetupService(SettingsStore settings, ProdKeys keys, ISystemP
             var passed = card.Status is not (CompatStatus.Problematic or CompatStatus.Unsupported);
             result = new CardTestResult(phy, passed, passed ? "passed" : "tx_failed", time.GetUtcNow(),
                 [.. new[] { 1, 6, 11 }.Select(c => new CardTestChannel(c, true, passed ? 5 : 0, passed ? 12 : 0, null))],
-                Simulated: true);
+                Simulated: true, Ap: passed ? true : null);
         }
         else
         {
@@ -228,7 +223,8 @@ public sealed class SetupService(SettingsStore settings, ProdKeys keys, ISystemP
                 c["error"]?.GetValue<string>()))
             .ToList();
         return new CardTestResult(phy, json["passed"]?.GetValue<bool>() ?? false,
-            json["code"]?.GetValue<string>() ?? "unknown", at, channels, json["error"]?.GetValue<string>());
+            json["code"]?.GetValue<string>() ?? "unknown", at, channels, json["error"]?.GetValue<string>(),
+            Ap: json["ap"]?.GetValue<bool?>(), ApError: json["apError"]?.GetValue<string>());
     }
 
     /// <summary>Instala a configuração do NetworkManager e do udev para as interfaces do LDN (via worker).</summary>

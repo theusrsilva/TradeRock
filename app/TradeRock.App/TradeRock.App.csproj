@@ -42,9 +42,10 @@
     <None Include="appsettings*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- Sprites 1–386 (PokeAPI, via submódulo do easyworld). Arte © Nintendo/Game Freak/The Pokémon Company. -->
+  <!-- Sprites 1–1025 do PokeAPI/sprites (1–386 vindos do easyworld; 387–1025 de scripts/fetch-sprites.sh).
+       Arte © Nintendo/Game Freak/The Pokémon Company. -->
   <ItemGroup>
-    <EmbeddedResource Include="..\..\engines\frlg-ldn-trade-esp32\assets\sprites\*.png" LogicalName="sprites/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\assets\sprites\*.png" LogicalName="sprites/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!--

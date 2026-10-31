@@ -1,5 +1,6 @@
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
+using TradeRock.Core.Games;
 using TradeRock.Core.Pokemon;
 
 namespace TradeRock.Core.Builder;
@@ -14,7 +15,7 @@ public sealed record BuildResult(
     string Generation, // regenerated | failed | timeout | invalid_request
     IReadOnlyList<string> Errors,
     byte[]? Data,
-    Pk3Summary? Summary,
+    PokemonSummary? Summary,
     PokemonSpec? Obtained,
     LegalityReport? Legality,
     IReadOnlyList<SpecDifference> Differences,
@@ -27,9 +28,10 @@ public sealed record BuildResult(
 }
 
 /// <summary>
-/// Modo automático ("legal por padrão"): o AutoMod procura um encontro válido nos jogos da Gen 3 e
-/// calcula PID/IV compatíveis (na Gen 3, natureza, habilidade, gênero e shiny saem do PID, e o
-/// PKHeX confere a correlação PID-IV do encontro). O resultado sempre passa pelo LegalityAnalysis.
+/// Modo automático ("legal por padrão"): o AutoMod procura um encontro válido e calcula PID/IV compatíveis
+/// (na Gen 3, natureza, habilidade, gênero e shiny saem do PID, e o PKHeX confere a correlação PID-IV do
+/// encontro). Nos jogos novos, o AutoMod gera no formato do jogo escolhido (Entrega 14). O resultado sempre
+/// passa pelo LegalityAnalysis.
 /// </summary>
 public static class PokemonBuilder
 {
@@ -42,7 +44,7 @@ public static class PokemonBuilder
         if (errors.Count > 0)
             return new BuildResult("invalid_request", errors, null, null, null, null, [], null);
 
-        var encounters = BuilderData.Encounters(spec.Species, spec.Game);
+        var encounters = BuilderData.Encounters(spec.Species, spec.Game, spec.Form);
         if (spec.EncounterKey is { } key)
         {
             var chosen = encounters.FirstOrDefault(e => e.Key == key);
@@ -138,16 +140,18 @@ public static class PokemonBuilder
 
     private static async Task<BuildResult> AttemptAsync(PokemonSpec spec, EncounterOption? encounter, string language, CancellationToken ct)
     {
-        var target = BuilderData.ToVersion(spec.Game);
+        var game = spec.GameInfo;
+        var target = GameCatalog.ToVersion(spec.Game);
         var text = spec.ToRegenText(encounter);
+        var ids = TrainerIds.FromDisplay(game, spec.Trainer.Tid, spec.Trainer.Sid) ?? (0, 0);
         var (created, status) = await AutoModEnvironment.RunAsync(target, () =>
         {
-            var set = new RegenTemplate(new ShowdownSet(text), 3);
+            var set = new RegenTemplate(new ShowdownSet(text), game.Format);
             var tr = new SimpleTrainerInfo(target)
             {
                 OT = spec.Trainer.Name,
-                TID16 = spec.Trainer.Tid,
-                SID16 = spec.Trainer.Sid,
+                TID16 = ids.Tid16,
+                SID16 = ids.Sid16,
                 Gender = spec.Trainer.Gender,
                 Language = spec.Language,
             };
@@ -155,11 +159,10 @@ public static class PokemonBuilder
             return (result.Created, result.Status);
         }, ct);
 
-        if (created is not PK3 pk)
-        {
-            // O AutoMod pode devolver outro formato quando falha antes de converter.
-            pk = created is null ? new PK3 { Species = spec.Species } : (PK3)EntityConverter.ConvertToType(created, typeof(PK3), out _)!;
-        }
+        // O AutoMod pode devolver outro formato quando falha antes de converter.
+        var pk = created?.GetType() == game.EntityType
+            ? created
+            : (created is null ? null : EntityConverter.ConvertToType(created, game.EntityType, out _)) ?? Fallback(game, spec);
 
         if (spec.HeldItem != 0)
         {
@@ -169,22 +172,43 @@ public static class PokemonBuilder
         return Finish(pk, spec, status.ToString().ToLowerInvariant(), language);
     }
 
-    internal static BuildResult Finish(PK3 pk, PokemonSpec requested, string generation, string language)
+    private static PKM Fallback(SwitchGame game, PokemonSpec spec)
+    {
+        var pk = game.Blank();
+        pk.Species = spec.Species;
+        pk.Form = spec.Form;
+        return pk;
+    }
+
+    internal static BuildResult Finish(PKM pk, PokemonSpec requested, string generation, string language)
     {
         var legality = LegalityReporter.Analyze(pk, language);
-        var data = new byte[Pk3Reader.PartySize];
-        if (!pk.PartyStatsPresent)
+        var game = GameCatalog.Of(requested.Game);
+        byte[] data;
+        if (pk is PK3 pk3)
+        {
+            data = new byte[Pk3Reader.PartySize];
+            if (!pk3.PartyStatsPresent)
+                pk3.ResetPartyStats();
+            pk3.WriteDecryptedDataParty(data);
+        }
+        else
+        {
+            // Jogos novos: a forma "de caixa", como o cofre guarda (PokemonReader).
             pk.ResetPartyStats();
-        pk.WriteDecryptedDataParty(data);
+            pk.RefreshChecksum();
+            data = new byte[pk.SIZE_STORED];
+            pk.WriteDecryptedDataStored(data);
+        }
 
-        var summary = Pk3Reader.Read(data).Summary;
+        var summary = PokemonReader.Summarize(pk, game.Family);
         var obtained = PokemonSpec.FromPk(pk, requested.Game);
         var encounter = legality.Status != LegalityStatus.Illegal
-            ? BuilderData.ToOption(new LegalityAnalysis(pk).EncounterOriginal)
+            ? BuilderData.ToOption(new LegalityAnalysis(pk).EncounterOriginal, pk.Format)
             : null;
 
         return new BuildResult(generation, [], data, summary, obtained, legality, Compare(requested, obtained), encounter,
-            RawPokemon.FromPk(pk));
+            pk is PK3 raw ? RawPokemon.FromPk(raw) : null);
     }
 
     /// <summary>O que ficou diferente do pedido (só campos que a pessoa definiu).</summary>
@@ -200,6 +224,7 @@ public static class PokemonBuilder
         }
 
         Check("species", true, s.specieslist[req.Species], s.specieslist[got.Species]);
+        Check("form", req.Form != 0, req.Form.ToString(), got.Form.ToString());
         Check("level", true, req.Level.ToString(), got.Level.ToString());
         Check("nature", req.Nature is not null, Name(s.natures, req.Nature), Name(s.natures, got.Nature));
         Check("ability", req.AbilitySlot is not null, req.AbilitySlot.ToString() ?? "", got.AbilitySlot.ToString() ?? "");

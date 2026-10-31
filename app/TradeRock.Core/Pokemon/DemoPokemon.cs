@@ -1,8 +1,8 @@
 namespace TradeRock.Core.Pokemon;
 
 /// <summary>
-/// Pokémon de demonstração embutidos (engines/frlg-ldn-trade-esp32/assets/party: MEWTWO e DEOXYS,
-/// validados pelo autor do easyworld). Usados no modo demonstração e nos testes.
+/// Pokémon de demonstração embutidos (assets/demo: MEWTWO e DEOXYS, fornecidos e validados pelo autor do
+/// easyworld). Usados no modo demonstração e nos testes.
 /// </summary>
 public static class DemoPokemon
 {

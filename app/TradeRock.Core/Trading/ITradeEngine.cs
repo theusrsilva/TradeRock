@@ -1,3 +1,5 @@
+using TradeRock.Core.Games;
+
 namespace TradeRock.Core.Trading;
 
 public enum AttemptOutcome
@@ -41,6 +43,21 @@ public interface ITradeEngine
     bool IsSimulation { get; }
 
     Task<EngineAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken);
+
+    /// <summary>Jogos que o motor sabe trocar. Os motores reais do FRLG só trocam com o FireRed/LeafGreen.</summary>
+    bool Supports(GameFamily family) => family == GameFamily.Frlg;
+
+    /// <summary>
+    /// O motor troca esse jogo pelo pokeldn (D23): o TradeRock cria a sala e o console entra (também no FRLG), e existe
+    /// o "trocar de volta". Os motores antigos do FRLG entram na sala do console.
+    /// </summary>
+    bool UsesPokeldn(GameFamily family) => false;
+
+    /// <summary>O motor precisa da configuração da conexão (prod.keys, rádio, teste com o Switch). O modo LAN não precisa.</summary>
+    bool NeedsSetup => true;
+
+    /// <summary>O jogo ignora o código de troca nesse motor (modo LAN do Sword/Shield).</summary>
+    bool IgnoresLinkCode => false;
 
     Task<TradeAttemptResult> RunAttemptAsync(
         TradeRequest request,

@@ -1,3 +1,6 @@
+using TradeRock.Core.Activities;
+using TradeRock.Core.Engines.Pokeldn;
+using TradeRock.Core.Games;
 using TradeRock.Core.Trading;
 
 namespace TradeRock.Core.Engines;
@@ -17,7 +20,7 @@ public sealed class FakeEngineOptions
 /// que o frlg-ldn-trade registra (transport.py, sim.py, trade.py), com atrasos no ritmo de uma
 /// troca real, e cenários de falha para testar o assistente e o coordenador.
 /// </summary>
-public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProvider = null) : ITradeEngine
+public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProvider = null) : ITradeEngine, IActivityEngine
 {
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
 
@@ -31,6 +34,9 @@ public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProv
 
     public Task<EngineAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken) =>
         Task.FromResult(new EngineAvailability(true));
+
+    /// <summary>A simulação vale para todos os jogos do catálogo.</summary>
+    public bool Supports(GameFamily family) => true;
 
     public async Task<TradeAttemptResult> RunAttemptAsync(
         TradeRequest request, Func<TradeEvent, ValueTask> emit, CancellationToken cancellationToken)
@@ -168,5 +174,43 @@ public sealed class FakeEngine(FakeEngineOptions options, TimeProvider? timeProv
         ct.ThrowIfCancellationRequested();
         await Task.Yield();
         ct.ThrowIfCancellationRequested();
+    }
+
+    public bool SupportsActivity(GameFamily family, ActivityKind kind) => PokeldnActivity.Supports(family, kind);
+
+    /// <summary>Mystery Gift e raids simulados (modo demonstração): os mesmos marcos do pokeldn, sem console.</summary>
+    public async Task<ActivityResult> RunActivityAsync(ActivityRequest request, Func<ActivityEvent, ValueTask> emit, CancellationToken ct)
+    {
+        try
+        {
+            await emit(new ActivityEvent(ActivityEventKind.Started, _time.GetUtcNow()));
+            await Wait(1, ct);
+            if (request.Kind is ActivityKind.Raid or ActivityKind.Circle)
+            {
+                await emit(new ActivityEvent(ActivityEventKind.Lobby, _time.GetUtcNow()));
+                await Wait(5, ct);
+                await emit(new ActivityEvent(ActivityEventKind.Battle, _time.GetUtcNow()));
+                await Wait(10, ct);
+                await emit(new ActivityEvent(ActivityEventKind.Over, _time.GetUtcNow()));
+                return ActivityResult.Done;
+            }
+            if (request.GameInfo.Family == GameFamily.Swsh)
+            {
+                // O console só ouve o anúncio: fica no ar o tempo do pokeldn, ou até a pessoa encerrar.
+                await emit(new ActivityEvent(ActivityEventKind.Advertising, _time.GetUtcNow()));
+                await Task.Delay(TimeSpan.FromSeconds(PokeldnActivity.GiftSeconds), _time, ct);
+                return ActivityResult.Done;
+            }
+            await emit(new ActivityEvent(ActivityEventKind.Waiting, _time.GetUtcNow()));
+            await Wait(3, ct);
+            await emit(new ActivityEvent(ActivityEventKind.Joined, _time.GetUtcNow()));
+            await Wait(4, ct);
+            await emit(new ActivityEvent(ActivityEventKind.Delivered, _time.GetUtcNow()));
+            return ActivityResult.Done;
+        }
+        catch (OperationCanceledException)
+        {
+            return request.Kind == ActivityKind.Gift && request.GameInfo.Family == GameFamily.Swsh ? ActivityResult.Done : ActivityResult.Cancelled;
+        }
     }
 }

@@ -6,6 +6,7 @@ import { SearchSelect } from '../../components/SearchSelect'
 import { Badge, Button, Callout, HelpTip, Icon, IconButton, inputClass, selectClass, useToast } from '../../components/ui'
 import { ApiError, api, spriteUrl } from '../../lib/api'
 import { optionText, useBuilderData } from '../../lib/builderData'
+import { familyOf, gameByFamily } from '../../lib/games'
 import { requestTrade } from '../../lib/tradeRequest'
 import type {
   AdvancedResult,
@@ -21,6 +22,7 @@ import type {
   VaultPokemon,
 } from '../../lib/types'
 import { tagClass, tagColors } from './tagColors'
+import { TransferDialog } from './TransferDialog'
 
 type TabKey = 'resumo' | 'golpes' | 'status' | 'origem'
 const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const
@@ -57,9 +59,11 @@ export function Details({
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const toast = useToast()
-  const data = useBuilderData()
   const [tab, setTab] = useState<TabKey>('resumo')
-  const [loaded, setLoaded] = useState<{ id: string; spec: PokemonSpec; raw: RawPokemon } | null>(null)
+  // raw (dados brutos) só existe no FireRed/LeafGreen; nos jogos novos o painel usa o pedido do construtor (spec).
+  const [loaded, setLoaded] = useState<{ id: string; spec: PokemonSpec; raw: RawPokemon | null } | null>(null)
+  const data = useBuilderData(loaded?.spec.game ?? 'fire_red')
+  const gen3 = familyOf(pokemon) === 'frlg'
   const [species, setSpecies] = useState<SpeciesDetails | null>(null)
   const [locations, setLocations] = useState<Option[]>([])
   const [report, setReport] = useState<LegalityReport | null>(null)
@@ -68,6 +72,7 @@ export function Details({
   const [draft, setDraft] = useState<Draft | null>(null)
   const [saving, setSaving] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
+  const [transferOpen, setTransferOpen] = useState(false)
 
   // Dados completos (golpes, IVs, EVs, local) vêm do arquivo do Pokémon.
   useEffect(() => {
@@ -77,7 +82,7 @@ export function Details({
     setLoaded(null)
     let alive = true
     api
-      .get<{ spec: PokemonSpec; raw: RawPokemon }>(`/api/builder/from/${pokemon.id}`)
+      .get<{ spec: PokemonSpec; raw: RawPokemon | null }>(`/api/builder/from/${pokemon.id}`)
       .then((r) => alive && setLoaded({ id: pokemon.id, ...r }))
       .catch(() => undefined)
     return () => {
@@ -85,11 +90,13 @@ export function Details({
     }
   }, [pokemon.id, pokemon.sha256])
 
+  const specGame = loaded?.spec.game
   useEffect(() => {
-    api.get<SpeciesDetails>(`/api/builder/species/${pokemon.species}`).then(setSpecies).catch(() => setSpecies(null))
-  }, [pokemon.species])
+    const query = specGame ? `?game=${specGame}&form=${pokemon.form ?? 0}` : ''
+    api.get<SpeciesDetails>(`/api/builder/species/${pokemon.species}${query}`).then(setSpecies).catch(() => setSpecies(null))
+  }, [pokemon.species, pokemon.form, specGame])
 
-  const version = loaded?.raw.version
+  const version = loaded?.raw?.version
   useEffect(() => {
     if (!version) return
     api.get<Option[]>(`/api/builder/locations?version=${version}`).then(setLocations).catch(() => setLocations([]))
@@ -97,6 +104,13 @@ export function Details({
 
   const spec = loaded?.id === pokemon.id ? loaded.spec : null
   const raw = loaded?.id === pokemon.id ? loaded.raw : null
+  // O que o painel mostra, venha dos dados brutos (Gen 3) ou do pedido do construtor (jogos novos).
+  const view = spec
+    ? raw
+      ? { moves: raw.moves, ivs: raw.ivs, evs: raw.evs, heldItem: raw.heldItem, language: raw.language, abilitySlot: raw.abilityBit ? 1 : 0, ball: raw.ball, level: raw.level }
+      : { moves: spec.moves, ivs: spec.ivs ?? [0, 0, 0, 0, 0, 0], evs: spec.evs, heldItem: spec.heldItem, language: spec.language, abilitySlot: spec.abilitySlot ?? 0, ball: spec.ball ?? 0, level: spec.level }
+    : null
+  const maxEv = data?.maxEv ?? 255
   const trash = !!pokemon.deletedAt
   const name = (pokemon.nickname || pokemon.speciesName).toUpperCase()
   const place = trash
@@ -133,34 +147,36 @@ export function Details({
   }
 
   function startEdit() {
-    if (!spec || !raw) return
+    if (!spec || !view) return
     setEditError(null)
     setDraft({
       nickname: spec.nickname ?? '',
-      level: String(raw.level),
+      level: String(view.level),
       nature: spec.nature ?? 0,
-      heldItem: raw.heldItem,
-      moves: [0, 1, 2, 3].map((i) => raw.moves[i] ?? 0),
-      evs: [...raw.evs],
+      heldItem: view.heldItem,
+      moves: [0, 1, 2, 3].map((i) => view.moves[i] ?? 0),
+      evs: [...view.evs],
     })
   }
 
   const evTotal = draft ? draft.evs.reduce((a, b) => a + b, 0) : 0
   const levelNumber = draft ? Number(draft.level) : 0
-  const draftValid = !!draft && evTotal <= 510 && Number.isInteger(levelNumber) && levelNumber >= 1 && levelNumber <= 100
+  const draftValid =
+    !!draft && evTotal <= 510 && draft.evs.every((v) => v <= maxEv) && Number.isInteger(levelNumber) && levelNumber >= 1 && levelNumber <= 100
 
   /**
    * Natureza igual: monta pelo editor avançado (PID, IVs, treinador e origem continuam idênticos).
    * Natureza diferente: na Gen 3 ela sai do PID, então o Pokémon é gerado de novo como no Criar.
    */
   async function saveEdit() {
-    if (!draft || !spec || !raw || !draftValid) return
+    if (!draft || !spec || !draftValid) return
     setSaving(true)
     setEditError(null)
     const nickname = draft.nickname.trim() || null
     try {
       let bytes: string | null = null
-      if (draft.nature === spec.nature) {
+      // Jogos novos: sempre gerado de novo pelo construtor (não há editor avançado fora da Gen 3).
+      if (raw && draft.nature === spec.nature) {
         const next: RawPokemon = { ...raw, nickname, level: levelNumber, heldItem: draft.heldItem, moves: draft.moves, evs: draft.evs }
         const r = await api.post<AdvancedResult>('/api/builder/advanced', { raw: next, language: i18n.language })
         if (r.errors.length > 0) throw new Error(r.errors.map((e) => t(`builder.errors.${e}`, { defaultValue: e })).join(' '))
@@ -218,6 +234,17 @@ export function Details({
 
   return (
     <div className="flex min-h-0 flex-col">
+      {transferOpen && (
+        <TransferDialog
+          pokemon={pokemon}
+          onClose={() => setTransferOpen(false)}
+          onDone={(moved) => {
+            setTransferOpen(false)
+            onChanged()
+            toast(t('vault.transfer.done', { game: gameByFamily(moved.family).name }))
+          }}
+        />
+      )}
       <div className="flex items-center gap-2 border-b border-line px-3.5 py-3">
         <span className="flex-1 text-[13px] text-muted">{place}</span>
         <button
@@ -249,6 +276,7 @@ export function Details({
               </Badge>
             )}
             <Badge>{t(`pokemon.origin.${pokemon.origin}`)}</Badge>
+            <Badge icon="sports_esports">{gameByFamily(familyOf(pokemon)).name}</Badge>
           </div>
         </div>
       </div>
@@ -283,22 +311,23 @@ export function Details({
             ))}
           </div>
           <div className="flex min-h-[190px] flex-col gap-2 px-4 py-3.5">
-            {!spec || !raw ? (
+            {!spec || !view ? (
               <p className="text-sm text-muted">{t('common.loading')}</p>
             ) : tab === 'resumo' ? (
               <>
                 {row(t('builder.fields.nature'), optionText(data?.natures, spec.nature) ?? dash)}
-                {row(t('builder.fields.ability'), species?.abilities.find((a) => a.value === (raw.abilityBit ? 1 : 0))?.text ?? dash)}
-                {row(t('builder.fields.heldItem'), raw.heldItem ? (optionText(data?.items, raw.heldItem) ?? `#${raw.heldItem}`) : t('ui.vault.none'))}
+                {row(t('builder.fields.ability'), species?.abilities.find((a) => a.value === view.abilitySlot)?.text ?? dash)}
+                {row(t('builder.fields.heldItem'), view.heldItem ? (optionText(data?.items, view.heldItem) ?? `#${view.heldItem}`) : t('ui.vault.none'))}
                 {row(t('builder.fields.gender'), gender)}
-                {row(t('ui.vault.ot'), `${pokemon.otName} (${String(pokemon.tid).padStart(5, '0')})`)}
-                {row(t('builder.fields.language'), optionText(data?.languages, raw.language) ?? dash)}
+                {row(t('ui.vault.ot'), `${pokemon.otName} (${String(pokemon.tid).padStart(gen3 ? 5 : 6, '0')})`)}
+                {row(t('builder.fields.language'), optionText(data?.languages, view.language) ?? dash)}
+                {row(t('vault.game'), gameByFamily(familyOf(pokemon)).name)}
               </>
             ) : tab === 'golpes' ? (
-              raw.moves.filter((m) => m > 0).length === 0 ? (
+              view.moves.filter((m) => m > 0).length === 0 ? (
                 <p className="text-sm text-muted">{dash}</p>
               ) : (
-                raw.moves
+                view.moves
                   .filter((m) => m > 0)
                   .map((m, i) => (
                     <div key={`${m}-${i}`} className="flex h-[38px] items-center rounded-lg bg-surface2 px-3 text-sm font-semibold">
@@ -318,14 +347,14 @@ export function Details({
                     <span className="w-11 text-muted">{statLabel(i)}</span>
                     <div className="flex flex-1 flex-col gap-[3px]">
                       <div className="h-1.5 rounded-sm bg-surface2">
-                        <div className="h-full rounded-sm bg-accent" style={{ width: `${(raw.ivs[i] / 31) * 100}%` }} />
+                        <div className="h-full rounded-sm bg-accent" style={{ width: `${(view.ivs[i] / 31) * 100}%` }} />
                       </div>
                       <div className="h-1.5 rounded-sm bg-surface2">
-                        <div className="h-full rounded-sm bg-info" style={{ width: `${(raw.evs[i] / 255) * 100}%` }} />
+                        <div className="h-full rounded-sm bg-info" style={{ width: `${(view.evs[i] / maxEv) * 100}%` }} />
                       </div>
                     </div>
                     <span className="w-14 text-right font-mono text-xs">
-                      {raw.ivs[i]}·{raw.evs[i]}
+                      {view.ivs[i]}·{view.evs[i]}
                     </span>
                   </div>
                 ))}
@@ -334,10 +363,10 @@ export function Details({
               <>
                 {row(t('ui.vault.originLabel'), t(`pokemon.origin.${pokemon.origin}`))}
                 {row(t('builder.fields.version'), pokemon.originGame)}
-                {row(t('builder.fields.metLocation'), optionText(locations, raw.metLocation) ?? `#${raw.metLocation}`)}
-                {row(t('builder.fields.metLevel'), raw.metLevel || t('ui.vault.hatched'))}
-                {row(t('builder.fields.ball'), optionText(data?.balls, raw.ball) ?? dash)}
-                {raw.fateful && row(t('builder.fields.fateful'), '✓')}
+                {raw && row(t('builder.fields.metLocation'), optionText(locations, raw.metLocation) ?? `#${raw.metLocation}`)}
+                {raw && row(t('builder.fields.metLevel'), raw.metLevel || t('ui.vault.hatched'))}
+                {row(t('builder.fields.ball'), optionText(data?.balls, view.ball) ?? dash)}
+                {pokemon.fateful && row(t('builder.fields.fateful'), '✓')}
                 {pokemon.sourceFileName && row(t('ui.vault.file'), pokemon.sourceFileName)}
                 {row(t('ui.vault.added'), new Date(pokemon.addedAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' }))}
                 <button
@@ -419,7 +448,7 @@ export function Details({
             ) : (
               <>
                 <div className="flex gap-2">
-                  <Button className="h-[42px] flex-1" icon="edit" disabled={!spec || !raw || pokemon.isEgg} onClick={startEdit}>
+                  <Button className="h-[42px] flex-1" icon="edit" disabled={!spec || !view || pokemon.isEgg} onClick={startEdit}>
                     {t('ui.vault.edit')}
                   </Button>
                   <Button className="h-[42px] flex-1" variant="secondary" icon="swap_horiz" onClick={useInTrade}>
@@ -443,7 +472,8 @@ export function Details({
                         </option>
                       ))}
                   </select>
-                  <IconButton name="file_download" label={t('ui.vault.exportPk3')} onClick={() => onExport([pokemon.id])} />
+                  <IconButton name="file_download" label={gen3 ? t('ui.vault.exportPk3') : t('ui.vault.exportFile')} onClick={() => onExport([pokemon.id])} />
+                  <IconButton name="move_up" label={t('vault.transfer.action')} onClick={() => setTransferOpen(true)} />
                   <IconButton name="tune" label={t('pokemon.editInBuilder')} onClick={() => navigate(`/criar/${pokemon.id}`)} />
                   <IconButton
                     name="delete"

@@ -3,15 +3,16 @@ using System.Security.Cryptography;
 namespace TradeRock.Core.Esp32;
 
 /// <summary>
-/// Um binário completo de firmware do easyworld (engines/frlg-ldn-trade-esp32/firmware/release):
-/// bootloader + tabela de partições + app, gravado em 0x0, DIO / 80 MHz.
-/// <see cref="Target"/> é o CONFIG_IDF_TARGET, o mesmo nome que o firmware devolve no LDN_HELLO e o
-/// campo "chip" do catálogo.
+/// Um binário completo ("merged") do firmware do pokeldn (assets/firmware/pokeldn, Release do pokeldn): bootloader +
+/// partições + app, gravado em 0x0. Modo, frequência e tamanho da flash ficam como estão no cabeçalho da imagem
+/// ("keep"), como o próprio pokeldn grava (gui/board.py). <see cref="FlashSize"/> é o mínimo que a placa precisa ter.
+/// <see cref="Target"/> é o CONFIG_IDF_TARGET, o mesmo nome do campo "chip" do catálogo.
 /// </summary>
 public sealed record FirmwareImage(string Target, string File, string FlashSize, string Connection)
 {
-    public const string FlashMode = "dio";
-    public const string FlashFreq = "80m";
+    public const string FlashMode = "keep";
+    public const string FlashFreq = "keep";
+    public const string FlashSizeParam = "keep";
 
     /// <summary>Tamanho da flash em MB ("16MB" → 16).</summary>
     public int FlashSizeMb => int.Parse(FlashSize.TrimEnd('M', 'B'));
@@ -22,13 +23,14 @@ public sealed class FirmwareIntegrityException(string file) : Exception($"Firmwa
 /// <summary>Os binários embutidos no app, sempre conferidos pelo SHA256SUMS.txt publicado junto.</summary>
 public static class Esp32Firmware
 {
-    // Tabela de firmware/release/README.md do easyworld (chip, flash e interface de cada arquivo).
+    // docs/hardware_esp32.md do pokeldn: o ESP32 clássico fala pela UART (conversor USB), os outros pelo USB nativo.
+    // O ESP32-S2 não é suportado.
     public static IReadOnlyList<FirmwareImage> Images { get; } =
     [
-        new("esp32", "frlg-trade-esp32-uart-4mb-full.bin", "4MB", "uart"),
-        new("esp32c3", "frlg-trade-esp32c3-usb-4mb-full.bin", "4MB", "native_usb"),
-        new("esp32c6", "frlg-trade-esp32c6-uart-16mb-full.bin", "16MB", "uart"),
-        new("esp32s3", "frlg-trade-esp32s3-uart-16mb-full.bin", "16MB", "uart"),
+        new("esp32", "pokeldn-radio.bin", "4MB", "uart"),
+        new("esp32c3", "pokeldn-radio-c3.bin", "4MB", "native_usb"),
+        new("esp32c6", "pokeldn-radio-c6.bin", "4MB", "native_usb"),
+        new("esp32s3", "pokeldn-radio-s3.bin", "4MB", "native_usb"),
     ];
 
     public static FirmwareImage? For(string? target) => Images.FirstOrDefault(i => i.Target == target);

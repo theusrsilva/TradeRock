@@ -6,6 +6,7 @@
 #   python/  Python 3.12 do python-build-standalone (checksum conferido) + dependências do motor
 #            instaladas com hash fixo (worker/requirements.lock)
 #   engine/  frlg-ldn-trade do submódulo + patches de engines/patches/frlg-ldn-trade
+#   pokeldn/ pokeldn do submódulo + patches de engines/patches/pokeldn (scripts/stage-pokeldn.sh, D21)
 #   worker/  o worker (worker/traderock_worker)
 #   bin/     iw e ip estáticos (scripts/build-nettools.sh), usados antes dos do sistema
 #   BUILD-INFO.json
@@ -63,6 +64,9 @@ for p in engines/patches/frlg-ldn-trade/*.patch; do
 done
 cp engines/patches/frlg-ldn-trade/README.md "$STAGE/engine/PATCHES.md"
 
+echo "==> pokeldn + patches"
+scripts/stage-pokeldn.sh "$STAGE/pokeldn"
+
 echo "==> iw e ip estáticos"
 NETTOOLS=$(scripts/build-nettools.sh)
 mkdir -p "$STAGE/bin"
@@ -72,13 +76,15 @@ echo "==> worker"
 mkdir -p "$STAGE/worker"
 cp worker/run.py "$STAGE/worker/"
 cp -r worker/traderock_worker "$STAGE/worker/"
-find "$STAGE/engine" "$STAGE/worker" -name __pycache__ -prune -exec rm -rf {} +
-"$STAGE/python/bin/python3" -m compileall -q "$STAGE/engine" "$STAGE/worker"
+find "$STAGE/engine" "$STAGE/pokeldn" "$STAGE/worker" -name __pycache__ -prune -exec rm -rf {} +
+"$STAGE/python/bin/python3" -m compileall -q "$STAGE/engine" "$STAGE/pokeldn" "$STAGE/worker"
 
 commit=$(git -C engines/frlg-ldn-trade rev-parse HEAD)
 cat > "$STAGE/BUILD-INFO.json" <<JSON
 {
   "engineCommit": "$commit",
+  "pokeldnCommit": "$(git -C engines/pokeldn rev-parse HEAD)",
+  "pokeldnPatches": [$(for p in engines/patches/pokeldn/*.patch; do printf '"%s",' "$(basename "$p")"; done | sed 's/,$//')],
   "patches": [$(IFS=,; echo "${patches[*]}")],
   "python": "${PY_FILE%%-x86_64*}",
   "nettools": "$(basename "$NETTOOLS")"

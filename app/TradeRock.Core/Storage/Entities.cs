@@ -1,3 +1,4 @@
+using TradeRock.Core.Games;
 using TradeRock.Core.Trading;
 
 namespace TradeRock.Core.Storage;
@@ -11,7 +12,7 @@ public enum PokemonOrigin
 }
 
 /// <summary>
-/// Pokémon guardado. O arquivo (.pk3 decriptado) fica em disco, nomeado pelo SHA-256;
+/// Pokémon guardado. O arquivo decriptado (.pk3, .pk8, .pk9...) fica em disco, nomeado pelo SHA-256;
 /// aqui ficam o hash e o resumo para listar e buscar. A Entrega 4 (cofre) amplia esta tabela.
 /// </summary>
 public sealed class StoredPokemon : IOwned
@@ -20,7 +21,15 @@ public sealed class StoredPokemon : IOwned
     public Guid OwnerId { get; set; }
     public required string Sha256 { get; set; }
     public int Size { get; set; }
+
+    /// <summary>Jogo do formato do arquivo (Entrega 14). Os anteriores são todos do FireRed/LeafGreen.</summary>
+    public GameFamily Family { get; set; }
+
     public ushort Species { get; set; }
+
+    /// <summary>Forma da espécie (Alola, Galar, Hisui...); 0 na Gen 3, menos o Unown.</summary>
+    public byte Form { get; set; }
+
     public required string SpeciesName { get; set; }
     public required string Nickname { get; set; }
     public byte Level { get; set; }
@@ -32,10 +41,10 @@ public sealed class StoredPokemon : IOwned
     public ushort Sid { get; set; }
     public required string OriginGame { get; set; }
 
-    /// <summary>Item segurado (ID interno da Gen 3).</summary>
+    /// <summary>Item segurado (ID interno do jogo do formato).</summary>
     public ushort HeldItem { get; set; }
 
-    /// <summary>Flag de encontro fatídico (eventos, Mew/Deoxys/Lugia/Ho-Oh dos tickets).</summary>
+    /// <summary>Flag de encontro fatídico (eventos; na Gen 3, Mew/Deoxys/Lugia/Ho-Oh dos tickets).</summary>
     public bool Fateful { get; set; }
 
     /// <summary>Resultado do LegalityAnalysis ("legal", "illegal", "unverifiable"); null = ainda não analisado.</summary>

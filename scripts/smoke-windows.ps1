@@ -5,6 +5,7 @@
 param([Parameter(Mandatory)] [string] $Installer, [Parameter(Mandatory)] [string] $Version)
 $ErrorActionPreference = 'Stop'
 $rule = 'TradeRock (modo servidor)'
+$lanRule = 'TradeRock (Sword/Shield na rede de casa)'
 
 function Wait-Process-Exit($p, $what) {
   if (-not $p.WaitForExit(300000)) { throw "$what demorou demais" }
@@ -13,7 +14,7 @@ function Wait-Process-Exit($p, $what) {
 
 Write-Host '==> instalação silenciosa'
 $log = Join-Path $env:TEMP 'traderock-setup.log'
-Wait-Process-Exit (Start-Process $Installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=firewall', "/LOG=$log" -PassThru) 'instalador'
+Wait-Process-Exit (Start-Process $Installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=firewall,lanfirewall', "/LOG=$log" -PassThru) 'instalador'
 $app = Join-Path ${env:ProgramFiles} 'TradeRock\traderock.exe'
 if (-not (Test-Path $app)) { throw "traderock.exe não instalado em $app" }
 
@@ -26,6 +27,15 @@ $fw = Get-NetFirewallRule -DisplayName $rule
 if ($fw.Direction -ne 'Inbound' -or $fw.Action -ne 'Allow' -or "$($fw.Profile)" -ne 'Private') { throw "regra do firewall inesperada: $($fw | Out-String)" }
 $program = ($fw | Get-NetFirewallApplicationFilter).Program
 if ($program -ne $app) { throw "regra do firewall aponta para $program" }
+
+Write-Host '==> firewall do modo LAN do Sword/Shield (UDP, só privado, só o Python embutido; D24)'
+$lan = Get-NetFirewallRule -DisplayName $lanRule
+if ($lan.Direction -ne 'Inbound' -or $lan.Action -ne 'Allow' -or "$($lan.Profile)" -ne 'Private') { throw "regra do modo LAN inesperada: $($lan | Out-String)" }
+$lanProgram = ($lan | Get-NetFirewallApplicationFilter).Program
+$python = Join-Path ${env:ProgramFiles} 'TradeRock\esp32-runtime\python\python.exe'
+if ($lanProgram -ne $python) { throw "regra do modo LAN aponta para $lanProgram" }
+$ports = $lan | Get-NetFirewallPortFilter
+if ($ports.Protocol -ne 'UDP' -or ($ports.LocalPort -join ',') -ne '30000,40000,49152-49155') { throw "portas do modo LAN: $($ports | Out-String)" }
 
 Write-Host '==> esptool embutido'
 $py = Join-Path ${env:ProgramFiles} 'TradeRock\esp32-runtime\python\python.exe'
@@ -62,4 +72,5 @@ Wait-Process-Exit (Start-Process $uninstaller -ArgumentList '/VERYSILENT', '/SUP
 Start-Sleep 2
 if (Test-Path $app) { throw 'traderock.exe continua depois de desinstalar' }
 if (Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue) { throw 'a regra do firewall continua depois de desinstalar' }
+if (Get-NetFirewallRule -DisplayName $lanRule -ErrorAction SilentlyContinue) { throw 'a regra do modo LAN continua depois de desinstalar' }
 Write-Host 'ok'

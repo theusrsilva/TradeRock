@@ -7,7 +7,10 @@ biblioteca LDN (a mesma que a troca usa), sem prod.keys e sem Switch:
 1. cria a interface em modo monitor (`Factory.create_monitor`);
 2. em cada canal (`Monitor.set_channel`), transmite quadros de ação (`Monitor.send_frame`);
 3. escuta por um instante e conta os quadros recebidos (`Monitor.recv`): qualquer rede Wi-Fi por
-   perto serve para mostrar que a recepção funciona.
+   perto serve para mostrar que a recepção funciona;
+4. abre uma rede em modo AP com o monitor ao lado (`Factory.create_ap` + `create_monitor`), como o
+   `ldn.create_network` faz quando o TradeRock abre a sala dos jogos novos pelo pokeldn (D23). Sem isso a
+   placa só troca com o FRLG, em que o console abre a sala e a placa entra.
 
 Transmitir sem erro não prova que o quadro saiu no ar (isso exigiria um segundo rádio), mas é o que
 separa os drivers que servem dos que recusam na hora.
@@ -18,7 +21,7 @@ import os
 import signal
 import sys
 
-from .radio import TEST_VIF
+from .radio import AP_VIF, TEST_VIF
 
 # Quadro de ação "vendor specific" (categoria 0x7F) com um OUI localmente administrado e uma marca.
 ACTION_BODY = b"\x7f" + b"\x02\x00\x00" + b"TRADEROCK-CARD-TEST"
@@ -40,7 +43,7 @@ def main():
     frames_per_channel = 5
 
     async def test():
-        result = {"monitor": False, "channels": [], "error": None}
+        result = {"monitor": False, "channels": [], "error": None, "ap": None, "apError": None}
         try:
             async with wlan.create_factory() as factory:
                 async with factory.create_monitor(phy, TEST_VIF) as monitor:
@@ -71,7 +74,24 @@ def main():
                                 entry["received"] += 1
         except Exception as e:  # noqa: BLE001
             result["error"] = f"{type(e).__name__}: {e}"[:300]
+            return result
+        usable = [c["channel"] for c in result["channels"] if c["set"]]
+        if usable:
+            await test_ap(phy, usable[0], result)
         return result
+
+    async def test_ap(phy, channel, result):
+        # SSID qualquer (o LDN esconde o nome no beacon) e sem chave: só importa o driver aceitar.
+        try:
+            with trio.fail_after(15):  # o START_AP espera a resposta do driver
+                async with wlan.create_factory() as factory:
+                    async with factory.create_ap(phy, AP_VIF, os.urandom(16).hex(), channel, None, 1):
+                        async with factory.create_monitor(phy, TEST_VIF):
+                            await trio.sleep(0.5)
+            result["ap"] = True
+        except Exception as e:  # noqa: BLE001
+            result["ap"] = False
+            result["apError"] = f"{type(e).__name__}: {e}"[:300]
 
     result = trio.run(test)
     result.update(verdict(result))
@@ -81,7 +101,8 @@ def main():
 
 
 def verdict(result):
-    """Resumo: `passed` e um código estável (o app traduz)."""
+    """Resumo: `passed` e um código estável (o app traduz). O modo AP vai à parte (`ap`): sem ele a placa ainda
+    troca com o FRLG."""
     channels = result["channels"]
     if not result["monitor"]:
         return {"passed": False, "code": "monitor_failed"}

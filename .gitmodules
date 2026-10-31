@@ -1,9 +1,9 @@
 [submodule "engines/frlg-ldn-trade"]
 	path = engines/frlg-ldn-trade
 	url = https://github.com/tornadus/frlg-ldn-trade
-[submodule "engines/frlg-ldn-trade-esp32"]
-	path = engines/frlg-ldn-trade-esp32
-	url = https://github.com/easyworld/frlg-ldn-trade-esp32
 [submodule "engines/PKHeX-Plugins"]
 	path = engines/PKHeX-Plugins
 	url = https://github.com/santacrab2/PKHeX-Plugins
+[submodule "engines/pokeldn"]
+	path = engines/pokeldn
+	url = https://github.com/Decryptu/pokeldn

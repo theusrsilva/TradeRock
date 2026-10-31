@@ -11,6 +11,7 @@ using TradeRock.App;
 using TradeRock.App.Server;
 using TradeRock.Core;
 using TradeRock.Core.Engines;
+using TradeRock.Core.Games;
 
 namespace TradeRock.Tests;
 
@@ -420,6 +421,60 @@ public sealed class ServerModeTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Conta_pela_rede_troca_com_o_scarlet_com_o_proprio_treinador()
+    {
+        // Entrega 19: o seletor de jogo, o "Meu treinador" por jogo e o cofre por conta valem pela rede.
+        await EnableAsync();
+        await CreateAccountAsync("lia");
+        var lia = await LoginAsync("lia");
+
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(SwitchPokemon.Stored(SwitchPokemon.Make(GameFamily.Sv)));
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+        form.Add(file, "files", "pikachu.pk9");
+        var upload = await lia.PostContentAsync("/api/pokemon", form);
+        Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+        var id = (await upload.Content.ReadFromJsonAsync<JsonElement>(Ct)).EnumerateArray().Single()
+            .GetProperty("pokemon").GetProperty("id").GetString();
+
+        Assert.Equal(HttpStatusCode.OK, (await lia.PutAsync("/api/settings/my-trainer?game=sv", new { name = "Lia", tid = 123456, sid = 1234 })).StatusCode);
+        Assert.Equal("Lia", (await lia.GetJsonAsync("/api/settings/my-trainer?game=sv")).GetProperty("name").GetString());
+        // O treinador de outra conta não muda.
+        Assert.Equal(HttpStatusCode.NoContent, (await _local.GetAsync("/api/settings/my-trainer?game=sv", Ct)).StatusCode);
+
+        var start = await lia.PostAsync("/api/trades", new
+        {
+            party = new[] { id }, offeredSlots = new[] { 0 }, game = "scarlet", linkCode = "12345678", acceptIllegal = true,
+            trainer = new { name = "Lia", tid = 123456, sid = 1234 }, simulation = new { scenario = "success" },
+        });
+        Assert.True(start.StatusCode == HttpStatusCode.Accepted, await start.Content.ReadAsStringAsync(Ct));
+        JsonElement session = default;
+        for (var i = 0; i < 200; i++)
+        {
+            session = await lia.GetJsonAsync("/api/trades/current");
+            if (session.GetProperty("status").GetString() != "running")
+                break;
+            await Task.Delay(50, Ct);
+        }
+        Assert.Equal("completed", session.GetProperty("status").GetString());
+        var received = session.GetProperty("receivedPokemonIds")[0].GetString();
+        var pokemon = await lia.GetJsonAsync($"/api/pokemon/{received}");
+        Assert.Equal("sv", pokemon.GetProperty("family").GetString());
+        // O histórico é gravado logo depois do fim da sessão.
+        var history = await lia.GetJsonAsync("/api/trades");
+        for (var i = 0; i < 100 && history.GetArrayLength() == 0; i++)
+        {
+            await Task.Delay(20, Ct);
+            history = await lia.GetJsonAsync("/api/trades");
+        }
+        Assert.Equal("scarlet", history[0].GetProperty("game").GetString());
+        Assert.Equal(HttpStatusCode.NotFound, (await _local.GetAsync($"/api/pokemon/{received}", Ct)).StatusCode);
+
+        // Outras atividades (Mystery Gift) ficam só na janela do PC.
+        Assert.Equal(HttpStatusCode.Forbidden, (await lia.GetAsync("/api/activities")).StatusCode);
+    }
+
+    [Fact]
     public async Task Sair_da_fila()
     {
         var fake = _app.Services.GetRequiredService<FakeEngineOptions>();
@@ -513,6 +568,10 @@ public sealed class ServerModeTests : IAsyncLifetime
         public Task<HttpResponseMessage> PostAsync(string path, object body, bool csrf = true, string? origin = null) =>
             SendAsync(HttpMethod.Post, path, body, csrf, origin);
 
+        /// <summary>POST com um corpo pronto (ex.: o upload multipart de um Pokémon).</summary>
+        public Task<HttpResponseMessage> PostContentAsync(string path, HttpContent content) =>
+            SendAsync(HttpMethod.Post, path, content, true, null);
+
         public async Task<JsonElement> GetJsonAsync(string path)
         {
             var response = await GetAsync(path);
@@ -524,7 +583,7 @@ public sealed class ServerModeTests : IAsyncLifetime
         {
             var request = new HttpRequestMessage(method, path);
             if (body is not null)
-                request.Content = JsonContent.Create(body);
+                request.Content = body as HttpContent ?? JsonContent.Create(body);
             if (_cookie is not null)
                 request.Headers.Add("Cookie", _cookie);
             if (csrf && _csrf is not null)

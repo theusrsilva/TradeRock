@@ -168,6 +168,10 @@ function CardTestView({ test }: { test: CardTestResult }) {
         </div>
       )}
       {test.error && <p className="font-mono text-xs opacity-80">{test.error}</p>}
+      {test.passed && test.ap != null && (
+        <p className={test.ap ? '' : 'text-warn'}>{t(test.ap ? 'wizard.cardTest.apOk' : 'wizard.cardTest.apNo')}</p>
+      )}
+      {test.apError && <p className="font-mono text-xs opacity-80">{test.apError}</p>}
       <p className="text-xs opacity-70">{new Date(test.at).toLocaleString(i18n.language)}</p>
     </div>
   )

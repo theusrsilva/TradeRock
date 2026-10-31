@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
 using TradeRock.App.Server;
+using TradeRock.Core.Games;
 using TradeRock.Core.Storage;
 using TradeRock.Core.Trading;
 
@@ -9,7 +10,8 @@ namespace TradeRock.App.Api;
 
 public static class TradeEndpoints
 {
-    public sealed record TrainerDto(string Name, ushort Tid, ushort? Sid);
+    /// <summary>Treinador simulado com os números que o jogo mostra (6 e 4 dígitos da Gen 7 em diante).</summary>
+    public sealed record TrainerDto(string Name, uint Tid, uint? Sid);
 
     public sealed record StartTradeDto(
         IReadOnlyList<Guid> Party,
@@ -17,11 +19,13 @@ public static class TradeEndpoints
         TradeGame Game,
         TrainerDto Trainer,
         SimulationOptions? Simulation,
-        bool AcceptIllegal = false);
+        bool AcceptIllegal = false,
+        string? LinkCode = null,
+        bool TradeBack = false);
 
     public sealed record TradeHistoryItemDto(
         Guid Id, DateTimeOffset StartedAt, DateTimeOffset? EndedAt, string EngineId, bool IsSimulation,
-        TradeGame Game, string TrainerName, ushort Tid, ushort? Sid, TradeSessionStatus Status, int Attempts,
+        TradeGame Game, string TrainerName, uint Tid, uint? Sid, TradeSessionStatus Status, int Attempts,
         int TradesPlanned, int TradesCompleted, string? FailureCode, string? FailureMessage,
         IReadOnlyList<TradeEntryDto> Entries);
 
@@ -40,10 +44,18 @@ public static class TradeEndpoints
         var group = api.MapGroup("/trades");
 
         group.MapPost("/", async (StartTradeDto body, HttpContext context, EngineRegistry engines, TradeQueue queue,
-            PokemonStore store, SettingsStore settings, TradeRock.Core.Setup.SetupService setup, CancellationToken ct) =>
+            PokemonStore store, SettingsStore settings, TradeRock.Core.Setup.SetupService setup,
+            TradeRock.Core.Activities.ActivityService activities, CancellationToken ct) =>
         {
+            // O rádio é o mesmo das outras atividades (D26): uma de cada vez.
+            if (activities.IsBusy)
+                return Results.Conflict(new { error = "busy" });
             if (body.Party is null || body.OfferedSlots is null || body.Trainer is null)
                 return Results.BadRequest(new { error = "invalid", errors = new[] { "missing_fields" } });
+
+            if (!Enum.IsDefined(body.Game))
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "game_invalid" } });
+            var game = GameCatalog.Of(body.Game);
 
             // Todo Pokémon da troca já está guardado no cofre: o time vem de lá, por id.
             var party = new List<PartyMember>();
@@ -52,6 +64,9 @@ public static class TradeEndpoints
             {
                 if (await store.GetAsync(id, ct) is not { DeletedAt: null } p)
                     return Results.BadRequest(new { error = "invalid", errors = new[] { "unknown_pokemon" } });
+                // Cada jogo troca o próprio formato (mover entre jogos é outra operação, no cofre).
+                if (p.Family != game.Family)
+                    return Results.BadRequest(new { error = "invalid", errors = new[] { "pokemon_wrong_game" } });
                 var name = string.IsNullOrWhiteSpace(p.Nickname) ? p.SpeciesName : p.Nickname;
                 party.Add(new PartyMember(p.Id, await store.ReadDataAsync(p, ct), name));
                 stored.Add(p);
@@ -59,21 +74,25 @@ public static class TradeEndpoints
 
             var tradeSettings = await settings.GetAsync(SettingsEndpoints.TradeSettingsKey, TradeSettings.Default, ct);
 
-            // Pokémon ilegal não vai para o Switch, a não ser no modo avançado e com confirmação explícita.
+            // FRLG: Pokémon ilegal não vai para o Switch, a não ser no modo avançado e com confirmação explícita.
+            // Jogos novos: o PKHeX avisa, mas não bloqueia; basta a confirmação (decisão do autor, multijogos.md).
             var offeredIllegal = body.OfferedSlots
                 .Where(slot => slot >= 0 && slot < stored.Count && stored[slot].Legality == "illegal")
                 .ToList();
-            if (offeredIllegal.Count > 0 && !(tradeSettings.AllowIllegal && body.AcceptIllegal))
+            var allowIllegal = tradeSettings.AllowIllegal || game.Family != GameFamily.Frlg;
+            if (offeredIllegal.Count > 0 && !(allowIllegal && body.AcceptIllegal))
             {
-                var code = tradeSettings.AllowIllegal ? "illegal_needs_confirmation" : "illegal_pokemon";
+                var code = allowIllegal ? "illegal_needs_confirmation" : "illegal_pokemon";
                 return Results.BadRequest(new { error = "invalid", errors = new[] { code } });
             }
 
             var engine = await engines.GetSelectedAsync(ct);
+            if (!engine.Supports(game.Family))
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "engine_game_unsupported" } });
 
             // Motor real só com o assistente concluído no essencial (chaves, rádio, teste com o Switch).
-            // O modo demonstração continua liberado.
-            if (!engine.IsSimulation)
+            // O modo demonstração e o modo LAN (sem rádio nem chaves, D24) continuam liberados.
+            if (!engine.IsSimulation && engine.NeedsSetup)
             {
                 var status = await setup.StatusAsync(ct);
                 // Cenário simulado no assistente (desenvolvimento): os dados não são deste PC.
@@ -82,10 +101,15 @@ public static class TradeEndpoints
                 if (!status.ReadyToTrade)
                     return Results.BadRequest(new { error = "invalid", errors = new[] { "setup_incomplete" } });
             }
+            if (TrainerIds.FromDisplay(game, body.Trainer.Tid, body.Trainer.Sid ?? 0) is not { } ids)
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "trainer_id_invalid" } });
+            ushort? sid16 = body.Trainer.Sid is null && !game.SixDigitTrainerId ? null : ids.Sid16;
             var request = new TradeRequest(
                 party, body.OfferedSlots, body.Game,
-                new TrainerProfile(body.Trainer.Name, body.Trainer.Tid, body.Trainer.Sid),
-                engine.IsSimulation ? body.Simulation : null);
+                new TrainerProfile(body.Trainer.Name, ids.Tid16, sid16),
+                engine.IsSimulation ? body.Simulation : null,
+                string.IsNullOrWhiteSpace(body.LinkCode) ? null : body.LinkCode.Trim(),
+                body.TradeBack);
 
             // Um rádio, uma troca por vez: com o rádio livre começa agora; senão espera a vez na fila.
             var caller = Caller.Of(context);
@@ -204,8 +228,15 @@ public static class TradeEndpoints
         }
     }
 
-    private static TradeHistoryItemDto ToDto(TradeRecord r) => new(
-        r.Id, r.StartedAt, r.EndedAt, r.EngineId, r.IsSimulation, r.Game, r.TrainerName, r.Tid, r.Sid, r.Status,
-        r.Attempts, r.TradesPlanned, r.TradesCompleted, r.FailureCode, r.FailureMessage,
-        r.Entries.OrderBy(e => e.TradeIndex).Select(e => new TradeEntryDto(e.TradeIndex, e.SentPokemonId, e.ReceivedPokemonId)).ToList());
+    private static TradeHistoryItemDto ToDto(TradeRecord r)
+    {
+        // Números como o jogo mostra; no FRLG o SID pode ficar em branco.
+        var game = GameCatalog.Of(r.Game);
+        var (tid, sid) = TrainerIds.Display(game, r.Tid, r.Sid ?? 0);
+        return new(
+            r.Id, r.StartedAt, r.EndedAt, r.EngineId, r.IsSimulation, r.Game, r.TrainerName, tid,
+            r.Sid is null && !game.SixDigitTrainerId ? null : sid, r.Status,
+            r.Attempts, r.TradesPlanned, r.TradesCompleted, r.FailureCode, r.FailureMessage,
+            r.Entries.OrderBy(e => e.TradeIndex).Select(e => new TradeEntryDto(e.TradeIndex, e.SentPokemonId, e.ReceivedPokemonId)).ToList());
+    }
 }

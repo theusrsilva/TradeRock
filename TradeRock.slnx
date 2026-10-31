@@ -2,7 +2,6 @@
   <Folder Name="/app/">
     <Project Path="app/TradeRock.App/TradeRock.App.csproj" />
     <Project Path="app/TradeRock.Core/TradeRock.Core.csproj" />
-    <Project Path="app/Frlg.Trade.Core.Patched/Frlg.Trade.Core.Patched.csproj" />
     <Project Path="app/TradeRock.Tests/TradeRock.Tests.csproj" />
   </Folder>
 </Solution>

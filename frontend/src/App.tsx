@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { Layout } from './components/Layout'
 import BuilderPage from './pages/builder/BuilderPage'
+import ActivitiesPage from './pages/ActivitiesPage'
 import HistoryPage from './pages/HistoryPage'
 import HomePage from './pages/HomePage'
 import VaultPage from './pages/vault/VaultPage'
@@ -28,6 +29,7 @@ export default function App() {
                 <Route path="/criar" element={<BuilderPage />} />
                 <Route path="/criar/:id" element={<BuilderPage />} />
                 <Route path="/historico" element={<HistoryPage />} />
+                <Route path="/atividades" element={<ActivitiesPage />} />
                 <Route path="/configuracoes" element={<SettingsPage />} />
                 {/* O antigo assistente de 7 etapas virou a lista de Configurações → Conexão. */}
                 <Route path="/configurar" element={<Navigate to="/configuracoes?aba=conexao" replace />} />

@@ -1,6 +1,20 @@
 // Tipos da API (enums em snake_case, como o backend serializa).
 
-export type TradeGame = 'fire_red' | 'leaf_green'
+export type TradeGame =
+  | 'fire_red'
+  | 'leaf_green'
+  | 'lets_go_pikachu'
+  | 'lets_go_eevee'
+  | 'sword'
+  | 'shield'
+  | 'brilliant_diamond'
+  | 'shining_pearl'
+  | 'legends_arceus'
+  | 'scarlet'
+  | 'violet'
+  | 'legends_za'
+/** Jogo do Switch (as duas versões de um par juntas), como o backend agrupa (GameCatalog). */
+export type GameFamily = 'frlg' | 'lgpe' | 'swsh' | 'bdsp' | 'pla' | 'sv' | 'za'
 export type PokemonOrigin = 'imported' | 'received' | 'demo' | 'created'
 export type LegalityStatus = 'legal' | 'illegal' | 'unverifiable'
 export type TradeSessionStatus = 'running' | 'completed' | 'partially_completed' | 'failed' | 'cancelled'
@@ -47,7 +61,9 @@ export interface Health {
 
 export interface Pokemon {
   id: string
+  family: GameFamily
   species: number
+  form: number
   speciesName: string
   nickname: string
   level: number
@@ -152,6 +168,14 @@ export interface Engine {
   available: boolean
   reasonCode: string | null
   selected: boolean
+  /** Jogos que o motor troca (GameFamily). */
+  games: GameFamily[]
+  /** Jogos que o motor troca pelo pokeldn: o TradeRock cria a sala (também no FRLG) e existe o "trocar de volta". */
+  pokeldnGames: GameFamily[]
+  /** Precisa da configuração da conexão (o modo LAN não precisa). */
+  needsSetup: boolean
+  /** O jogo ignora o código de troca (modo LAN do Sword/Shield). */
+  ignoresLinkCode: boolean
 }
 
 export interface Trainer {
@@ -173,6 +197,9 @@ export interface StartTrade {
   trainer: Trainer
   simulation: { scenario: SimulationScenario; failuresBeforeSuccess: number } | null
   acceptIllegal: boolean
+  /** Oito dígitos, ou no Let's Go três números da grade ("0,4,9"). Vazio = sem código. */
+  linkCode?: string | null
+  tradeBack?: boolean
 }
 
 // ---- Construtor ----
@@ -190,6 +217,10 @@ export interface BuilderData {
   balls: Option[]
   languages: Option[]
   versions: string[]
+  maxEv: number
+  nicknameLength: number
+  /** Modo avançado (só FireRed/LeafGreen). */
+  advanced: boolean
 }
 
 export interface SpeciesDetails {
@@ -198,6 +229,8 @@ export interface SpeciesDetails {
   abilities: Option[]
   genderRatio: 'genderless' | 'male_only' | 'female_only' | 'mixed'
   inKantoDex: boolean
+  /** Formas que existem no jogo (Value = número da forma); null no FRLG. */
+  forms: Option[] | null
 }
 
 export interface EncounterOption {
@@ -222,6 +255,7 @@ export interface TrainerSpec {
 
 export interface PokemonSpec {
   species: number
+  form?: number
   nickname: string | null
   level: number
   nature: number | null
@@ -282,6 +316,7 @@ export interface LegalityReport {
 }
 
 export interface Pk3Summary {
+  family?: GameFamily
   species: number
   speciesName: string
   nickname: string
@@ -482,6 +517,9 @@ export interface CardTestResult {
   error: string | null
   simulated: boolean
   driver: string | null
+  /** Modo AP com o monitor ao lado (sala dos jogos novos); null = teste antigo, sem essa etapa. */
+  ap: boolean | null
+  apError: string | null
 }
 
 export type SwitchTestCode =
@@ -597,7 +635,6 @@ export interface SetupStatus {
     phy: string | null
     serialPort: string | null
     esp32Board: string | null
-    esp32ModuleConfirmed: boolean
     keysSkipped: boolean
     cardTest: CardTestResult | null
     esp32Probe: Esp32ProbeResult | null
@@ -683,4 +720,49 @@ export interface QueuedTrade {
   queued: true
   entryId: string
   position: number
+}
+
+// Outras atividades (D26): Mystery Gift do FRLG e do Sword/Shield.
+export interface GiftEntry {
+  key: string
+  group: string
+  label: string
+  summary: string
+  when: string
+}
+
+export interface ActivitiesCatalog {
+  engineId: string
+  engineSupports: boolean
+  games: { game: GameFamily; activities: ('gift' | 'raid' | 'circle')[]; supported: ('gift' | 'raid' | 'circle')[]; giftExtensions: string[] }[]
+  gifts: Partial<Record<GameFamily, { presets: GiftEntry[]; events: GiftEntry[] }>>
+  lairLegendaries: number[]
+}
+
+export type ActivityEventKind =
+  | 'started'
+  | 'waiting'
+  | 'joined'
+  | 'left'
+  | 'delivered'
+  | 'advertising'
+  | 'lobby'
+  | 'battle'
+  | 'over'
+  | 'error'
+  | 'finished'
+
+export interface ActivitySnapshot {
+  id: string
+  game: TradeGame
+  kind: 'gift' | 'raid' | 'circle'
+  /** Tipo de raid ou do Union Circle ("quests", "encounters"). */
+  raidKind: string | null
+  giftLabel: string | null
+  status: 'running' | 'completed' | 'failed' | 'cancelled'
+  startedAt: string
+  finishedAt: string | null
+  events: { kind: ActivityEventKind; at: string; message: string | null; errorCode: string | null }[]
+  errorCode: string | null
+  errorMessage: string | null
 }

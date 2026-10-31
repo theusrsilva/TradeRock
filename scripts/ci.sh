@@ -11,6 +11,10 @@ echo "::group::Worker (Python)"
 python3 -m unittest discover -s worker/tests -t worker
 echo "::endgroup::"
 
+echo "::group::pokeldn (testes offline com os patches, D21)"
+scripts/test-pokeldn.sh
+echo "::endgroup::"
+
 echo "::group::.NET build"
 dotnet build TradeRock.slnx -c Release
 echo "::endgroup::"

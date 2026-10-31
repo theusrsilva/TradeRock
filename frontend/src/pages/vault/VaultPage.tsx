@@ -7,7 +7,8 @@ import { ApiError, api } from '../../lib/api'
 import { PENDING_SAVE } from '../../components/GlobalDrop'
 import { VAULT_CHANGED, takePendingSave } from '../../lib/pendingDrop'
 import { requestTrade } from '../../lib/tradeRequest'
-import type { LegalityStatus, PokemonOrigin, Tag, VaultOverview, VaultPokemon } from '../../lib/types'
+import { GAMES } from '../../lib/games'
+import type { GameFamily, LegalityStatus, PokemonOrigin, Tag, VaultOverview, VaultPokemon } from '../../lib/types'
 import { BoxGrid, PokemonTile } from './BoxGrid'
 import { Details } from './Details'
 import { ExportDialog } from './ExportDialog'
@@ -20,6 +21,7 @@ interface Filters {
   text: string
   legality: LegalityStatus | 'unknown' | ''
   origin: PokemonOrigin | ''
+  game: GameFamily | ''
   shiny: boolean
   warnings: boolean
   duplicates: boolean
@@ -28,7 +30,7 @@ interface Filters {
   maxLevel: string
 }
 
-const noFilters: Filters = { text: '', legality: '', origin: '', shiny: false, warnings: false, duplicates: false, tagIds: [], minLevel: '', maxLevel: '' }
+const noFilters: Filters = { text: '', legality: '', origin: '', game: '', shiny: false, warnings: false, duplicates: false, tagIds: [], minLevel: '', maxLevel: '' }
 
 type Dialog =
   | null
@@ -80,6 +82,7 @@ export default function VaultPage() {
     if (filters.text) q.set('text', filters.text)
     if (filters.legality) q.set('legality', filters.legality)
     if (filters.origin) q.set('origin', filters.origin)
+    if (filters.game) q.set('game', filters.game)
     if (filters.shiny) q.set('shiny', 'true')
     if (filters.warnings) q.set('warnings', 'true')
     if (filters.duplicates) q.set('duplicates', 'true')
@@ -344,6 +347,19 @@ export default function VaultPage() {
             {(['imported', 'received', 'created', 'demo'] as const).map((o) => (
               <option key={o} value={o}>
                 {t(`pokemon.origin.${o}`)}
+              </option>
+            ))}
+          </select>
+          <select
+            className="h-[34px] cursor-pointer rounded-full border border-line bg-surface px-2 text-[13.5px]"
+            value={filters.game}
+            onChange={(e) => setFilters({ ...filters, game: e.target.value as Filters['game'] })}
+            aria-label={t('vault.game')}
+          >
+            <option value="">{t('vault.anyGame')}</option>
+            {GAMES.map((g) => (
+              <option key={g.family} value={g.family}>
+                {g.name}
               </option>
             ))}
           </select>

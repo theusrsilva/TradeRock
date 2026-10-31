@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using TradeRock.App.Server;
 using TradeRock.Core;
+using TradeRock.Core.Games;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Engines;
+using TradeRock.Core.Engines.Pokeldn;
 using TradeRock.Core.Engines.Worker;
 using TradeRock.Core.Esp32;
 using TradeRock.Core.Pokemon;
@@ -40,6 +42,7 @@ public static class ServiceSetup
         services.AddSingleton<ITradeRecorder>(sp => sp.GetRequiredService<TradeRecorder>());
         services.AddSingleton<TradeCoordinator>();
         services.AddSingleton<TradeQueue>();
+        services.AddSingleton<TradeRock.Core.Activities.ActivityService>();
         services.AddSingleton<WindowBridge>();
 
         // Worker privilegiado (placa Wi-Fi, só Linux). Em desenvolvimento, a instalação dev
@@ -57,17 +60,15 @@ public static class ServiceSetup
         services.AddSingleton<IPrivilegedShell, PkexecShell>();
         services.AddSingleton(sp => new BundledWorker(sp.GetRequiredService<IPrivilegedShell>(), payload));
 
-        // ESP32: a serial pelo núcleo do easyworld (com os patches) e o esptool pelo Python embutido do
-        // worker, rodando como o usuário. Em desenvolvimento, o runtime também vale de build/worker/stage.
+        // ESP32: firmware, placa e troca pelo pokeldn (D23) e o esptool, os dois no Python embutido do worker,
+        // rodando como o usuário. Em desenvolvimento, o runtime também vale de build/worker/stage.
         var esp32Runtime = config["Engines:Esp32:Runtime"];
         var devStage = development ? FindDevStage() : null;
-        services.AddSingleton<IEsp32Link, SerialEsp32Link>();
-        services.AddSingleton<IEsp32Flasher>(sp => new PythonEsp32Flasher(
-            () => esp32Runtime ?? PythonEsp32Flasher.FindRuntime(payload, development, devStage),
-            Path.Combine(paths.DataDir, "tmp")));
+        Func<string?> runtime = () => esp32Runtime ?? PythonEsp32Flasher.FindRuntime(payload, development, devStage);
+        services.AddSingleton<IPokeldnProcess>(new PokeldnProcess(runtime, Path.Combine(paths.DataDir, "tmp")));
+        services.AddSingleton<IEsp32Link, PokeldnEsp32Link>();
+        services.AddSingleton<IEsp32Flasher>(sp => new PythonEsp32Flasher(runtime, Path.Combine(paths.DataDir, "tmp")));
         services.AddSingleton<TradeRock.Core.Setup.Esp32Setup>();
-        services.AddSingleton<IEsp32Session, UpstreamEsp32Session>();
-        services.AddSingleton(new Esp32EngineOptions { LogsDir = Path.Combine(paths.LogsDir, "esp32") });
 
         // Motores: o primeiro registrado é o padrão (simulação).
         var fake = new FakeEngineOptions
@@ -82,7 +83,8 @@ public static class ServiceSetup
             ApprovalSeconds = config.GetValue("Engines:PythonLdn:ApprovalSeconds", 100),
         });
         services.AddSingleton<ITradeEngine, PythonLdnEngine>();
-        services.AddSingleton<ITradeEngine, Esp32SerialEngine>();
+        services.AddSingleton<ITradeEngine, PokeldnEngine>();
+        services.AddSingleton<ITradeEngine, PokeldnLanEngine>();
         services.AddSingleton<EngineRegistry>();
     }
 
@@ -128,14 +130,28 @@ public static class ServiceSetup
 
     /// <summary>
     /// O "Switch" simulado manda um Pokémon de demonstração diferente do que foi oferecido,
-    /// para a troca fazer sentido na tela.
+    /// para a troca fazer sentido na tela. Nos jogos novos (sem Pokémon de demonstração), devolve uma cópia
+    /// do oferecido com outro treinador.
     /// </summary>
     private static byte[] DemoHostPokemon(TradeRequest request, int tradeIndex)
     {
+        if (request.GameInfo.Family != GameFamily.Frlg)
+            return DemoCopy(request.Party[request.OfferedSlots[tradeIndex]].Data, request.GameInfo.Family);
         var offered = Pk3Reader.Read(request.Party[request.OfferedSlots[tradeIndex]].Data).Sha256;
         var others = DemoPokemon.All.Where(d => Pk3Reader.Read(d.Data).Sha256 != offered).ToList();
         var pool = others.Count > 0 ? others : DemoPokemon.All.ToList();
         return pool[tradeIndex % pool.Count].Data;
+    }
+
+    private static byte[] DemoCopy(byte[] data, GameFamily family)
+    {
+        var pk = PokemonReader.ToEntity(data, family);
+        pk.OriginalTrainerName = "DEMO";
+        pk.PID = (uint)Random.Shared.NextInt64(0, uint.MaxValue);
+        pk.RefreshChecksum();
+        var result = new byte[pk.SIZE_STORED];
+        pk.WriteDecryptedDataStored(result);
+        return result;
     }
 
     /// <summary>Cria as pastas, aplica as migrações e, na primeira execução, coloca os Pokémon de demonstração.</summary>

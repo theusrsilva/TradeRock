@@ -30,6 +30,9 @@ public sealed class FakeWorker : IWorkerLauncher
     public int Launches;
     public ConcurrentQueue<JsonObject> Requests { get; } = new();
 
+    /// <summary>Pokémon (base64) que o pokeldn falso "recebe" em start_pokeldn.</summary>
+    public string PokeldnReceived { get; set; } = "";
+
     public WorkerInstall? Find() => Installed;
 
     public Task<IWorkerConnection> LaunchAsync(WorkerInstall install, CancellationToken ct)
@@ -120,6 +123,18 @@ public sealed class FakeWorker : IWorkerLauncher
                     await Reply(id, new JsonObject { ["started"] = true });
                     var slots = msg["slots"]!.AsArray().Count;
                     _ = Task.Run(() => TradeAsync(Send, slots, cancelled.Task));
+                    break;
+                case "start_pokeldn":
+                    // Pokeldn com a placa Wi-Fi (D23): o worker repassa as mensagens do pokeldn_trade.py.
+                    await Reply(id, new JsonObject { ["started"] = true });
+                    _ = Task.Run(async () =>
+                    {
+                        JsonObject Wrap(JsonObject m) => new() { ["event"] = "pokeldn", ["message"] = m };
+                        await Send(Wrap(new JsonObject { ["type"] = "event", ["kind"] = "joined" }));
+                        await Send(Wrap(new JsonObject { ["type"] = "trade_done", ["index"] = 1, ["data"] = PokeldnReceived }));
+                        await Send(Wrap(new JsonObject { ["type"] = "result", ["exitCode"] = 0, ["trades"] = 1 }));
+                        await Send(new JsonObject { ["event"] = "pokeldn_end", ["exitCode"] = 0, ["cancelled"] = false });
+                    });
                     break;
                 default:
                     await Send(new JsonObject { ["id"] = id?.DeepClone(), ["ok"] = false, ["error"] = new JsonObject { ["code"] = "unknown_op" } });

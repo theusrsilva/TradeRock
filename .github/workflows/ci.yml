@@ -110,8 +110,8 @@ jobs:
       - name: Fumaça
         run: chmod +x dist/*.AppImage && sudo bash scripts/smoke-linux.sh appimage dist/*.AppImage
 
-  # Windows (só ESP32): app, runtime do esptool e testes compilados aqui, no Linux (o mesmo núcleo do
-  # easyworld com os patches); o job seguinte roda no Windows.
+  # Windows (só ESP32): app, runtime do pokeldn e do esptool e testes compilados aqui, no Linux; o job seguinte
+  # roda no Windows.
   package-windows:
     needs: build-test
     runs-on: ubuntu-24.04

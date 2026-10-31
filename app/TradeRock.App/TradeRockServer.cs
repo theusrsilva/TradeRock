@@ -98,6 +98,7 @@ public static class TradeRockServer
         api.MapAppEndpoints();
         api.MapPokemon();
         api.MapTrades();
+        api.MapActivities();
         api.MapSettings();
         api.MapBuilder();
         api.MapVault();

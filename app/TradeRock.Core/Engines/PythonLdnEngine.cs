@@ -1,5 +1,8 @@
 using System.Text.Json.Nodes;
+using TradeRock.Core.Activities;
+using TradeRock.Core.Engines.Pokeldn;
 using TradeRock.Core.Engines.Worker;
+using TradeRock.Core.Games;
 using TradeRock.Core.Setup;
 using TradeRock.Core.Trading;
 
@@ -22,13 +25,18 @@ public sealed class PythonLdnEngineOptions
 /// Motor com a placa Wi-Fi do PC (só Linux): o frlg-ldn-trade roda no worker privilegiado, que
 /// devolve os marcos da troca como eventos. Uma chamada = uma tentativa (o retry é do coordenador).
 /// </summary>
-public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdKeys keys, PythonLdnEngineOptions options) : ITradeEngine
+public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdKeys keys, PythonLdnEngineOptions options) : ITradeEngine, IActivityEngine
 {
     public const string EngineId = "python-ldn";
 
     public string Id => EngineId;
 
     public bool IsSimulation => false;
+
+    /// <summary>FRLG pelo frlg-ldn-trade (o console é o líder); os outros jogos pelo pokeldn, no worker (D23).</summary>
+    public bool Supports(GameFamily family) => true;
+
+    public bool UsesPokeldn(GameFamily family) => family != GameFamily.Frlg;
 
     public async Task<EngineAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken)
     {
@@ -47,6 +55,9 @@ public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdK
         var state = (await setup.StatusAsync(cancellationToken)).State;
         if (state.Phy is null)
             return TradeAttemptResult.Fail("wifi_not_configured", "Escolha a placa Wi-Fi no assistente.", retryable: false);
+        // Os jogos novos pedem a sala aberta pela placa (modo AP, D23); o teste da placa diz se ela consegue.
+        if (request.GameInfo.Family != GameFamily.Frlg && state.CardTest is { Ap: false } card && card.Phy == state.Phy)
+            return TradeAttemptResult.Fail("card_no_ap", "Esta placa não abre a sala dos jogos novos (modo AP).", retryable: false);
 
         byte[] keyFile;
         try
@@ -69,6 +80,8 @@ public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdK
         }
 
         client.DrainEvents();
+        if (request.GameInfo.Family != GameFamily.Frlg)
+            return await RunPokeldnAsync(client, request, state.Phy, keyFile, emit, cancellationToken);
         var args = new JsonObject
         {
             ["phy"] = state.Phy,
@@ -99,7 +112,139 @@ public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdK
         return await FollowAsync(client, emit, cancellationToken);
     }
 
-    /// <summary>Repassa os eventos da troca até o fim. Cancelado: pede ao worker e espera ele sair da sala.</summary>
+    /// <summary>Jogos do Switch pelo pokeldn com a placa Wi-Fi: o worker (root) roda o pokeldn_trade.py com a placa.</summary>
+    private async Task<TradeAttemptResult> RunPokeldnAsync(WorkerClient client, TradeRequest request, string phy, byte[] keyFile,
+        Func<TradeEvent, ValueTask> emit, CancellationToken ct)
+    {
+        var progress = new PokeldnEngine.Progress(request);
+        try
+        {
+            var end = await StreamPokeldnAsync(client, phy, keyFile, PokeldnEngine.Request(request, radio: null, keysPath: null),
+                async message =>
+                {
+                    if (progress.Map(message, DateTimeOffset.UtcNow) is { } e)
+                        await emit(e);
+                }, ct);
+            return end switch
+            {
+                PokeldnEnd.Finished => progress.Result(),
+                PokeldnEnd.FinishedAfterCancel => progress.Received < request.Trades ? TradeAttemptResult.Cancelled : progress.Result(),
+                PokeldnEnd.WorkerExited => TradeAttemptResult.Fail("worker_exited", "O componente de rede parou durante a troca.", retryable: false),
+                _ => TradeAttemptResult.Cancelled,
+            };
+        }
+        catch (WorkerException e)
+        {
+            return TradeAttemptResult.Fail(e.Code, e.Message, retryable: e.Code is "busy" or "worker_timeout");
+        }
+    }
+
+    private enum PokeldnEnd
+    {
+        Finished,
+        FinishedAfterCancel,
+        WorkerExited,
+        Cancelled,
+    }
+
+    /// <summary>
+    /// Pede ao worker o pokeldn_trade.py com a placa e repassa as mensagens dele até o fim. Cancelado: pede ao worker
+    /// e espera ele sair da sala. As chaves saem da memória assim que o pedido é enviado.
+    /// </summary>
+    private async Task<PokeldnEnd> StreamPokeldnAsync(WorkerClient client, string phy, byte[] keyFile, JsonObject request,
+        Func<JsonObject, ValueTask> onMessage, CancellationToken ct)
+    {
+        var args = new JsonObject
+        {
+            ["phy"] = phy,
+            ["keys"] = Convert.ToBase64String(keyFile),
+            ["request"] = request,
+        };
+        Array.Clear(keyFile);
+        try
+        {
+            await client.RequestAsync("start_pokeldn", args, TimeSpan.FromSeconds(30), ct);
+        }
+        finally
+        {
+            args["keys"] = null;
+        }
+
+        var cancelRequested = false;
+        using var cancelDeadline = new CancellationTokenSource();
+        await using var registration = ct.Register(() =>
+        {
+            cancelRequested = true;
+            _ = client.RequestAsync("cancel", null, TimeSpan.FromSeconds(10), CancellationToken.None)
+                .ContinueWith(_ => { }, TaskScheduler.Default);
+            cancelDeadline.CancelAfter(options.CancelWait);
+        });
+        try
+        {
+            await foreach (var msg in client.Events.ReadAllAsync(cancelDeadline.Token))
+            {
+                switch (msg["event"]?.GetValue<string>())
+                {
+                    case "pokeldn" when msg["message"] is JsonObject message:
+                        await onMessage(message);
+                        break;
+                    case "pokeldn_end":
+                        return cancelRequested ? PokeldnEnd.FinishedAfterCancel : PokeldnEnd.Finished;
+                    case "worker_exited":
+                        return cancelRequested ? PokeldnEnd.Cancelled : PokeldnEnd.WorkerExited;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancelDeadline.IsCancellationRequested)
+        {
+        }
+        return PokeldnEnd.Cancelled;
+    }
+
+    public bool SupportsActivity(GameFamily family, ActivityKind kind) => PokeldnActivity.Supports(family, kind);
+
+    /// <summary>Outras atividades (D26) com a placa Wi-Fi, pelo worker, como os jogos novos.</summary>
+    public async Task<ActivityResult> RunActivityAsync(ActivityRequest request, Func<ActivityEvent, ValueTask> emit, CancellationToken ct)
+    {
+        var state = (await setup.StatusAsync(ct)).State;
+        if (state.Phy is null)
+            return ActivityResult.Fail("wifi_not_configured");
+        // A placa abre a sala (modo AP) nas atividades de todos os jogos, o FRLG inclusive (D23, D25).
+        if (state.CardTest is { Ap: false } card && card.Phy == state.Phy)
+            return ActivityResult.Fail("card_no_ap");
+        byte[] keyFile;
+        try
+        {
+            keyFile = await File.ReadAllBytesAsync(keys.FilePath, ct);
+        }
+        catch (IOException)
+        {
+            return ActivityResult.Fail("keys_missing");
+        }
+
+        var progress = new PokeldnActivity.Progress(request);
+        try
+        {
+            var client = await worker.GetAsync(ct);
+            client.DrainEvents();
+            var end = await StreamPokeldnAsync(client, state.Phy, keyFile, PokeldnActivity.Request(request, radio: null, keysPath: null),
+                async message =>
+                {
+                    if (progress.Map(message, DateTimeOffset.UtcNow) is { } e)
+                        await emit(e);
+                }, ct);
+            return end == PokeldnEnd.WorkerExited ? ActivityResult.Fail("worker_exited") : progress.Result(end != PokeldnEnd.Finished);
+        }
+        catch (WorkerException e)
+        {
+            return ActivityResult.Fail(e.Code, e.Message);
+        }
+        finally
+        {
+            Array.Clear(keyFile);
+        }
+    }
+
     private async Task<TradeAttemptResult> FollowAsync(WorkerClient client, Func<TradeEvent, ValueTask> emit, CancellationToken ct)
     {
         var cancelRequested = false;

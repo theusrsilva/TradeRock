@@ -7,11 +7,10 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | --- | --- | --- |
 | [tornadus/frlg-ldn-trade](https://github.com/tornadus/frlg-ldn-trade) | Motor de troca com a placa Wi-Fi (submódulo) | AGPL-3.0 |
 | [kinnay/LDN](https://github.com/kinnay/LDN) | Biblioteca LDN usada pelo motor Python | GPL-3.0 |
-| [easyworld/frlg-ldn-trade-esp32](https://github.com/easyworld/frlg-ldn-trade-esp32) | Núcleo C# (motor ESP32, compilado com o patch de `engines/patches/frlg-ldn-trade-esp32`) e os binários de firmware de `firmware/release`, embutidos no app e gravados na placa | AGPL-3.0 (componente LDN: GPL-3.0); o firmware inclui o ESP-IDF v6.1 (Apache-2.0) e bibliotecas binárias da Espressif |
-| BouncyCastle.Cryptography, ZstdSharp.Port, System.IO.Ports | Dependências do núcleo do easyworld (NuGet) | MIT; MIT; MIT |
+| [Decryptu/pokeldn](https://github.com/Decryptu/pokeldn) | Motor das trocas com o ESP32 (todos os jogos) e dos jogos do Switch, no worker e no `esp32-runtime` do Windows (submódulo, com o patch de `engines/patches/pokeldn`), e o firmware do ESP32 (`assets/firmware/pokeldn`, Release v0.49.1, embutido e gravado na placa). Traz uma cópia modificada do kinnay/LDN (`vendor/LDN`) | AGPL-3.0 (cópia do LDN: GPL-3.0); o firmware inclui o ESP-IDF v6.1 (Apache-2.0) e bibliotecas binárias da Espressif |
 | [Konscious.Security.Cryptography.Argon2](https://github.com/kmaragon/Konscious.Security.Cryptography) 1.3.1 (com Konscious.Security.Cryptography.Blake2 1.1.1 e System.Memory) | Hash Argon2id das senhas do modo servidor (NuGet) | MIT |
 | [QRCoder](https://github.com/Shane32/QRCoder) 1.8.0 | QR code do endereço do modo servidor (NuGet) | MIT |
-| [System.Management](https://github.com/dotnet/runtime) | Windows: portas COM e dispositivos sem driver (WMI) | MIT |
+| [System.Management](https://github.com/dotnet/runtime) e System.IO.Ports | Windows: portas COM e dispositivos sem driver (WMI) | MIT |
 | colorama | Dependência do esptool no Windows | BSD-3-Clause |
 | [Inno Setup](https://jrsoftware.org/isinfo.php) | Gera o instalador do Windows (não é distribuído junto) | Licença do Inno Setup (uso livre, inclusive comercial) |
 | [esptool](https://github.com/espressif/esptool) 5.4.0 | Gravação do firmware do ESP32 (no Python embutido, roda como usuário) | GPL-2.0-or-later |
@@ -35,7 +34,8 @@ compatíveis com a AGPL-3.0. Licenças conferidas no código-fonte em 2026-09-29
 | [GB-Link/GB-Link-Switch-LDN](https://github.com/GB-Link/GB-Link-Switch-LDN) | Referência (não distribuído) | AGPL-3.0, sem código incorporado |
 | [Material Symbols](https://github.com/google/material-design-icons) (Rounded, via o pacote npm `material-symbols`) | Ícones da interface (arquivo reduzido em `frontend/src/assets/fonts`) | Apache-2.0 |
 | [Nunito](https://github.com/googlefonts/nunito), [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans) e [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (via `@fontsource`) | Fontes da interface, embutidas no app | SIL OFL 1.1 |
-| [PokeAPI/sprites](https://github.com/PokeAPI/sprites) | Sprites 1–386 (via `assets/sprites` do easyworld) | Arte © Nintendo, Game Freak e The Pokémon Company; uso não autorizado por eles |
-| Pokémon de demonstração | `assets/party/mewtwo.pk3` e `deoxys.pk3` do easyworld | Fornecidos pelo autor do easyworld |
+| [PokeAPI/sprites](https://github.com/PokeAPI/sprites) | Sprites 1–1025 em `assets/sprites` (1–386 copiados do easyworld/frlg-ldn-trade-esp32; 387–1025 do commit `1dd55c0`, `scripts/fetch-sprites.sh`) | Arte © Nintendo, Game Freak e The Pokémon Company; uso não autorizado por eles |
+| [projectpokemon/EventsGallery](https://github.com/projectpokemon/EventsGallery) | Raids de evento do Sword/Shield e do Scarlet/Violet em `assets/raid-events/raid-events.zip` (commits `0595d45` e `bc61f78`, `scripts/fetch-raid-events.sh`) | Sem licença declarada; dados dos eventos oficiais © Nintendo, Game Freak e The Pokémon Company, como os sprites |
+| Pokémon de demonstração | `assets/demo/mewtwo.pk3` e `deoxys.pk3`, copiados do [easyworld/frlg-ldn-trade-esp32](https://github.com/easyworld/frlg-ldn-trade-esp32) | Fornecidos pelo autor do easyworld |
 
 O TradeRock nunca distribui `prod.keys`, chaves do Switch nem ROMs.

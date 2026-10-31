@@ -4,7 +4,8 @@ Pedido:   {"id": 1, "op": "hello"}
 Resposta: {"id": 1, "ok": true, "result": {...}}  ou  {"id": 1, "ok": false, "error": {"code", "message"}}
 Evento:   {"event": "trade" | "trade_end" | "debug", ...}
 
-Uma operação de rádio por vez (card_test, beacon_test ou start_trade). `cancel` interrompe a operação em andamento.
+Uma operação de rádio por vez (card_test, beacon_test, start_trade ou start_pokeldn). `cancel` interrompe a operação
+em andamento.
 """
 
 import base64
@@ -19,7 +20,7 @@ import tempfile
 import threading
 
 from . import PROTOCOL, VERSION
-from .protocol import MAX_LINE, RequestError, beacon_params, phy as check_phy, trade_params
+from .protocol import MAX_LINE, RequestError, beacon_params, phy as check_phy, pokeldn_params, trade_params
 from .radio import NetworkConfig, Radio, SAFE_PATH, which
 
 GRACEFUL_CANCEL_SECONDS = 30   # primeiro SIGINT: o motor sai da sala e espera o Switch fechar
@@ -95,6 +96,7 @@ class Server:
             "card_test": self.op_card_test,
             "beacon_test": self.op_beacon_test,
             "start_trade": self.op_start_trade,
+            "start_pokeldn": self.op_start_pokeldn,
             "cancel": self.op_cancel,
             "net_status": self.op_net_status,
             "net_install": self.op_net_install,
@@ -355,6 +357,55 @@ class Server:
             end["received"] = len(sent)
             self._end()
             self.send({"event": "trade_end", **end})
+
+    # -- troca pelo pokeldn (jogos do Switch, D23) ------------------------------------------------
+    def op_start_pokeldn(self, req_id, msg):
+        params = pokeldn_params(msg)
+        self._require_tools()
+        if not self.radio.phy_exists(params.phy):
+            raise RequestError("phy_not_found", f"{params.phy} não existe")
+        if not self._begin("pokeldn", req_id):
+            return
+        self.reply(req_id, {"started": True})
+        self._op_thread = threading.Thread(target=self._pokeldn, args=(params,), daemon=True)
+        self._op_thread.start()
+
+    def _pokeldn(self, p):
+        """O filho (pokeldn_trade.py) fala o próprio protocolo; cada mensagem vai ao app como {"event": "pokeldn"}."""
+        tmp = tempfile.mkdtemp(prefix="traderock-pokeldn-")  # 0700, do root
+        snapshot = self.radio.snapshot(p.phy)
+        code = None
+        try:
+            keys = os.path.join(tmp, "prod.keys")
+            fd = os.open(keys, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "wb") as f:
+                f.write(p.keys)
+            if self._cancel:
+                raise Cancelled()
+            child = self._spawn("pokeldn", cwd=tmp)
+            request = dict(p.request, keys=keys, radio=None, phy=p.phy)
+            child.stdin.write((json.dumps(request) + "\n").encode())
+            child.stdin.close()
+            for raw in child.stdout:
+                try:
+                    msg = json.loads(raw)
+                except ValueError:
+                    continue
+                if isinstance(msg, dict):
+                    self.send({"event": "pokeldn", "message": msg})
+            child.stdout.close()
+            code = child.wait()
+        except Cancelled:
+            pass
+        except Exception as e:  # noqa: BLE001
+            self.send({"event": "pokeldn", "message": {"type": "error", "code": "engine_error",
+                                                        "message": f"{type(e).__name__}: {e}"}})
+        finally:
+            self.radio.restore(snapshot)
+            shutil.rmtree(tmp, ignore_errors=True)
+            cancelled = self._cancel
+            self._end()
+            self.send({"event": "pokeldn_end", "exitCode": code, "cancelled": cancelled})
 
     # -- encerramento ----------------------------------------------------------------------------
     def shutdown(self):

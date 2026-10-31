@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TradeRock.App.Server;
+using TradeRock.Core.Games;
 using TradeRock.Core.Engines;
 using TradeRock.Core.Storage;
 using TradeRock.Core.Trading;
@@ -10,11 +11,22 @@ public static class SettingsEndpoints
 {
     public const string TradeSettingsKey = "trade.settings";
 
-    public sealed record EngineDto(string Id, bool IsSimulation, bool Available, string? ReasonCode, bool Selected);
+    /// <summary>Motor e os jogos que ele troca (chaves do catálogo: frlg, sv...).</summary>
+    public sealed record EngineDto(string Id, bool IsSimulation, bool Available, string? ReasonCode, bool Selected, IReadOnlyList<string> Games,
+        IReadOnlyList<string> PokeldnGames, bool NeedsSetup, bool IgnoresLinkCode);
 
     public sealed record SelectEngineDto(string Id);
 
-    public sealed record TrainerPresetDto(Guid? Id, string Label, string Name, ushort Tid, ushort? Sid, TradeGame Game);
+    /// <summary>Treinador salvo, com os números que o jogo mostra (guardados como TID16/SID16).</summary>
+    public sealed record TrainerPresetDto(Guid? Id, string Label, string Name, uint Tid, uint? Sid, TradeGame Game)
+    {
+        public static TrainerPresetDto From(TrainerPreset p)
+        {
+            var game = GameCatalog.Of(p.Game);
+            var (tid, sid) = TrainerIds.Display(game, p.Tid, p.Sid ?? 0);
+            return new(p.Id, p.Label, p.Name, tid, p.Sid is null && !game.SixDigitTrainerId ? null : sid, p.Game);
+        }
+    }
 
     public static void MapSettings(this IEndpointRouteBuilder api)
     {
@@ -36,7 +48,10 @@ public static class SettingsEndpoints
             {
                 var availability = await engine.CheckAvailabilityAsync(ct);
                 result.Add(new EngineDto(engine.Id, engine.IsSimulation, availability.Available,
-                    availability.ReasonCode, engine.Id == selected.Id));
+                    availability.ReasonCode, engine.Id == selected.Id,
+                    GameCatalog.All.Where(g => engine.Supports(g.Family)).Select(g => g.Key).ToList(),
+                    GameCatalog.All.Where(g => engine.Supports(g.Family) && engine.UsesPokeldn(g.Family)).Select(g => g.Key).ToList(),
+                    engine.NeedsSetup, engine.IgnoresLinkCode));
             }
             return result;
         });
@@ -65,14 +80,20 @@ public static class SettingsEndpoints
         {
             await using var db = await dbFactory.CreateDbContextAsync(ct);
             var list = await db.TrainerPresets.AsNoTracking().OrderBy(p => p.Label).ToListAsync(ct);
-            return list.Select(p => new TrainerPresetDto(p.Id, p.Label, p.Name, p.Tid, p.Sid, p.Game));
+            return list.Select(TrainerPresetDto.From);
         });
 
         presets.MapPost("/", async (TrainerPresetDto body, IDbContextFactory<TradeRockDb> dbFactory, CancellationToken ct) =>
         {
-            var errors = TrainerName.Validate(body.Name).ToList();
+            if (!Enum.IsDefined(body.Game))
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "game_invalid" } });
+            var game = GameCatalog.Of(body.Game);
+            var errors = TrainerName.Validate(body.Name, game).ToList();
             if (string.IsNullOrWhiteSpace(body.Label) || body.Label.Length > 40)
                 errors.Add("preset_label_invalid");
+            var ids = TrainerIds.FromDisplay(game, body.Tid, body.Sid ?? 0);
+            if (ids is null)
+                errors.Add("trainer_id_invalid");
             if (errors.Count > 0)
                 return Results.BadRequest(new { error = "invalid", errors });
 
@@ -82,13 +103,13 @@ public static class SettingsEndpoints
                 Id = Guid.CreateVersion7(),
                 Label = body.Label.Trim(),
                 Name = body.Name,
-                Tid = body.Tid,
-                Sid = body.Sid,
+                Tid = ids!.Value.Tid16,
+                Sid = body.Sid is null && !game.SixDigitTrainerId ? null : ids.Value.Sid16,
                 Game = body.Game,
             };
             db.TrainerPresets.Add(preset);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new TrainerPresetDto(preset.Id, preset.Label, preset.Name, preset.Tid, preset.Sid, preset.Game));
+            return Results.Ok(TrainerPresetDto.From(preset));
         });
 
         presets.MapDelete("/{id:guid}", async (Guid id, IDbContextFactory<TradeRockDb> dbFactory, CancellationToken ct) =>

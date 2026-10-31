@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TradeRock.Core.Games;
 
 namespace TradeRock.Core.Storage;
 
@@ -19,6 +20,9 @@ public sealed record VaultQuery
     public IReadOnlyList<Guid>? TagIds { get; init; }
     public byte? MinLevel { get; init; }
     public byte? MaxLevel { get; init; }
+
+    /// <summary>Só os Pokémon do formato deste jogo.</summary>
+    public GameFamily? Family { get; init; }
 }
 
 public sealed record BoxSummary(Guid? Id, string Name, int Order, int Count);
@@ -181,6 +185,8 @@ public sealed class VaultStore(IDbContextFactory<TradeRockDb> dbFactory, Pokemon
             var id when Guid.TryParse(id, out var boxId) => query.Where(p => p.DeletedAt == null && p.BoxId == boxId),
             _ => throw new VaultException("scope_invalid"),
         };
+        if (q.Family is { } family)
+            query = query.Where(p => p.Family == family);
 
         if (q.Shiny is { } shiny)
             query = query.Where(p => p.IsShiny == shiny);
@@ -343,7 +349,7 @@ public sealed class VaultStore(IDbContextFactory<TradeRockDb> dbFactory, Pokemon
             .Select(p => p.Sha256).Distinct().ToListAsync(ct);
         foreach (var p in deletable.Where(p => !stillUsed.Contains(p.Sha256)))
         {
-            var path = pokemon.FilePath(p.Sha256);
+            var path = pokemon.FilePath(p.Sha256, p.Family);
             if (File.Exists(path))
                 File.Delete(path);
         }

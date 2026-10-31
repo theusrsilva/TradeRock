@@ -10,7 +10,8 @@
     "history": "Histórico",
     "settings": "Configurações",
     "builder": "Criar Pokémon",
-    "setup": "Configurar"
+    "setup": "Configurar",
+    "activities": "Atividades"
   },
   "common": {
     "loading": "Carregando…",
@@ -23,7 +24,8 @@
     "cancel": "Cancelar",
     "optional": "opcional",
     "learnMore": "Saiba mais",
-    "close": "Fechar"
+    "close": "Fechar",
+    "clear": "Limpar"
   },
   "demo": {
     "badge": "Modo demonstração",
@@ -195,7 +197,7 @@
     "offered_slot_out_of_range": "um Pokémon marcado não está no time",
     "party_data_size": "um arquivo do time não é um Pokémon válido",
     "trainer_name_empty": "digite o nome do treinador",
-    "trainer_name_too_long": "o nome tem mais de 7 caracteres",
+    "trainer_name_too_long": "o nome é comprido demais para esse jogo",
     "trainer_name_invalid_chars": "o nome tem letras que o jogo não aceita (acentos, ç, _ …)",
     "unknown_pokemon": "um Pokémon do time não foi encontrado",
     "missing_fields": "faltam informações",
@@ -204,7 +206,16 @@
     "illegal_pokemon": "um Pokémon marcado para o Switch é ilegal. Corrija no construtor ou ative o modo avançado nas Configurações.",
     "illegal_needs_confirmation": "confirme que quer mandar um Pokémon ilegal",
     "setup_simulated": "a configuração da conexão está num cenário simulado (desenvolvimento). Volte para \"Sistema real\" para trocar de verdade.",
-    "setup_incomplete": "a configuração ainda não está completa. Abra Configurações → Conexão e resolva os itens essenciais."
+    "setup_incomplete": "a configuração ainda não está completa. Abra Configurações → Conexão e resolva os itens essenciais.",
+    "link_code_invalid": "o código de troca precisa ter 8 números (ou três Pokémon, no Let's Go)",
+    "pokemon_wrong_game": "um dos Pokémon é de outro jogo (dá para mover de jogo no cofre)",
+    "engine_game_unsupported": "a conexão escolhida ainda não troca com esse jogo; por enquanto, só no modo demonstração",
+    "game_invalid": "jogo desconhecido",
+    "trainer_id_invalid": "esse número de treinador não existe nesse jogo",
+    "format_ambiguous": "não dá para saber de qual jogo é o arquivo: use a extensão certa (.pb7, .pk8, .pb8, .pk9 ou .pa9)",
+    "game_mismatch": "o arquivo é de outro jogo",
+    "game_unsupported": "o Pokémon é de um jogo que o TradeRock não troca",
+    "save_game_unsupported": "só dá para colocar no save Pokémon do FireRed/LeafGreen"
   },
   "failures": {
     "no_network_found": "A sala do Switch não foi encontrada. Confira se o Direct Corner está aberto como Leader e se o Switch está perto.",
@@ -225,7 +236,7 @@
     "radio_rx_failed": "A entrada autenticou, mas a placa parou de receber os anúncios do Switch. Configure o NetworkManager em Configurações → Conexão e tente de novo.",
     "engine_broken": "O motor de troca está incompleto nesta instalação. Instale o TradeRock de novo.",
     "trade_incomplete": "Só parte das trocas foi concluída.",
-    "engine_error": "O motor de troca parou com um erro.",
+    "engine_error": "O motor dos jogos do Switch parou com um erro. Os detalhes estão no log.",
     "invalid_request": "O pedido de troca tem um dado que o motor não aceita.",
     "missing_tools": "Faltam programas do sistema que o motor usa. Veja Configurações → Conexão.",
     "phy_not_found": "A placa Wi-Fi escolhida não está mais no PC. Ela foi desconectada?",
@@ -265,7 +276,11 @@
     "esptool_error": "O gravador de firmware parou com um erro.",
     "boot_mode_required": "A placa não entrou no modo de gravação sozinha. Siga as instruções do botão BOOT e tente de novo.",
     "esp32_firmware_not_checked": "Confira o firmware do ESP32 antes do teste.",
-    "keys_invalid": "O prod.keys não é válido."
+    "keys_invalid": "O prod.keys não é válido.",
+    "console_never_joined": "O Switch não entrou na sala. Confira se ele procurou a troca com o mesmo código e tente de novo.",
+    "card_no_ap": "Esta placa Wi-Fi não abre a sala dos jogos novos (modo AP): com ela, só o FireRed/LeafGreen troca. Para os outros jogos, use um ESP32 (ou a rede de casa, no Sword/Shield).",
+    "pokeldn_missing": "O motor dos jogos do Switch (pokeldn) não foi encontrado nesta instalação.",
+    "received_missing": "A troca terminou, mas o Pokémon recebido não apareceu."
   },
   "history": {
     "title": "Histórico de trocas",
@@ -435,7 +450,13 @@
       "ability_not_gen3": "habilidade",
       "item_not_gen3": "item",
       "move_not_gen3": "golpe(s)",
-      "showdown_empty": "cole algum texto"
+      "showdown_empty": "cole algum texto",
+      "species_not_in_game": "essa espécie não existe nesse jogo",
+      "ability_not_in_game": "essa habilidade não existe para a espécie nesse jogo",
+      "item_not_in_game": "esse item não existe nesse jogo",
+      "move_not_in_game": "um dos golpes não existe nesse jogo",
+      "trainer_id_invalid": "esse número de treinador não existe nesse jogo",
+      "game_invalid": "jogo desconhecido"
     },
     "blockersTitle": "O que impede:",
     "blockers": {
@@ -549,6 +570,28 @@
       "color_invalid": "cor inválida",
       "pokemon_duplicate": "o resultado é igual a outro Pokémon do cofre",
       "pokemon_not_found": "o Pokémon não está mais no cofre"
+    },
+    "game": "Jogo",
+    "anyGame": "Qualquer jogo",
+    "exportSwitchNote": "Pokémon dos jogos do Switch (Let's Go a Legends: Z-A) saem no formato do próprio jogo (.pb7, .pk8, .pb8, .pa8, .pk9 ou .pa9), decriptados.",
+    "transfer": {
+      "action": "Mover para outro jogo",
+      "title": "Mover para outro jogo",
+      "help": "Como o Pokémon HOME faz: o Pokémon passa a ser do jogo escolhido, com o seu \"Meu treinador\" daquele jogo como treinador atual. Ele continua no mesmo lugar do cofre.",
+      "confirm": "Mover",
+      "done": "Agora ele é do {{game}}",
+      "tracker": "Ele fica sem o rastreador do Pokémon HOME, que só o HOME cria. Os jogos não conferem isso, mas o HOME não aceita o Pokémon depois.",
+      "refusal": {
+        "same_game": "É o jogo atual",
+        "home_no_destination": "O HOME não manda Pokémon para esse jogo",
+        "egg": "Ovos ficam no próprio jogo",
+        "frlg_held_item": "Tire o item segurado antes (o HOME não aceita Pokémon do FireRed/LeafGreen com item)",
+        "frlg_hm_move": "Esqueça os golpes de HM antes (o HOME não aceita Pokémon do FireRed/LeafGreen com HM)",
+        "species_not_in_game": "Essa espécie (ou forma) não existe nesse jogo",
+        "no_route": "O PKHeX não achou um jeito de converter",
+        "pokemon_duplicate": "Já existe um Pokémon igual no cofre",
+        "pokemon_in_trash": "Está na lixeira"
+      }
     }
   },
   "inject": {
@@ -659,8 +702,6 @@
     "chooseBoardPlaceholder": "Escolha o modelo da placa…",
     "choosePort": "Em qual porta está o ESP32?",
     "noPorts": "Nenhuma porta encontrada. Ligue o ESP32 com um cabo de dados.",
-    "confirmModule": "Conferi: a tampa metálica do módulo diz ESP32-WROOM-32E.",
-    "moduleHelp": "Veja o nome escrito na tampa metálica do módulo (a peça prateada com a antena).",
     "refresh": "Verificar de novo",
     "copy": "Copiar",
     "copied": "Copiado!",
@@ -717,7 +758,6 @@
       "phy_is_internet": "Esta placa é a internet do PC ({{iface}}): a internet cai durante a troca. Use cabo de rede ou um segundo adaptador.",
       "esp32_board_not_chosen": "Diga qual ESP32 você tem.",
       "esp32_board_unsupported": "{{model}}: não suportado.",
-      "esp32_confirm_module": "Confira se o módulo é o ESP32-WROOM-32E.",
       "esp32_board_recommended": "{{model}}: recomendado.",
       "esp32_board_works": "{{model}}: funciona.",
       "esp32_board_untested": "{{model}}: sem troca completa relatada com este firmware.",
@@ -746,6 +786,8 @@
       "card_test_passed": "A placa {{model}} ({{phy}}) passou no teste: entrou em modo monitor e transmitiu.",
       "card_test_failed": "A placa {{model}} ({{phy}}) não passou no teste. Veja o resultado abaixo.",
       "card_test_passed_no_rx": "A placa transmitiu, mas não recebeu nada durante o teste. Pode ser só falta de redes Wi-Fi por perto; se a troca não achar o Switch, desconfie da recepção.",
+      "card_test_no_ap": "A placa {{model}} ({{phy}}) não abriu rede em modo AP. Ela troca com o FireRed/LeafGreen, mas não abre a sala dos outros jogos. Para eles, use um ESP32 (ou a rede de casa, no Sword/Shield).",
+      "card_test_ap_unknown": "Este teste é de uma versão anterior e não conferiu o modo AP, que os jogos novos usam. Teste a placa de novo para saber se ela troca com eles.",
       "card_test_passed_some_channels": "A placa funcionou, mas não sintonizou todos os canais (1, 6 e 11). A troca pode falhar se o Switch usar um deles.",
       "network_manager_ok": "NetworkManager configurado para não atrapalhar a troca.",
       "network_manager_unconfigured": "O NetworkManager pode atrapalhar a troca. Configure abaixo (recomendado).",
@@ -773,7 +815,7 @@
       "esp32_chip_unsupported": "O chip {{chip}} não tem firmware do TradeRock.",
       "esp32_board_mismatch": "Você marcou {{model}}, mas o chip é {{chip}}. Corrija a placa na lista acima.",
       "esp32_flash_too_small": "A flash desta placa tem {{size}}; o firmware precisa de {{needed}}.",
-      "esp32_old_revision": "Chip {{chip}}: revisão antiga, típica do módulo ESP32-WROOM-32 (não o 32E), que não troca de forma confiável. Confira o nome na blindagem."
+      "esp32_old_revision": "Chip {{chip}}: revisão antiga, típica do módulo ESP32-WROOM-32. Algumas placas assim não ouvem o Switch; o teste com o Switch mostra se a sua serve."
     },
     "deliveries": {
       "entrega-6": "componente de rede e teste da placa",
@@ -797,6 +839,8 @@
       "sent": "Enviados",
       "received": "Recebidos",
       "channelFailed": "não sintonizou",
+      "apOk": "A placa abriu uma rede em modo AP: troca com todos os jogos.",
+      "apNo": "A placa não abriu rede em modo AP: troca só com o FireRed/LeafGreen.",
       "codes": {
         "passed": "A placa passou: modo monitor e transmissão funcionando.",
         "passed_no_rx": "A placa transmitiu, mas não recebeu nenhum quadro.",
@@ -878,7 +922,7 @@
     },
     "esp32fw": {
       "title": "Firmware do ESP32",
-      "help": "O ESP32 precisa do firmware do TradeRock (do projeto easyworld) para conversar com o Switch. O TradeRock traz o firmware certo para cada chip e grava sozinho, pelo USB.",
+      "help": "O ESP32 precisa do firmware do pokeldn para conversar com o Switch (todos os jogos usam o mesmo). O TradeRock traz o firmware certo para cada chip e grava sozinho, pelo USB.",
       "probe": "Verificar o firmware",
       "identify": "Identificar a placa",
       "verify": "Conferir a versão",
@@ -1174,7 +1218,17 @@
         "No seu Switch desbloqueado, rode o Lockpick_RCM.",
         "Copie o arquivo prod.keys do cartão SD para o PC.",
         "Clique em Enviar prod.keys abaixo."
-      ]
+      ],
+      "lan": {
+        "title": "Rede de casa (só Sword/Shield)",
+        "inUse": "Em uso",
+        "sub": "O Sword/Shield também troca pela rede de casa, sem ESP32, placa Wi-Fi nem prod.keys. O Switch e este computador precisam estar na mesma rede.",
+        "step1": "No jogo, abra as Opções e aperte L + R + o analógico esquerdo juntos: aparece o aviso de que o modo LAN foi ligado.",
+        "step2": "Na troca, o código não é usado: qualquer Switch no modo LAN da mesma rede encontra o TradeRock.",
+        "use": "Usar a rede de casa",
+        "backRadio": "Voltar para o rádio",
+        "backDemo": "Voltar para a demonstração"
+      }
     },
     "settings": {
       "tabs": {
@@ -1229,9 +1283,10 @@
       "title": "Trocar com o Switch",
       "steps": {
         "party": "Time",
-        "trainer": "Jogo e treinador",
+        "trainer": "Treinador",
         "reminder": "Preparar o Switch",
-        "queue": "Fila"
+        "queue": "Fila",
+        "game": "Jogo"
       },
       "demoBanner": "Tudo funciona, mas as trocas são simuladas até a conexão ficar pronta.",
       "setupConnection": "Configurar conexão",
@@ -1244,7 +1299,7 @@
       "goingCount_other": "{{count}} vão para o Switch",
       "fromVault": "Escolha do cofre",
       "searchVault": "Buscar no cofre",
-      "whichGame": "Qual jogo está no Switch?",
+      "whichGame": "Com qual jogo você vai trocar?",
       "nameOnSwitch": "Nome que vai aparecer no Switch",
       "nameTip": "É o nome que você vai aprovar no pedido para entrar na sala. Até 7 caracteres, sem acento (o jogo não tem “ã” ou “ç”). Pode usar . - ! ?",
       "moreOptions": "Mais opções (ID secreto)",
@@ -1275,7 +1330,21 @@
       "sending": "Enviando {{names}}",
       "nothingToSend": "Nada para enviar",
       "trainerLabel": "treinador",
-      "continue": "Continuar"
+      "continue": "Continuar",
+      "whichGameSub": "Escolha o jogo e a versão que estão no Switch.",
+      "games": {
+        "linkCode": "Código de troca",
+        "soon": "Com o Switch de verdade, em breve (no modo demonstração já funciona)"
+      },
+      "tradingWith": "Troca com o {{game}}",
+      "linkCode": "Código de troca",
+      "linkCodeTip": "Oito números. No Switch, use o mesmo código na troca. Em branco, a troca é sem código.",
+      "linkCodeLgpeTip": "No Let's Go, o código são três Pokémon escolhidos em ordem. Escolha aqui os mesmos que você vai escolher no Switch. Em branco, vale o padrão: três Pikachu.",
+      "offersTip": "Cada Pokémon escolhido vai para o Switch, um por troca, nesta ordem. Nesse jogo não precisa de Pokémon de preenchimento.",
+      "tradeNumber": "Troca {{n}}",
+      "otherGame": "É do {{game}}: dá para mover de jogo no cofre",
+      "tradeBack": "Trocar de volta para evoluir",
+      "tradeBackTip": "Para o Pokémon do Switch que evolui por troca: depois de cada troca, o TradeRock devolve na hora o Pokémon que recebeu (ele evolui no Switch) e recebe de volta o que tinha mandado. No fim, nada muda no cofre."
     },
     "live": {
       "running": "Troca em andamento",
@@ -1325,7 +1394,8 @@
       "savedIllegal": "Salvo, mas o PKHeX acusa problemas de legalidade",
       "errors": {
         "pokemon_duplicate": "O resultado é igual a outro Pokémon do cofre."
-      }
+      },
+      "exportFile": "Exportar arquivo"
     },
     "builder": {
       "forGame": "Para o jogo",
@@ -1336,7 +1406,9 @@
       "advancedBanner": "Dados brutos, como no PKHeX. Nada é corrigido sozinho: o painel ao lado mostra o que ficou errado.",
       "howItWorks": "Como funciona",
       "legalAttention": "Legal, com atenção",
-      "legalTip": "Verificado pelo PKHeX {{version}}. “Atenção” não torna o Pokémon ilegal."
+      "legalTip": "Verificado pelo PKHeX {{version}}. “Atenção” não torna o Pokémon ilegal.",
+      "form": "Forma",
+      "formNormal": "Normal"
     },
     "history": {
       "events": "Eventos",
@@ -1353,6 +1425,176 @@
       "license": "Licença, código-fonte e marcas",
       "projects_one": "{{count}} projeto",
       "projects_other": "{{count}} projetos"
+    }
+  },
+  "activities": {
+    "title": "Outras atividades",
+    "sub": "Mystery Gift, raids e Union Circle, pelo mesmo rádio da troca.",
+    "engineUnsupported": "A conexão escolhida não faz outras atividades. Use o ESP32, a placa Wi-Fi ou o modo demonstração em Configurações → Conexão.",
+    "whichGame": "Para qual jogo?",
+    "whichGameSub": "Mystery Gift no FireRed/LeafGreen e no Sword/Shield; raids no Sword/Shield e no Scarlet/Violet; Union Circle no Scarlet/Violet.",
+    "gift": {
+      "title": "Qual presente?",
+      "sub": "Escolha um presente pronto, um evento oficial ou abra um arquivo de presente.",
+      "modes": {
+        "preset": "Prontos",
+        "event": "Eventos oficiais",
+        "file": "Arquivo"
+      },
+      "search": "Procurar…",
+      "nothing": "Nenhum presente encontrado.",
+      "fileHelp": "Abra um arquivo de presente ({{types}}). O TradeRock não baixa presentes: use arquivos que você já tem."
+    },
+    "howTo": "No {{game}}",
+    "send": "Enviar",
+    "stop": "Parar",
+    "done": "Terminei",
+    "again": "Mandar outro presente",
+    "progress": {
+      "started": "Preparando o rádio",
+      "waiting": "Esperando o console",
+      "joined": "O console encontrou o presente",
+      "delivered": "Presente entregue",
+      "advertising": "Presente no ar",
+      "swshConfirm": "O console só ouve o presente e não avisa quando recebe. Quando o cartão aparecer no jogo e você aceitar, clique em Terminei.",
+      "lobby": "Sala aberta",
+      "battle": "Batalha começou",
+      "over": "Batalha acabou",
+      "raidBattle": "A batalha está no console. Quando terminar, clique em Terminei."
+    },
+    "result": {
+      "frlg": "Presente entregue. Salve o jogo e fale com o entregador no 2º andar de qualquer Centro Pokémon.",
+      "swsh": "Pronto. Se o cartão chegou ao jogo, o presente está lá.",
+      "cancelled": "Envio interrompido.",
+      "raid": "Raid concluída."
+    },
+    "errors": {
+      "busy": "O rádio está ocupado com uma troca ou outra atividade. Espere terminar.",
+      "gift_unknown": "Este presente não existe para o jogo escolhido.",
+      "gift_file_wrong_type": "Este tipo de arquivo não serve para o jogo escolhido.",
+      "gift_file_invalid": "O arquivo não é um presente válido.",
+      "gift_file_other_game": "Este presente é de outro jogo.",
+      "gift_not_received": "O console não recebeu o presente. Confira se ele estava na tela de busca do Mystery Gift e tente de novo.",
+      "activity_engine_unsupported": "A conexão escolhida não faz outras atividades.",
+      "activity_game_unsupported": "Este jogo ainda não tem outras atividades no TradeRock.",
+      "load_failed": "Não foi possível carregar a lista de presentes.",
+      "raid_invalid": "Esta raid não é deste jogo, ou falta algum campo.",
+      "raid_pokemon_missing": "Escolha os Pokémon da raid.",
+      "raid_event_invalid": "Este evento não tem essa combinação de chefe, versão ou etapa.",
+      "raid_seed_invalid": "A semente precisa de 8 dígitos hexadecimais.",
+      "raid_not_started": "A batalha não começou. Confira os passos no console e tente de novo.",
+      "unknown_pokemon": "Esse Pokémon não está mais no cofre.",
+      "pokemon_wrong_game": "Esse Pokémon é de outro jogo.",
+      "link_code_invalid": "O código precisa de 8 dígitos.",
+      "circle_code_invalid": "O código do círculo tem 4 dígitos.",
+      "circle_invalid": "Confira a tarefa, o Pokémon e o nível.",
+      "circle_not_done": "A tarefa não terminou. Confira os passos no console e tente de novo.",
+      "circle_not_started": "O círculo não começou. Confira os passos no console e tente de novo."
+    },
+    "kinds": {
+      "gift": "Mystery Gift",
+      "raid": "Raids",
+      "circle": "Union Circle"
+    },
+    "raid": {
+      "title": "Qual raid?",
+      "sub": "Você escolhe quem abre a sala: o TradeRock ou o seu console.",
+      "start": "Começar a raid",
+      "kinds": {
+        "max-raid-host": "Max Raid: o console entra",
+        "max-raid-join": "Max Raid: o TradeRock entra",
+        "lair-host": "Dynamax Adventure: o console entra",
+        "lair-join": "Dynamax Adventure: o TradeRock entra",
+        "tera-raid-host": "Tera Raid: o console entra",
+        "tera-raid-join": "Tera Raid: o TradeRock entra"
+      },
+      "about": {
+        "max-raid-host": "O TradeRock abre uma Max Raid com o chefe que você escolher e entra na batalha com o seu Pokémon. O console entra pelo Y-Comm.",
+        "max-raid-join": "O console abre a raid numa toca (Invite Others) e o TradeRock entra para lutar ao seu lado.",
+        "lair-host": "O TradeRock abre uma Dynamax Adventure com o lendário escolhido. Quando a aventura começa, ele sai e um parceiro do jogo continua.",
+        "lair-join": "O console abre a Dynamax Adventure na Max Lair (Invite Others) e o TradeRock entra para ajudar.",
+        "tera-raid-host": "O TradeRock abre uma Tera Raid com o chefe que você escolher. O console procura pela Poké Portal com o código 4970.",
+        "tera-raid-join": "O console abre a Tera Raid num cristal (Challenge as a group) e o TradeRock entra com o seu Pokémon."
+      },
+      "noPokemon": "Você não tem Pokémon deste jogo no cofre. Crie um no construtor ou importe um arquivo.",
+      "choosePokemon": "Escolha um Pokémon do cofre",
+      "anyPokemon": "Nenhum (o pokeldn escolhe)",
+      "level": "nível {{level}}",
+      "offer": "Pokémon que o TradeRock leva",
+      "offerHelp": "Ele luta ao seu lado na raid.",
+      "boss": "Chefe",
+      "bossVault": "Chefe do cofre",
+      "bossEvent": "Chefe de um evento",
+      "chooseBoss": "Escolha o chefe",
+      "gigantamax": "Gigantamax (só se a espécie tiver)",
+      "event": "Evento",
+      "move": "Golpe que o TradeRock usa",
+      "moveN": "Golpe {{n}}",
+      "legendary": "Lendário",
+      "code": "Código (opcional)",
+      "codeHelp": "8 dígitos. Use o mesmo no console; deixe em branco para nenhum.",
+      "svBoss": "Chefe",
+      "svBossHelp": "O Pokémon do cofre vira o chefe da raid.",
+      "svEventHelp": "Opcional: uma Tera Raid de evento já distribuída.",
+      "noEvent": "Sem evento",
+      "version": "Versão",
+      "group": "Grupo do evento",
+      "map": "Região",
+      "maps": {
+        "paldea": "Paldea",
+        "kitakami": "Kitakami",
+        "blueberry": "Blueberry"
+      },
+      "progress": "Etapa da história",
+      "progressNames": {
+        "beginning": "Começo",
+        "tera": "Depois do Tera",
+        "3star": "3 estrelas",
+        "4star": "4 estrelas",
+        "5star": "5 estrelas",
+        "6star": "6 estrelas"
+      },
+      "players": "Consoles",
+      "playersHelp": "Quantos consoles vão entrar. As vagas que sobram ficam com parceiros do jogo.",
+      "black": "Raid de 6 estrelas (cristal preto)",
+      "seed": "Semente",
+      "seedHelp": "8 dígitos hexadecimais. Com a mesma semente, a raid sai igual.",
+      "svOffer": "Pokémon que o TradeRock leva"
+    },
+    "circle": {
+      "title": "Union Circle",
+      "sub": "O console abre o círculo e o TradeRock entra.",
+      "start": "Entrar no círculo",
+      "kinds": {
+        "quests": "Missões do Blueberry",
+        "encounters": "Encontros"
+      },
+      "about": {
+        "quests": "O TradeRock cumpre missões do Blueberry pelo seu console: todos os lendários do Snacksworth, ou os BP que você escolher. Depois ele sai do círculo.",
+        "encounters": "O TradeRock faz aparecer em volta do seu jogador o Pokémon selvagem que você escolher, para batalhar e capturar."
+      },
+      "code": "Código do círculo",
+      "codeHelp": "Os 4 dígitos que você usou no console.",
+      "task": "Tarefa",
+      "tasks": {
+        "snacksworth": "Liberar todos os lendários do Snacksworth",
+        "bp": "Dar BP"
+      },
+      "bp": "BP",
+      "bpHelp": "De 1 a 9.999.999.",
+      "species": "Pokémon",
+      "chooseSpecies": "Escolha o Pokémon",
+      "level": "Nível",
+      "tera": "Tipo Tera",
+      "teraDefault": "Normal (padrão)",
+      "shiny": "Shiny",
+      "progress": {
+        "lobby": "Entrou no círculo",
+        "started": "O círculo começou",
+        "over": "Tarefa concluída",
+        "running": "O círculo está em andamento no console. Para terminar, feche o círculo no console ou clique em Terminei."
+      },
+      "result": "Union Circle concluído."
     }
   }
 }

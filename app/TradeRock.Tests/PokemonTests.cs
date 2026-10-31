@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PKHeX.Core;
+using TradeRock.Core.Games;
 using TradeRock.Core;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Storage;
@@ -91,7 +92,7 @@ public sealed class PokemonStoreTests : IAsyncLifetime
         Assert.False(second.Created);
         Assert.Equal(first.Pokemon.Id, second.Pokemon.Id);
         Assert.Single(await _store.ListAsync(default));
-        Assert.True(File.Exists(_store.FilePath(first.Pokemon.Sha256)));
+        Assert.True(File.Exists(_store.FilePath(first.Pokemon.Sha256, GameFamily.Frlg)));
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public sealed class PokemonStoreTests : IAsyncLifetime
         var data = await _store.ReadDataAsync(imported.Pokemon, default);
         Assert.Equal(Pk3Reader.Read(DemoPokemon.All[1].Data).Data, data);
 
-        var path = _store.FilePath(imported.Pokemon.Sha256);
+        var path = _store.FilePath(imported.Pokemon.Sha256, GameFamily.Frlg);
         var tampered = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
         tampered[0x0A] ^= 1;
         await File.WriteAllBytesAsync(path, tampered, TestContext.Current.CancellationToken);
@@ -113,11 +114,11 @@ public sealed class PokemonStoreTests : IAsyncLifetime
     public async Task Arquivo_apagado_e_regravado_na_reimportacao()
     {
         var imported = await _store.ImportAsync(DemoPokemon.All[0].Data, PokemonOrigin.Imported, null, default);
-        File.Delete(_store.FilePath(imported.Pokemon.Sha256));
+        File.Delete(_store.FilePath(imported.Pokemon.Sha256, GameFamily.Frlg));
 
         await _store.ImportAsync(DemoPokemon.All[0].Data, PokemonOrigin.Imported, null, default);
 
-        Assert.True(File.Exists(_store.FilePath(imported.Pokemon.Sha256)));
+        Assert.True(File.Exists(_store.FilePath(imported.Pokemon.Sha256, GameFamily.Frlg)));
     }
 }
 

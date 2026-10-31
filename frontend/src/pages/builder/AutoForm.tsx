@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { SearchSelect } from '../../components/SearchSelect'
 import { Button, Icon, Segmented, inputClass, selectClass } from '../../components/ui'
 import { api, spriteUrl } from '../../lib/api'
-import type { BuilderData, EncounterOption, MyTrainer, PokemonSpec, SpeciesDetails } from '../../lib/types'
+import { GAMES, gameOf, idLimits } from '../../lib/games'
+import type { BuilderData, EncounterOption, MyTrainer, PokemonSpec, SpeciesDetails, TradeGame } from '../../lib/types'
 import { FieldBox, StatInputs, type Issue } from './shared'
 
 export function SpriteIcon({ species }: { species: number }) {
@@ -16,12 +17,15 @@ export function AutoForm({
   onChange,
   issues,
   myTrainer,
+  onGameChange,
 }: {
   data: BuilderData
   spec: PokemonSpec
   onChange: (spec: PokemonSpec) => void
   issues: Record<string, Issue>
   myTrainer: MyTrainer | null
+  /** Troca de jogo (a página recarrega as listas e o treinador do jogo). */
+  onGameChange: (game: TradeGame) => void
 }) {
   const { t } = useTranslation()
   const [details, setDetails] = useState<SpeciesDetails | null>(null)
@@ -29,16 +33,19 @@ export function AutoForm({
   const [more, setMore] = useState(false)
   const set = (patch: Partial<PokemonSpec>) => onChange({ ...spec, ...patch })
 
+  const form = spec.form ?? 0
+  const game = gameOf(spec.game)
+  const limits = idLimits(game)
   useEffect(() => {
-    api.get<SpeciesDetails>(`/api/builder/species/${spec.species}`).then(setDetails).catch(() => setDetails(null))
-  }, [spec.species])
+    api.get<SpeciesDetails>(`/api/builder/species/${spec.species}?game=${spec.game}&form=${form}`).then(setDetails).catch(() => setDetails(null))
+  }, [spec.species, spec.game, form])
 
   useEffect(() => {
     api
-      .get<EncounterOption[]>(`/api/builder/species/${spec.species}/encounters?game=${spec.game}`)
+      .get<EncounterOption[]>(`/api/builder/species/${spec.species}/encounters?game=${spec.game}&form=${form}`)
       .then(setEncounters)
       .catch(() => setEncounters([]))
-  }, [spec.species, spec.game])
+  }, [spec.species, spec.game, form])
 
   const evTotal = spec.evs.reduce((a, b) => a + b, 0)
   // Problema num campo de "Mais opções": abre sozinho para o campo aparecer.
@@ -46,8 +53,8 @@ export function AutoForm({
 
   function changeSpecies(species: number | null) {
     if (!species) return
-    // Habilidade, gênero e origem dependem da espécie: voltam para "tanto faz".
-    set({ species, abilitySlot: null, gender: null, encounterKey: null })
+    // Habilidade, gênero, forma e origem dependem da espécie: voltam para "tanto faz".
+    set({ species, form: 0, abilitySlot: null, gender: null, encounterKey: null })
   }
 
   return (
@@ -63,8 +70,19 @@ export function AutoForm({
           />
         </FieldBox>
         <FieldBox field="nickname" issue={issues.nickname} label={<>{t('builder.fields.nickname')} <span className="font-normal text-muted">({t('common.optional')})</span></>}>
-          <input className={inputClass} maxLength={10} value={spec.nickname ?? ''} onChange={(e) => set({ nickname: e.target.value || null })} />
+          <input className={inputClass} maxLength={data.nicknameLength} value={spec.nickname ?? ''} onChange={(e) => set({ nickname: e.target.value || null })} />
         </FieldBox>
+        {details?.forms && details.forms.length > 1 && (
+          <FieldBox field="form" issue={issues.form} label={t('ui.builder.form')}>
+            <select className={selectClass} value={form} onChange={(e) => set({ form: Number(e.target.value), abilitySlot: null, encounterKey: null })}>
+              {details.forms.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.text || t('ui.builder.formNormal')}
+                </option>
+              ))}
+            </select>
+          </FieldBox>
+        )}
       </div>
 
       <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
@@ -88,15 +106,17 @@ export function AutoForm({
           </div>
         </FieldBox>
         <FieldBox field="game" label={t('ui.builder.forGame')}>
-          <Segmented
-            className="h-11"
-            value={spec.game}
-            onChange={(game) => set({ game, encounterKey: null })}
-            options={[
-              { value: 'fire_red', label: 'FireRed' },
-              { value: 'leaf_green', label: 'LeafGreen' },
-            ]}
-          />
+          <select className={selectClass} value={spec.game} onChange={(e) => onGameChange(e.target.value as TradeGame)}>
+            {GAMES.map((g) => (
+              <optgroup key={g.family} label={g.name}>
+                {g.versions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
         </FieldBox>
       </div>
 
@@ -211,7 +231,7 @@ export function AutoForm({
           </FieldBox>
 
           <FieldBox field="evs" issue={issues.evs} label={<span className="flex flex-1 items-center">EVs<span className={`ml-auto text-[13px] font-semibold ${evTotal > 510 ? 'text-bad' : 'text-muted'}`}>{evTotal}/510</span></span>}>
-            <StatInputs values={spec.evs} max={255} onChange={(evs) => set({ evs })} />
+            <StatInputs values={spec.evs} max={data.maxEv} onChange={(evs) => set({ evs })} />
           </FieldBox>
 
           <FieldBox field="origin" issue={issues.origin} help={t('builder.originHelp')}>
@@ -229,9 +249,9 @@ export function AutoForm({
 
           <FieldBox field="trainer" issue={issues.trainer}>
             <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(110px,1fr))]">
-              <input className={inputClass} maxLength={7} value={spec.trainer.name} onChange={(e) => set({ trainer: { ...spec.trainer, name: e.target.value } })} aria-label={t('builder.fields.otName')} />
-              <input inputMode="numeric" className={inputClass} value={spec.trainer.tid} onChange={(e) => set({ trainer: { ...spec.trainer, tid: Math.min(65535, Number(e.target.value.replace(/\D/g, '')) || 0) } })} aria-label="TID" title="TID" />
-              <input inputMode="numeric" className={inputClass} value={spec.trainer.sid} onChange={(e) => set({ trainer: { ...spec.trainer, sid: Math.min(65535, Number(e.target.value.replace(/\D/g, '')) || 0) } })} aria-label="SID" title="SID" />
+              <input className={inputClass} maxLength={game.trainerNameMax} value={spec.trainer.name} onChange={(e) => set({ trainer: { ...spec.trainer, name: e.target.value } })} aria-label={t('builder.fields.otName')} />
+              <input inputMode="numeric" className={inputClass} value={spec.trainer.tid} onChange={(e) => set({ trainer: { ...spec.trainer, tid: Math.min(limits.tid, Number(e.target.value.replace(/\D/g, '')) || 0) } })} aria-label="TID" title="TID" />
+              <input inputMode="numeric" className={inputClass} value={spec.trainer.sid} onChange={(e) => set({ trainer: { ...spec.trainer, sid: Math.min(limits.sid, Number(e.target.value.replace(/\D/g, '')) || 0) } })} aria-label="SID" title="SID" />
               <select className={selectClass} value={spec.trainer.gender} onChange={(e) => set({ trainer: { ...spec.trainer, gender: Number(e.target.value) } })} aria-label={t('builder.fields.otGender')}>
                 <option value={0}>♂</option>
                 <option value={1}>♀</option>

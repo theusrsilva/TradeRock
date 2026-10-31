@@ -13,9 +13,12 @@
 # Conteúdo de build/windows/app:
 #   traderock.exe + .NET (self-contained) + frontend embutido + traderock.ico
 #   esp32-runtime/python   CPython 3.12 do python-build-standalone para Windows (checksum conferido)
-#                          + esptool 5.4.0 e dependências win_amd64 com hash fixo
-#                          (worker/requirements-esp32-windows.lock; o esptool vem do requirements.lock)
-#   esp32-runtime/worker   só o necessário para "run.py --esp32" (gravação do ESP32, roda como o usuário)
+#                          + esptool 5.4.0, as dependências do pokeldn e as rodas win_amd64 com hash fixo
+#                          (worker/requirements-esp32-windows.lock; o esptool e o python-netlink vêm do
+#                          requirements.lock, só existem como código-fonte)
+#   esp32-runtime/worker   só o necessário para "run.py --esp32" e "run.py --pokeldn" (gravação, placa e troca
+#                          pelo ESP32, como o usuário)
+#   esp32-runtime/pokeldn  o pokeldn com os patches (scripts/stage-pokeldn.sh, D21/D23)
 #   LICENSE, THIRD-PARTY-NOTICES.md
 #
 # Nenhuma chave, ROM ou dado do usuário entra aqui.
@@ -91,7 +94,7 @@ mkdir -p "$HOSTPY"
 tar xzf "$CACHE/$PY_LINUX" -C "$HOSTPY"
 PIP=("$HOSTPY/python/bin/python3" -m pip --disable-pip-version-check --no-input)
 # O esptool só é publicado como código-fonte (puro Python): vira uma roda py3-none-any aqui.
-grep -E '^esptool==' worker/requirements.lock > "$BUILD/esptool.lock"
+grep -E '^(esptool|python_netlink)==' worker/requirements.lock > "$BUILD/esptool.lock"
 "${PIP[@]}" wheel --quiet --no-deps --require-hashes --cache-dir "$CACHE/pip" -w "$BUILD/wheels" -r "$BUILD/esptool.lock"
 SITE="$RUNTIME/python/Lib/site-packages"
 "${PIP[@]}" install --quiet --no-deps --require-hashes --only-binary=:all: --cache-dir "$CACHE/pip" \
@@ -100,19 +103,25 @@ SITE="$RUNTIME/python/Lib/site-packages"
 rm -rf "$SITE/bin"
 "${PIP[@]}" install --quiet --no-deps --no-index --only-binary=:all: \
   --platform win_amd64 --python-version 3.12 --implementation cp \
-  --target "$SITE" "$BUILD"/wheels/esptool-*.whl
+  --target "$SITE" "$BUILD"/wheels/esptool-*.whl "$BUILD"/wheels/python_netlink-*.whl
 # Atalhos de linha de comando que o pip do Linux gera (scripts POSIX, inúteis no Windows).
 rm -rf "$SITE/bin"
 find "$SITE" -name __pycache__ -prune -exec rm -rf {} +
 
-echo "==> worker (só a gravação do ESP32)"
+echo "==> worker (gravação do ESP32 e pokeldn)"
 mkdir -p "$RUNTIME/worker/traderock_worker"
 cp worker/run.py "$RUNTIME/worker/"
-cp worker/traderock_worker/{__init__.py,main.py,esp32_flash.py} "$RUNTIME/worker/traderock_worker/"
+cp worker/traderock_worker/{__init__.py,main.py,esp32_flash.py,netguard.py,pokeldn_env.py,pokeldn_board.py,pokeldn_trade.py} \
+  "$RUNTIME/worker/traderock_worker/"
+
+echo "==> pokeldn + patches"
+scripts/stage-pokeldn.sh "$RUNTIME/pokeldn"
+find "$RUNTIME/pokeldn" -name __pycache__ -prune -exec rm -rf {} +
 cat > "$RUNTIME/BUILD-INFO.json" <<JSON
 {
   "python": "3.12.14+$PY_RELEASE (win x86_64)",
-  "esptool": "$(sed -n 's/^esptool==\([^ ]*\).*/\1/p' worker/requirements.lock)"
+  "esptool": "$(sed -n 's/^esptool==\([^ ]*\).*/\1/p' worker/requirements.lock)",
+  "pokeldnCommit": "$(git -C engines/pokeldn rev-parse HEAD)"
 }
 JSON
 rm -rf "$HOSTPY" "$BUILD/wheels" "$BUILD/esptool.lock"

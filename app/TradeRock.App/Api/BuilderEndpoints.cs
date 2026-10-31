@@ -1,6 +1,7 @@
 using TradeRock.App.Server;
 using Microsoft.Extensions.Caching.Memory;
 using PKHeX.Core;
+using TradeRock.Core.Games;
 using TradeRock.Core.Builder;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Storage;
@@ -11,11 +12,22 @@ namespace TradeRock.App.Api;
 
 public static class BuilderEndpoints
 {
+    /// <summary>"Meu treinador" do FireRed/LeafGreen; os outros jogos usam "trainer.me.&lt;jogo&gt;" (<see cref="MyTrainerKeyFor"/>).</summary>
     public const string MyTrainerKey = "trainer.me";
+
+    public static string MyTrainerKeyFor(GameFamily family) =>
+        family == GameFamily.Frlg ? MyTrainerKey : $"{MyTrainerKey}.{GameCatalog.Get(family).Key}";
+
+    /// <summary>
+    /// "Meu treinador" de um jogo como a tela mostra: <see cref="Tid"/>/<see cref="Sid"/> com os dígitos do jogo
+    /// (5 no FRLG, 6 e 4 nos outros). Insígnias e Pokédex Nacional só valem no FRLG.
+    /// </summary>
+    public sealed record MyTrainerDto(string Name, uint Tid, uint? Sid, byte Gender = 0, byte Badges = 8, bool HasNationalDex = true);
 
     public sealed record GenerateDto(PokemonSpec Spec, string? Language);
     public sealed record AdvancedDto(RawPokemon Raw, string? Language);
-    public sealed record SaveDto(byte[] Data);
+    /// <param name="Game">Versão do jogo do Pokémon gerado (o formato de PK8/PB8 e PK9/PA9 não se distingue pelos bytes).</param>
+    public sealed record SaveDto(byte[] Data, TradeGame? Game = null);
     public sealed record ShowdownDto(string Text, TradeGame Game = TradeGame.FireRed);
     public sealed record SavImportDto(IReadOnlyList<int> Indices);
 
@@ -23,24 +35,41 @@ public static class BuilderEndpoints
     {
         var group = api.MapGroup("/builder");
 
-        group.MapGet("/data", () => new
+        // ?game=<versão> (fire_red, scarlet...). O modo avançado (versions) é só do FireRed/LeafGreen.
+        group.MapGet("/data", (string? game) =>
         {
-            species = BuilderData.Species,
-            natures = BuilderData.Natures,
-            moves = BuilderData.Moves,
-            items = BuilderData.Items,
-            balls = BuilderData.Balls,
-            languages = BuilderData.Languages,
-            versions = AdvancedEditor.Versions,
+            var info = GameCatalog.Of(ParseGame(game));
+            var data = BuilderData.For(info);
+            return new
+            {
+                species = data.Species,
+                natures = data.Natures,
+                moves = data.Moves,
+                items = data.Items,
+                balls = data.Balls,
+                languages = data.Languages,
+                versions = info.Family == GameFamily.Frlg ? AdvancedEditor.Versions : [],
+                maxEv = data.MaxEv,
+                nicknameLength = data.NicknameLength,
+                advanced = info.Family == GameFamily.Frlg,
+            };
         });
 
-        group.MapGet("/species/{species:int}", (int species) =>
-            species is < 1 or > BuilderData.MaxSpecies ? Results.NotFound() : Results.Ok(BuilderData.Details((ushort)species)));
+        group.MapGet("/species/{species:int}", (int species, string? game, byte? form) =>
+        {
+            var info = GameCatalog.Of(ParseGame(game));
+            return SpeciesExists(info, species, form ?? 0)
+                ? Results.Ok(BuilderData.Details((ushort)species, info, form ?? 0))
+                : Results.NotFound();
+        });
 
-        group.MapGet("/species/{species:int}/encounters", (int species, string? game) =>
-            species is < 1 or > BuilderData.MaxSpecies
-                ? Results.NotFound()
-                : Results.Ok(BuilderData.Encounters((ushort)species, ParseGame(game))));
+        group.MapGet("/species/{species:int}/encounters", (int species, string? game, byte? form) =>
+        {
+            var version = ParseGame(game);
+            return SpeciesExists(GameCatalog.Of(version), species, form ?? 0)
+                ? Results.Ok(BuilderData.Encounters((ushort)species, version, form ?? 0))
+                : Results.NotFound();
+        });
 
         group.MapGet("/locations", (string? version) =>
         {
@@ -58,7 +87,8 @@ public static class BuilderEndpoints
         {
             try
             {
-                var imported = await store.ImportAsync(body.Data, PokemonOrigin.Created, null, ct);
+                var family = body.Game is { } g && Enum.IsDefined(g) ? GameCatalog.Of(g).Family : (GameFamily?)null;
+                var imported = await store.ImportAsync(body.Data, PokemonOrigin.Created, null, ct, family);
                 var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
                 return Results.Ok(new { created = imported.Created, pokemon = PokemonEndpoints.PokemonDto.From(imported.Pokemon, me) });
             }
@@ -73,20 +103,23 @@ public static class BuilderEndpoints
         {
             if (await store.GetAsync(id, ct) is not { } p)
                 return Results.NotFound();
-            var pk = new PK3(await store.ReadDataAsync(p, ct));
-            return Results.Ok(new { spec = PokemonSpec.FromPk(pk), raw = RawPokemon.FromPk(pk) });
+            var pk = PokemonReader.ToEntity(await store.ReadDataAsync(p, ct), p.Family);
+            var info = GameCatalog.Get(p.Family);
+            // A versão do próprio Pokémon quando é do jogo (Scarlet ou Violet...), senão a primeira do par.
+            var version = info.Versions.FirstOrDefault(v => GameCatalog.ToVersion(v) == pk.Version, info.Versions[0]);
+            return Results.Ok(new { spec = PokemonSpec.FromPk(pk, version), raw = pk is PK3 pk3 ? RawPokemon.FromPk(pk3) : null });
         });
 
         group.MapPost("/showdown", async (ShowdownDto body, SettingsStore settings, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(body.Text) || body.Text.Length > 20_000)
                 return Results.BadRequest(new { error = "invalid", errors = new[] { "showdown_empty" } });
-            var trainer = await DefaultTrainerAsync(settings, ct);
+            var trainer = await DefaultTrainerAsync(settings, ct, body.Game);
             return Results.Ok(ShowdownImport.Parse(body.Text, trainer, body.Game));
         });
 
-        group.MapGet("/default-trainer", async (SettingsStore settings, CancellationToken ct) =>
-            await DefaultTrainerAsync(settings, ct));
+        group.MapGet("/default-trainer", async (string? game, SettingsStore settings, CancellationToken ct) =>
+            await DefaultTrainerAsync(settings, ct, ParseGame(game)));
 
         MapSaveImport(api);
         MapMyTrainer(api);
@@ -149,48 +182,86 @@ public static class BuilderEndpoints
 
     private static void MapMyTrainer(IEndpointRouteBuilder api)
     {
-        api.MapGet("/settings/my-trainer", async (SettingsStore settings, CancellationToken ct) =>
-            await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct) is { } me ? Results.Ok(me) : Results.NoContent());
-
-        api.MapPut("/settings/my-trainer", async (MyTrainer body, SettingsStore settings, CancellationToken ct) =>
+        // ?game=frlg|lgpe|swsh|bdsp|pla|sv|za (padrão frlg). Guardado com TID16/SID16, como no arquivo.
+        api.MapGet("/settings/my-trainer", async (string? game, SettingsStore settings, CancellationToken ct) =>
         {
-            var errors = TrainerName.Validate(body.Name).ToList();
-            if (body.Badges > 8)
-                errors.Add("badges_invalid");
-            if (errors.Count > 0)
-                return Results.BadRequest(new { error = "invalid", errors });
-            await settings.SetAsync(UserSettings.Key(MyTrainerKey), body, ct);
-            return Results.Ok(body);
+            if (GameParam(game) is not { } g)
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "game_invalid" } });
+            return await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKeyFor(g.Family)), null, ct) is { } me
+                ? Results.Ok(ToDto(g, me))
+                : Results.NoContent();
         });
 
-        // Um Pokémon capturado no Switch e recebido pelo TradeRock traz o TID e o SID do jogador.
+        api.MapPut("/settings/my-trainer", async (string? game, MyTrainerDto body, SettingsStore settings, CancellationToken ct) =>
+        {
+            if (GameParam(game) is not { } g)
+                return Results.BadRequest(new { error = "invalid", errors = new[] { "game_invalid" } });
+            var errors = TrainerName.Validate(body.Name, g).ToList();
+            if (body.Badges > 8)
+                errors.Add("badges_invalid");
+            var ids = TrainerIds.FromDisplay(g, body.Tid, body.Sid ?? 0);
+            if (ids is null)
+                errors.Add("trainer_id_invalid");
+            if (errors.Count > 0)
+                return Results.BadRequest(new { error = "invalid", errors });
+            // Da Gen 7 em diante o SID16 faz parte do TID que o jogo mostra: guarda sempre.
+            var me = new MyTrainer(body.Name, ids!.Value.Tid16, body.Sid is null && !g.SixDigitTrainerId ? null : ids.Value.Sid16,
+                body.Gender, body.Badges, body.HasNationalDex);
+            await settings.SetAsync(UserSettings.Key(MyTrainerKeyFor(g.Family)), me, ct);
+            return Results.Ok(ToDto(g, me));
+        });
+
+        // Um Pokémon capturado no Switch e recebido pelo TradeRock traz o TID e o SID do jogador (no jogo dele).
         api.MapPost("/settings/my-trainer/from-pokemon/{id:guid}", async (Guid id, PokemonStore store, SettingsStore settings, CancellationToken ct) =>
         {
             if (await store.GetAsync(id, ct) is not { } p)
                 return Results.NotFound();
-            var current = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
+            var key = UserSettings.Key(MyTrainerKeyFor(p.Family));
+            var current = await settings.GetAsync<MyTrainer?>(key, null, ct);
             var me = new MyTrainer(p.OtName, p.Tid, p.Sid, current?.Gender ?? 0, current?.Badges ?? 8, current?.HasNationalDex ?? true);
-            await settings.SetAsync(UserSettings.Key(MyTrainerKey), me, ct);
-            return Results.Ok(me);
+            await settings.SetAsync(key, me, ct);
+            return Results.Ok(ToDto(GameCatalog.Get(p.Family), me));
         });
     }
 
-    /// <summary>OT padrão do construtor: "Meu treinador" ou, sem ele, o treinador padrão do motor (EMU).</summary>
-    public static async Task<TrainerSpec> DefaultTrainerAsync(SettingsStore settings, CancellationToken ct)
+    private static SwitchGame? GameParam(string? game) => string.IsNullOrEmpty(game) ? GameCatalog.Get(GameFamily.Frlg) : GameCatalog.ByKey(game);
+
+    private static MyTrainerDto ToDto(SwitchGame game, MyTrainer me)
     {
-        var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKey), null, ct);
-        if (me is not null)
-            return new TrainerSpec(me.Name, me.Tid, me.Sid ?? 0, me.Gender);
-        var d = TrainerProfile.Default;
-        return new TrainerSpec(d.Name, d.Tid, d.Sid ?? 0);
+        var (tid, sid) = TrainerIds.Display(game, me.Tid, me.Sid ?? 0);
+        return new MyTrainerDto(me.Name, tid, me.Sid is null && !game.SixDigitTrainerId ? null : sid, me.Gender, me.Badges, me.HasNationalDex);
     }
 
-    /// <summary>Query string não passa pelo conversor JSON: aceita "fire_red"/"leaf_green" (e os nomes do enum).</summary>
-    private static TradeGame ParseGame(string? game) => game?.Replace("_", "", StringComparison.Ordinal).ToLowerInvariant() switch
+    /// <summary>
+    /// OT padrão do construtor: o "Meu treinador" do jogo ou, sem ele, o treinador padrão do motor (EMU), com os
+    /// números como o jogo mostra.
+    /// </summary>
+    public static async Task<TrainerSpec> DefaultTrainerAsync(SettingsStore settings, CancellationToken ct,
+        TradeGame game = TradeGame.FireRed)
     {
-        "leafgreen" => TradeGame.LeafGreen,
-        _ => TradeGame.FireRed,
-    };
+        var info = GameCatalog.Of(game);
+        var me = await settings.GetAsync<MyTrainer?>(UserSettings.Key(MyTrainerKeyFor(info.Family)), null, ct);
+        if (me is not null)
+        {
+            var (tid, sid) = TrainerIds.Display(info, me.Tid, me.Sid ?? 0);
+            return new TrainerSpec(me.Name, tid, sid, me.Gender);
+        }
+        var d = TrainerProfile.Default;
+        var (dt, ds) = TrainerIds.Display(info, d.Tid, d.Sid ?? 0);
+        return new TrainerSpec(d.Name, dt, ds);
+    }
+
+    /// <summary>Query string não passa pelo conversor JSON: aceita o snake_case ("fire_red", "legends_za") e os nomes do enum.</summary>
+    private static TradeGame ParseGame(string? game)
+    {
+        var key = game?.Replace("_", "", StringComparison.Ordinal);
+        return Enum.GetValues<TradeGame>().FirstOrDefault(
+            g => string.Equals(g.ToString(), key, StringComparison.OrdinalIgnoreCase), TradeGame.FireRed);
+    }
+
+    private static bool SpeciesExists(SwitchGame game, int species, byte form) =>
+        game.Family == GameFamily.Frlg ? species is >= 1 and <= BuilderData.MaxSpecies && form == 0
+            : species is >= 1 and <= ushort.MaxValue && game.HasSpecies((ushort)species, form);
 
     private static string Lang(string? language) => language is "en" ? "en" : "pt-BR";
 }

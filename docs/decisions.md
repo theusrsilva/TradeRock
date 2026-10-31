@@ -546,3 +546,407 @@ Windows 10 1809+ e 11, x64, **só o motor ESP32** (o Windows não dá acesso de 
   WebView2, API, ACL do prod.keys, esptool (porta ausente) e a fumaça completa do instalador.
   **Não verificado:** ESP32 real no Windows (gravação, troca, driver do CH340/CP210x).
 
+
+## D21. Jogos do Switch pelo pokeldn (Entrega 13)
+
+Plano e respostas do autor em [multijogos.md](multijogos.md).
+
+- **pokeldn como submódulo**, em `engines/pokeldn`: [Decryptu/pokeldn](https://github.com/Decryptu/pokeldn)
+  v0.49.1, commit `ae97616`, AGPL-3.0. É um fork do frlg-ldn-trade que fala o protocolo local de cada jogo.
+  - Sem fork nosso (D2). `scripts/stage-pokeldn.sh` copia o pokeldn e aplica `engines/patches/pokeldn`.
+  - A cópia do worker leva só `pokeldn/`, `bin/`, o LDN vendorizado, `config/`, a versão do firmware e as
+    licenças. São 15 MB, sem a interface gráfica (flet), o firmware em C nem os testes.
+- **Python 3.12 mantido.** O plano previa o 3.13, mas não é preciso:
+  - o LDN vendorizado exige 3.12 (sintaxe da PEP 695);
+  - não há nada exclusivo do 3.13;
+  - a suíte do pokeldn dá o mesmo resultado nos dois.
+
+  Os módulos de protocolo de todos os jogos importam no Python embutido com as dependências que o
+  `requirements.lock` já tem (pycryptodome, trio, zstandard, pyserial, python-netlink).
+- **Duas bibliotecas LDN.**
+  - O pokeldn traz uma cópia modificada do kinnay/LDN 0.0.17 (`vendor/LDN`, rev `39d0b20`, com correções
+    de placas). O processo do pokeldn põe essa cópia na frente do `sys.path`.
+  - O motor do FRLG continua com o `ldn` do PyPI, no próprio processo.
+- **Modo TradeRock (`TRADEROCK=1`, patch 0001).** Sem a variável, o pokeldn se comporta como o upstream,
+  e os testes dele continuam valendo.
+  - `app/update._open` recusa. Por ele passam atualizações, sprites, loja de plugins e galeria de eventos.
+  - `plugins.load` não carrega nada.
+  - `prepare_offer` pula os plugins e o ajudante `pokeldn-pkhex`. Sem o patch, um Pokémon ilegal
+    bloquearia a troca, e o autor quer só o aviso.
+  - O app confere o Pokémon com o PKHeX dele e manda a forma de equipe.
+- **Trava de rede (`worker/traderock_worker/netguard.py`).** É a segunda camada da D17: um audit hook
+  (PEP 578) instalado no processo do pokeldn.
+  - Recusa `connect`, `sendto` e `sendmsg` IP para fora da rede local (privada, link-local, loopback,
+    multicast, broadcast).
+  - Recusa também resolver nomes de host.
+  - Netlink, AF_PACKET e serial não são IP e passam.
+  - A troca online do pokeldn (Nostr, `--online`) nunca é usada.
+- **Chaves.**
+  - O pokeldn não registra o prod.keys.
+  - Ele imprime **chaves de sessão derivadas** (`SessionKeys.__repr__`, `pia_lan`, as chaves de canal do
+    PLA) e as grava no `--capture`.
+  - O adaptador não guarda a saída crua: guarda só os eventos mapeados e o resto com as sequências
+    hexadecimais longas apagadas. Nunca usa `--capture`.
+  - O ESP32 recebe só a chave de rede derivada, como no easyworld.
+- **Adaptador (Entrega 15).**
+  - **Um processo filho por sessão.** O pokeldn guarda estado global: o contador `_done` de
+    `pokeldn.ldn` e o `TRADE_IN_PROGRESS` do LGPE.
+  - **Os scripts `bin/<jogo>_<papel>.py` são a API.** A lógica de rádio e Pia de SV, SwSh (join), BDSP
+    (join) e LGPE está presa no `main()` deles.
+    - O filho carrega o script com `importlib` e chama `main(argv)` com as flags testadas do catálogo do
+      pokeldn (`pokeldn/app/catalog.py`).
+    - Sempre com `--no-take-host`: o padrão `--take-host` do SV e do PLA faz `os.execv`.
+    - O `main()` do `pla_host` lê `sys.argv`.
+  - **Eventos.** São as linhas da saída padrão:
+    - `[done] trade N complete`;
+    - `[link] waiting|joined|left`, com `POKELDN_MANAGED_RUN=1`;
+    - os prefixos de cada jogo.
+
+    Um teste confere que cada frase mapeada existe no submódulo, como o do frlg-ldn-trade.
+- **Por jogo** (versões em que o pokeldn estudou cada jogo; nenhum confere a versão do console):
+
+  | Jogo | Comm id | Versão | Papéis | Código | Oferta | Recebido (arquivo) | LAN |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | FRLG | 0x01006fa0233f8000 | rev 0x0A | host e join | não tem | PK3 | PK3 decifrado | não |
+  | Let's Go | 0x010003F003A34000 | 1.0.2 | host e join | 3 Pokémon (host) | PB7 | 232 bytes + 28 zeros | não |
+  | Sword/Shield | 0x0100ABF008968000 | 1.3.2 | host e join | 8 dígitos (host) | PK8 de equipe | PK8 cifrado, 344 | **sim** |
+  | BDSP | 0x0100000011D90000 | 1.3.0 | host e join | senha (host) | PB8 | PB8 cifrado, 328 | não |
+  | Arceus | 0x01001f5010dfa000 | 1.1.1 | host e join | 8 dígitos | PA8 de equipe | PA8 cifrado, 376 | não |
+  | Scarlet/Violet | 0x0100a3d008c5c000 | 4.0.0 | host e join | até 16 caracteres | PK9 de equipe | PK9 decifrado, 344 | não |
+  | Legends: Z-A | 0x0100f43008c44000 | 2.0.2 | host e join | 8 dígitos | PA9 de equipe | PA9 decifrado, 344 | não |
+
+  - O app normaliza o recebido com o PKHeX.
+  - SwSh e BDSP gravam o arquivo quando o console **mostra** a oferta, antes de a troca concluir. Por
+    isso o app só guarda o Pokémon depois do evento de troca concluída.
+  - Várias trocas por sessão em todos os jogos. A última oferta se repete, menos no LGPE, que para de
+    responder.
+- **Modo LAN só no Sword/Shield.** O plano previa também o Scarlet/Violet, mas a troca do SV nunca usa
+  LAN. O mesmo vale para Z-A, PLA, BDSP e LGPE.
+  - No console: Opções, L + R + analógico esquerdo.
+  - Sem root, sem prod.keys e sem rádio.
+  - UDP 30000, 40000 e 49152–49155. O código de troca é ignorado.
+- **Evolução por troca.** Quem evolui é o console, no que recebe; o pokeldn não evolui nada.
+  - O `--trade-back` devolve o Pokémon recebido para ele evoluir no console. Só foi verificado em FireRed
+    e Shield.
+  - Se acontece algo parecido com a D8 nos outros jogos, só o teste com o console dirá.
+- **Sair no meio castiga o console.**
+  - PLA: trava de cerca de 10 min.
+  - LGPE: 600 s de jogo.
+  - BDSP: penalidade.
+  - Z-A: "Error Number: 6" quando a sessão fecha sem passar o host.
+
+  O cancelar do app pede a saída educada de cada jogo e espera.
+- **Rádios.**
+  - **Placa Wi-Fi no Linux:** root, pelo worker. O pokeldn chama esse caminho de "legacy".
+  - **ESP32:** o caminho principal dele, sem root.
+    - Serial COBS + CRC32, protocolo 1, 115200 → 921600 baud. Firmware 1.9.1 no commit travado.
+    - Placas: ESP32 clássico, S3, C3 e C6. Não servem o ESP32-S2 nem o ESP32-WROOM-32 genérico antigo.
+    - O ESP32 não alcança os canais 36–48 de 5 GHz.
+  - **`ldnrs`:** placa USB no Windows, nunca testada com console. Fica de fora.
+- **Firmware do pokeldn.** Os `.bin` não estão no repositório, só nos Releases do GitHub, com `SHA256SUMS`.
+  Na Entrega 17 escolho entre:
+  - baixar no empacotamento, com sha256 fixo (nunca em tempo de execução, D17);
+  - compilar com o ESP-IDF v6.1 no CI.
+- **Ajudante PKHeX do pokeldn** (`services/pkhex`, o mesmo PKHeX.Core 26.8.26). Só é compilado para os
+  testes. Ainda dependem dele:
+  - `SERVICE.names(..., "bag")` do `sv_host` e do `swsh_host`;
+  - o Mystery Gift do SwSh (`validate_gift`).
+
+  Resolver nas Entregas 15 e 18.
+- **Testes.** `scripts/test-pokeldn.sh` entrou no `ci.sh` (cerca de 5 min) e roda a suíte do pokeldn na
+  cópia com os patches.
+  - Os testes que falham só porque falta o flet contam como pulados (`scripts/pokeldn/skip_gui.py`).
+  - No commit `ae97616`: 4667 passaram, 354 pulados.
+  - `worker/tests/test_pokeldn.py` cobre os patches e a trava de rede.
+- **Fora:**
+  - Ruby/Sapphire/Emerald: em prévia no pokeldn, ainda não lançado no Switch.
+  - Pokémon Champions e Pokopia: o pokeldn não fala com eles.
+
+## D22. Base multijogo (Entrega 14)
+
+Respostas do autor em [multijogos.md](multijogos.md): um "Meu treinador" por jogo, mover entre jogos como o HOME,
+sprites até a Gen 9, cofre único com filtro, legalidade que avisa sem bloquear.
+
+- **Catálogo** (`Core/Games/GameCatalog.cs`, espelhado em `frontend/src/lib/games.ts`). Os sete jogos, cada um com:
+  - formato do PKHeX;
+  - versões;
+  - código de troca: nenhum no FRLG, três Pokémon no Let's Go e oito dígitos nos outros;
+  - modo LAN (só SwSh);
+  - atividades.
+
+  O `TradeGame` ganhou as versões novas no fim, porque é gravado como texto no banco.
+- **Leitura** (`PokemonReader`).
+  - A Gen 3 continua igual ao `Pk3Reader`, com o mesmo hash.
+  - Os outros formatos ficam guardados na forma "de caixa" decriptada (`SIZE_STORED`). Da Gen 8 em diante o PS atual
+    fica nessa parte do arquivo, então o hash muda com o PS.
+  - O `EntityFormat` do PKHeX confunde PB7 com PK7, PA9 com PK9, e PK8 com PB8. Por isso o jogo vem da extensão do
+    arquivo ou de quem chama (troca, construtor, transferência). Sem isso, o arquivo é recusado com `format_ambiguous`.
+    O Arceus (PA8) é reconhecido sozinho.
+- **Cofre.** Colunas novas `Family` e `Form` (migração `Games`; os antigos ficam como `Frlg`).
+  - O arquivo leva a extensão do jogo.
+  - Filtro `?game=` na busca.
+  - A exportação sai no formato do próprio jogo, decriptada. Os formatos `ek3` e 80/100 bytes são só da Gen 3.
+  - A injeção em `.sav` e a importação de `.sav` continuam só no FRLG: os saves do Switch só saem do console com
+    homebrew.
+- **IDs de treinador.** O arquivo e o banco guardam TID16/SID16. A API e a tela usam os números que o jogo mostra
+  (`TrainerIds`): da Gen 7 em diante, TID de 6 dígitos (ID32 % 1.000.000) e SID de 4 (ID32 / 1.000.000). Valem as
+  mesmas regras para o "Meu treinador" por jogo (`trainer.me` no FRLG, `trainer.me.<jogo>` nos outros), os treinadores
+  salvos, o histórico e o construtor. Nas linhas `TID:`/`SID:` do AutoMod, a partir do formato 7 ele lê esses números
+  e reempacota.
+- **Troca.**
+  - Os jogos novos não têm time simulado. Cada Pokémon escolhido é uma oferta, de 1 a 6, uma por troca.
+  - O pedido traz o código de troca.
+  - O nome do treinador vai até 12 caracteres, sem a tabela Gen III.
+  - Cada motor diz que jogos troca (`ITradeEngine.Supports`). Até a Entrega 15, só o motor de simulação troca os jogos
+    novos: o Switch simulado devolve uma cópia do oferecido com o treinador "DEMO".
+  - Nos jogos novos, Pokémon ilegal só pede a confirmação. No FRLG, a regra antiga continua (modo avançado mais
+    confirmação).
+- **Construtor.** O modo automático gera no formato do jogo escolhido (Pikachu legal verificado nos seis jogos novos).
+  - Listas por jogo: espécies que existem no jogo, golpes sem os "dummied", e itens e bolas do save vazio.
+  - Formas e habilidade oculta (posição 2).
+  - EV até 252 e apelido de até 12.
+  - O modo avançado (PID e IVs da Gen 3) continua só no FRLG. Nos jogos novos, editar no cofre gera o Pokémon de novo.
+- **Mover entre jogos** (`HomeTransfer`, regras adaptadas do ajudante PKHeX do pokeldn, AGPL-3.0):
+  - o Let's Go não recebe do HOME;
+  - ovo fica no próprio jogo;
+  - do FRLG, só sem item e sem HM;
+  - a espécie e a forma precisam existir no destino;
+  - o "Meu treinador" do destino vira o treinador atual;
+  - golpe que o destino não tem é trocado pela sugestão do PKHeX, com as marcas de TM/TR.
+
+  O registro do cofre é o mesmo: id, caixa, etiquetas e histórico.
+- **Rastreador do HOME.**
+  - Ele fica vazio, porque o HOME recusa um inventado e os jogos não o conferem.
+  - O status de legalidade é "não verificável" quando o único problema é o rastreador ausente, ou quando o Pokémon
+    seria válido com um rastreador. O PKHeX só aceita evoluir em outro jogo do HOME com rastreador.
+- **Sprites.** 387–1025 do PokeAPI/sprites, commit `1dd55c0`, em `assets/sprites`, conferidos por `SHA256SUMS`
+  (`scripts/fetch-sprites.sh`). As formas usam o sprite da forma normal.
+- **Instruções de cada jogo** em `content/{pt-BR,en}/trade/jogos/<jogo>.md`, a partir dos passos que o pokeldn testou
+  no console (`pokeldn/app/catalog.py`). Os nomes dos menus ficam em inglês, como no jogo.
+- **Verificado:** testes de API e de núcleo nos sete formatos, e build e testes do frontend.
+- **Não verificado:**
+  - a interface no navegador ou na janela (sem Playwright nesta sessão);
+  - qualquer troca real com os jogos novos (Entrega 15).
+
+## D23. Motor pokeldn e ESP32 com o firmware do pokeldn (Entrega 15)
+
+- **O TradeRock é sempre o anfitrião.** Pedido do autor: o jogador escolhe o código no console e digita o mesmo no
+  app.
+  - Em todos os jogos, o console que procura com um código entra numa sala anunciada com esse código (docs do
+    pokeldn).
+  - Por isso o app roda o `bin/<jogo>_host.py` (no FRLG, o `frlg_trade_host.py`). No BDSP, o código é a senha da
+    Union Room.
+  - A sala fica aberta 10 min (`RoomSeconds`). Se o console não entra, o resultado é `console_never_joined`, sem
+    nova tentativa.
+- **Comando.** O adaptador não copia as flags. Ele usa a própria função do pokeldn (`pokeldn.app.command.build`,
+  com o catálogo dele), que monta as flags testadas no console. Ajustes nossos:
+  - sem `--capture`, que grava chaves de sessão;
+  - sem `--fresh-pid`, que passa pelo ajudante PKHeX do pokeldn e que o TradeRock não leva;
+  - o código e o "trocar de volta";
+  - no FRLG, `--trades` e `--version` (vale o último valor).
+- **Processo** (`worker/traderock_worker/pokeldn_trade.py`, `run.py --pokeldn trade`).
+  - Um processo por sessão. Ele roda o `main(argv)` do script, carregado com importlib.
+  - Marcos: as linhas `[link] waiting|joined|left` e `[done] trade N complete`. Em cada `[done]` vai junto o arquivo
+    mais novo da pasta de recebidos.
+  - O log é a saída do pokeldn, com as sequências hexadecimais longas apagadas.
+  - Cancelar manda SIGINT no Linux (o Ctrl+C do pokeldn sai com educação) e espera 20 s. No Windows não dá para
+    mandar SIGINT a outro processo: o processo é encerrado.
+- **Oferta.** O C# monta no formato do ajudante PKHeX do pokeldn (`PokeldnOffer`):
+  - forma de equipe decriptada no FRLG e no Z-A;
+  - forma de caixa criptografada no BDSP;
+  - forma de equipe criptografada nos outros.
+
+  No FRLG vão primeiro os oferecidos, na ordem das trocas, e depois o preenchimento.
+- **Trocar de volta** (`--trade-back` do pokeldn, para o Pokémon do Switch que evolui por troca). Cada troca vira
+  duas:
+  - na primeira, o Switch manda o Pokémon;
+  - na segunda, o app o devolve (ele evolui no Switch) e recebe de volta o que tinha mandado.
+
+  Só a segunda entra no cofre, e é o mesmo arquivo, então não duplica. Vale em todo motor que roda o pokeldn
+  (`ITradeEngine.UsesPokeldn`).
+- **ESP32 só com o firmware do pokeldn (decisão da D21).**
+  - Imagens 1.9.1 do Release `v0.49.1` em `assets/firmware/pokeldn`, conferidas por `SHA256SUMS.txt`
+    (`scripts/fetch-pokeldn-firmware.sh`).
+  - Gravadas em 0x0 com modo, frequência e tamanho da flash `keep`, como o pokeldn grava.
+  - Placas: clássico (UART), S3, C3 e C6 (USB nativo), com no mínimo 4 MB.
+  - O HELLO e a varredura do teste com o Switch também passam pelo pokeldn (`pokeldn_board.py`, `PokeldnEsp32Link`).
+    O teste aceita a sala de troca de qualquer jogo do catálogo (`GameCatalog.CommunicationIds`).
+  - O motor `esp32` agora é o `PokeldnEngine` e troca todos os jogos, o FRLG inclusive. No FRLG, o app cria a sala e
+    o console entra pelo "Join Group", com outras instruções (`content/*/trade/jogos/frlg.md`).
+  - O motor C# do easyworld (`Esp32SerialEngine`, `Frlg.Trade.Core.Patched`) saiu do registro de motores e fica no
+    código até a limpeza.
+- **Windows.**
+  - O `esp32-runtime` leva o pokeldn (cópia com os patches) e os módulos do worker.
+  - Leva também as rodas `win_amd64` do pokeldn (pycryptodome, trio e dependências, zstandard), com hash fixo.
+  - O python-netlink, como o esptool, vira roda a partir do código-fonte conferido pelo `requirements.lock`. O LDN
+    vendorizado o importa, mas só o usa na placa Wi-Fi.
+  - Verificado pelo WSL no Python do Windows: todos os módulos de protocolo importam, e `run.py --pokeldn board|trade`
+    roda de ponta a ponta até o erro esperado (porta COM inexistente, oferta falsa).
+- **Placa Wi-Fi (Linux).**
+  - O motor `python-ldn` troca todos os jogos: o FRLG continua no frlg-ldn-trade (o console é o líder) e os outros
+    vão pelo pokeldn (`ITradeEngine.UsesPokeldn` vale por jogo).
+  - O worker (root) ganhou a operação `start_pokeldn`. Ela grava as chaves num arquivo 600 do root, roda o
+    `run.py --child pokeldn` (o mesmo `pokeldn_trade.py`, com `--phy` da placa escolhida e sem `POKELDN_RADIO`) e
+    repassa cada mensagem como `{"event": "pokeldn"}`, terminando com `pokeldn_end`.
+  - O rádio volta ao estado anterior no fim, como na troca do FRLG. As interfaces do pokeldn usam o prefixo `ldn*`,
+    que a configuração do NetworkManager da D15 já deixa de fora.
+  - Como anfitrião, o pokeldn precisa de uma placa que crie rede (modo AP). O teste da placa do assistente confere o
+    modo monitor, não o AP: falta acrescentar.
+- **Não verificado:**
+  - gravação, HELLO e troca com uma placa real e um console real;
+  - o cancelamento educado no Windows;
+  - a troca dos jogos novos com a placa Wi-Fi (modo AP).
+
+## D24. Modo LAN do Sword/Shield (Entrega 16)
+
+- **É um motor a mais (`lan`, `PokeldnLanEngine`).** Respostas do autor: é uma conexão a mais e não mexe no rádio
+  configurado.
+  - Ele troca só o Sword/Shield, pela rede de casa: o pokeldn roda o `swsh_host.py --lan` (ferramenta
+    `swsh-lan-host` do catálogo dele), como o usuário, no Linux e no Windows.
+  - Não precisa de ESP32, placa Wi-Fi nem prod.keys (`ITradeEngine.NeedsSetup = false`), então a troca não pede o
+    assistente concluído.
+  - O jogo ignora o código de troca, que some da tela (`IgnoresLinkCode`) e não vai ao pokeldn.
+  - Ele é escolhido no cartão "Rede de casa" de Configurações → Conexão. "Voltar" volta ao motor do rádio
+    configurado ou à demonstração.
+- **No console:** em Opções, L + R + analógico esquerdo liga o modo LAN. As instruções estão em
+  `content/*/trade/jogos/swsh-lan.md`, a partir dos passos que o pokeldn testou num Sword real, num Switch 2 pelo
+  Wi-Fi.
+- **Rede.** O pokeldn usa UDP 30000 (busca), 40000 (broadcast) e 49152–49155 (estações), sempre na rede local.
+  - A trava de rede (D21) deixa passar. A única consulta de nome do pokeldn (`gethostbyname_ex` do próprio
+    computador) é recusada e ele segue sem ela.
+  - O endereço vem da rota padrão: um "connect" UDP para 192.0.2.1, endereço reservado, sem enviar nada.
+- **Firewall do Windows.** Tarefa nova do instalador, marcada por padrão: entrada UDP nessas portas, só no perfil
+  "Privada" e só para o `esp32-runtime\python\python.exe`, que é quem roda o pokeldn. A desinstalação apaga a
+  regra, e o `smoke-windows.ps1` confere as duas coisas.
+- **Verificado:** testes do worker e da API (modo LAN sem configuração, sem código, recusa de outro jogo) e
+  compilação do instalador pelo Inno Setup do Windows.
+- **Não verificado:** a troca com um Sword/Shield de verdade e o `smoke-windows.ps1`, que pede o UAC.
+
+## D25. Sem o motor do easyworld; teste do modo AP (Entrega 17)
+
+O autor deixou as duas escolhas comigo ("pode seguir da forma que achar melhor").
+
+- **O easyworld saiu.** O motor C# (`Esp32SerialEngine`, `SerialEsp32Link`, `Frlg.Trade.Core.Patched`), o patch
+  `engines/patches/frlg-ldn-trade-esp32`, o ESP32 falso (`fake_esp32.py`) e o submódulo foram removidos. O motor
+  já estava fora do registro desde a D23.
+  - Os sprites 1–386 (do PokeAPI) e os dois Pokémon de demonstração (MEWTWO e DEOXYS, do autor do easyworld)
+    foram copiados para `assets/sprites` e `assets/demo`. O `SHA256SUMS` dos sprites agora cobre 1–1025.
+  - Sem o núcleo, o BouncyCastle e o ZstdSharp saem das dependências. O `System.IO.Ports` (portas COM no Windows)
+    passa a ser referência direta do `TradeRock.Core`.
+- **O FRLG com a placa Wi-Fi continua no frlg-ldn-trade**, em que o console abre a sala e a placa entra. Assim, uma
+  placa sem modo AP ainda troca com o FRLG. Os jogos novos seguem pelo pokeldn (D23).
+- **Teste do modo AP.** Nos jogos novos o TradeRock abre a sala, e a biblioteca LDN (`ldn.create_network`) cria a
+  interface em modo AP com o monitor ao lado. O teste da placa (`card_child.py`) ganhou essa etapa:
+  `Factory.create_ap` + `create_monitor` no primeiro canal que sintonizou, por meio segundo, com um SSID qualquer e
+  sem chave (limite de 15 s).
+  - O resultado vai à parte (`ap`, `apError`): sem AP a placa continua aprovada, porque troca com o FRLG.
+  - Conexão mostra o aviso `card_test_no_ap`, que não bloqueia. Um teste de antes desta entrega (`ap` nulo) mostra
+    `card_test_ap_unknown` e sugere testar de novo.
+  - Com `ap = false`, o `PythonLdnEngine` recusa os jogos novos antes de chamar o worker (`card_no_ap`), sem pedir a
+    senha à toa.
+- **Catálogo de ESP32 com os dados do pokeldn** (`docs/hardware_esp32.md` do submódulo). O catálogo ainda descrevia
+  o firmware do easyworld, e com o do pokeldn duas coisas mudam:
+  - **S3 e C6 usam a USB nativa**, como o C3. Pela porta do conversor o firmware do pokeldn não responde. O
+    catálogo, o guia e o aviso `port_should_be_native` foram corrigidos.
+  - **O ESP32 clássico deixa de exigir o WROOM-32E.** O pokeldn relata uma placa clássica trocando com todos os
+    jogos, e só um WROOM-32 genérico que não ouve o Switch. O WROOM-32 passa de "não suportado" para "sem teste".
+    A confirmação do módulo (estado, caixa de seleção e desenho) saiu, e o aviso de revisão antiga do chip agora
+    manda fazer o teste com o Switch.
+  - Nenhuma placa fica como "recomendada": o TradeRock ainda não trocou com nenhuma.
+- **Verificado:** build, testes do .NET, do worker e do frontend.
+- **Não verificado:** a etapa do AP numa placa de verdade (precisa de root e de uma placa no Linux).
+
+## D26. Outras atividades: Mystery Gift (Entrega 18a)
+
+Respostas do autor: começar pelo Mystery Gift e fazer todas as atividades; o app confere com o próprio PKHeX, sem
+o ajudante do pokeldn; nada gravado na placa; sem backup nem restauração do save; raids de evento embutidas (18b).
+
+- **Tela "Atividades"** (`/atividades`, só na janela do PC, como a configuração do rádio). A pessoa escolhe o jogo
+  (FRLG ou Sword/Shield, os que têm Mystery Gift local) e o presente:
+  - **prontos do pokeldn:** no FRLG, Wonder Cards, mudanças num Pokémon, mudanças no jogo, mais presentes e Wonder
+    News; no SwSh, Pokémon, itens e roupas;
+  - **eventos oficiais do Sword/Shield:** os 189 cartões que o pokeldn traz (`pokeldn/swsh/data/events.json`,
+    gerados por ele a partir da EventsGallery), sem internet;
+  - **arquivo:** `.wc3` (FRLG), `.wc8` (SwSh) ou `.pokegift`, até 256 KiB.
+- **Catálogo** em `catalog/gifts.json`, gerado do próprio pokeldn por `scripts/pokeldn/gift_catalog.py`. O
+  `scripts/test-pokeldn.sh` confere se ainda bate (`UPDATE_CATALOG=1` regrava). Ficam de fora os Pokémon de evento do
+  FRLG (pedem o ajudante PKHeX do pokeldn), a leitura do save, os presets com opções e as melhorias guardadas
+  ("Game boosts"). Os nomes dos prontos e dos grupos têm tradução em `frontend/src/locales/gifts.pt-BR.json`,
+  conferida por teste; os eventos oficiais ficam com o nome original.
+- **Worker:** o `pokeldn_trade.py` ganhou o pedido `"activity": "gift"`. Ele roda `frlg_mg_host.py` ou
+  `swsh_gift_host.py` com o valor do campo "builder" do pokeldn e chama `command.prepare`, que grava o
+  `.pokegift`. O `gift_builder` troca uma chave desconhecida pela primeira da lista, então o worker confere a
+  chave antes, com o mesmo filtro do catálogo. `--save-to-board` fica sempre desligado. O modo LAN não manda
+  presentes.
+- **Fim da atividade:**
+  - **FRLG:** deu certo com `[done] delivery N complete`.
+  - **Sword/Shield:** o console só ouve o anúncio e não confirma. Deu certo se o presente ficou no ar
+    (`advertising comm id`). A pessoa encerra com "Terminei" depois de aceitar o cartão; senão, ele fica no ar
+    por 5 minutos.
+- **Patch:** `PkhexService.validate_gift` confere só o tamanho e a soma do cartão. O app confere o arquivo
+  aberto (tamanho do `.wc3` e do `.wc8`, jogo do `.pokegift`).
+- **Rádio:** uma atividade por vez, sem fila (`ActivityService`). Troca e atividade não rodam juntas: cada uma
+  recusa com 409 enquanto a outra roda. Com a placa Wi-Fi, a atividade precisa do modo AP (D25), o FRLG
+  inclusive. O modo demonstração simula os marcos.
+- **Remetente:** o "Meu treinador" do jogo, ou o treinador padrão.
+- **Correção junto:** a troca com o Legends: Arceus chamava o ajudante PKHeX do pokeldn por fora do
+  `prepare_offer` e falhava sempre. O patch cobre também o `pokemon.validate`.
+- **Verificado:** testes do worker (validação, comando de cada presente, marcos), da API (catálogo, presente
+  simulado, rádio ocupado, pedido ao pokeldn pelo ESP32) e das traduções.
+- **Não verificado:** a entrega num console de verdade e a tela num navegador.
+
+## D27. Modo servidor com os jogos novos (Entrega 19)
+
+- **Já funcionava.** A troca pela fila, o cofre por conta e o "Meu treinador" usam o jogo desde a Entrega 14: o
+  seletor de jogo é a mesma tela no celular, a fila guarda o pedido inteiro (jogo, código, trocar de volta) e o
+  "Meu treinador" de cada jogo fica nas configurações da conta (`UserSettings`).
+- **Teste novo** (`ServerModeTests.Conta_pela_rede_troca_com_o_scarlet_com_o_proprio_treinador`): uma conta pela
+  rede envia um .pk9, grava o próprio treinador do SV, troca com o Scarlet pela fila e recebe no próprio cofre; a
+  outra conta não vê o recebido nem o treinador.
+- **Outras atividades só na janela do PC** (`/api/activities` em `Caller.IsLocalOnly`). Elas não passam pela fila:
+  quem está no PC escolhe o presente ou a raid e acompanha. Liberar pela rede pediria uma fila de atividades; fica
+  para quando o autor quiser.
+- **Não verificado:** com um celular de verdade (como a Entrega 10).
+
+### D26 (continuação). Raids (Entrega 18b)
+
+- **Tipos:** Max Raid e Dynamax Adventure no Sword/Shield, Tera Raid no Scarlet/Violet. Em cada um, o console entra
+  na sala do TradeRock (host) ou o TradeRock entra na do console (join). As do Sword/Shield também vão pela rede de
+  casa: o motor `lan` usa as ferramentas `swsh-lan-*` do pokeldn, sem rádio nem chaves.
+- **Pokémon do cofre:** o chefe da Max Raid montada, o que o TradeRock leva e o chefe da Tera Raid, no formato do
+  jogo (`PokeldnOffer`).
+- **Raids de evento, embutidas.** A EventsGallery do Project Pokémon foi baixada no desenvolvimento por
+  `scripts/fetch-raid-events.sh`, com o próprio pokeldn, em commits travados: SV `bc61f78` e SwSh `0595d45`.
+  - Fica num .zip determinístico de 5 MB (`assets/raid-events`, conferido pelo SHA256SUMS). O app não baixa nada
+    (D17). A galeria não declara licença; são dados dos eventos oficiais, a mesma situação dos sprites.
+  - O `stage-pokeldn.sh` leva o .zip. O worker extrai só o evento escolhido na pasta da sessão, com o caminho longo
+    no Windows (os nomes passam de 150 caracteres), e aponta o `events_gallery.location` do pokeldn para lá.
+  - A tela usa `catalog/raids.json` (eventos, chefes do SwSh, grupos e etapas do SV), gerado por
+    `scripts/pokeldn/raid_catalog.py` e conferido no `scripts/test-pokeldn.sh` (`UPDATE_CATALOG=1` regrava). O app
+    confere a combinação escolhida antes de chamar o pokeldn.
+- **Sem o ajudante PKHeX do pokeldn:**
+  - os prêmios escolhidos (`--raid-reward`) ficam de fora, e a raid dá os prêmios da toca, do evento ou da semente;
+  - o patch passa a cobrir também o `pokemon.prepare`, que o `swsh_connect.py` (entrar na sala do console) chama
+    sempre.
+- **Fim:**
+  - o pokeldn não diz quem venceu, e cada console luta a própria batalha. A raid conta como concluída quando a
+    batalha começa ("lobby", "battle" e "over" vêm das linhas dos scripts);
+  - a Max Raid hospedada fica aberta até a pessoa clicar em Terminei, ou até o tempo do pokeldn acabar;
+  - as outras saem sozinhas.
+- **Verificado:** testes do worker (validação, comando de cada tipo, evento extraído do .zip), da API (raid simulada,
+  conferências, ESP32 e rede de casa) e o typecheck da tela.
+- **Não verificado:** raid com console de verdade.
+
+### D26 (continuação). Union Circle (Entrega 18c)
+
+- **Só no Scarlet/Violet, e o console é sempre o anfitrião:** ele abre um grupo local com um código de 4 dígitos, e o
+  TradeRock entra pelo `sv_join.py` do pokeldn.
+  - **Missões do Blueberry** (`sv-circle-join`): todos os lendários do Snacksworth, ou os BP escolhidos
+    (1 a 9.999.999). Dá certo quando o pokeldn diz que a tarefa terminou.
+  - **Encontros** (`sv-circle-encounters-join`): espécie (as que existem no SV), nível, tipo Tera e shiny. Ficam até
+    o console fechar o círculo. Dá certo quando o círculo começou.
+- **Sem o "só encontros legais"** (`--spawn-legal`), que pede o ajudante PKHeX do pokeldn.
+- **Marcos novos:** "lobby" quando o console aceita a entrada (também na Tera Raid em que o TradeRock entra),
+  "battle" quando o círculo começa e "over" quando a tarefa termina.
+- **Verificado:** testes do worker (validação, comando, marcos) e da API (simulado, conferências, pedido pelo ESP32).
+- **Não verificado:** com um Scarlet/Violet de verdade.
