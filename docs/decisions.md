@@ -366,9 +366,9 @@ em memória. **Falta testar com um `.sav` real.**
   - a remoção fica em Configurações. Antes de instalar ou remover, o worker da sessão é encerrado;
   - o pkexec usa a ação padrão do polkit (`org.freedesktop.policykit.exec`, `auth_admin`). A senha é
     pedida pelo sistema.
-- **Runtime do AppImage:** `type2-runtime` estático (sem libfuse2), squashfs com zstd. O upstream só
-  publica o "continuous"; o sha256 fica fixo no script e o arquivo fica no cache do CI. Se o
-  upstream mudar, o build falha com uma mensagem clara.
+- **Runtime do AppImage:** `type2-runtime` estático (sem libfuse2), squashfs com zstd. Usa a versão
+  fixa `20251108` do upstream (o "continuous" mudou em outubro de 2026 e quebrou o CI da v01.00.00);
+  o sha256 fica fixo no script e o arquivo fica no cache do CI.
 - **Versão:** `Directory.Build.props` (0.8.0), ou a tag no CI (`v0.8.1` → 0.8.1). Fora de tag, o CI
   usa `0.8.0-ci.<execução>`. O comando `traderock --version` não cria pasta de dados nem banco.
 - **CI:**
