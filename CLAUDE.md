@@ -92,15 +92,16 @@ Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-l
   - janela nativa do Photino no Linux (WebKitGTK) e os diálogos de arquivo nos dois sistemas (no
     Windows, a janela abriu com o WebView2);
   - `.sav` real e o formato de save NSO do Switch;
-  - troca com Switch real;
+  - troca com Switch real nos outros jogos (o Legends: Z-A pelo ESP32-S3 no Windows funcionou em 01/11/2026,
+    v01.02.00, D30);
   - teste com o Switch (Entrega 7, D16);
-  - ESP32 real: gravação do firmware, troca e teste com o Switch (Entrega 9, D18; o autor ainda não
-    tem placa);
+  - ESP32 real no Linux (no Windows, o ESP32-S3 do autor gravou o firmware, passou no teste com o Switch e trocou
+    com o Z-A);
   - teste da placa com root;
   - AppImage montado por FUSE, instalação do worker pelo pkexec (diálogo) e a janela a partir dos pacotes.
   - modo servidor com um celular de verdade na rede (Entrega 10, D19);
-  - ESP32 real no Windows: gravação, troca e driver do CH340/CP210x (Entrega 11, D20). O app, a janela,
-    o instalador e os testes foram verificados num Windows 11 real, pelo WSL.
+  - ESP32 com conversor CH340/CP210x no Windows (o ESP32-S3 usa a USB nativa). O app, a janela, o instalador e os
+    testes foram verificados num Windows 11 real, pelo WSL.
 
   O roteiro de teste no host está em [docs/dev-host.md](docs/dev-host.md).
 

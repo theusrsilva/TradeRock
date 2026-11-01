@@ -1093,5 +1093,7 @@ pelo ESP32 e pela placa Wi-Fi).
     cofre), cancelamento depois de uma troca, de todas e de nenhuma, o código na mensagem da sala, a sala menor que o
     tempo da fase;
   - testes do frontend do fluxo do anfitrião (instruções e linha do tempo).
-- **Não verificado:** com um console de verdade (o autor tem o Z-A): o recebido chegando ao cofre, o `stop` passando
-  a sala ao console no Windows, as linhas de entrada e saída dos outros jogos e do modo LAN.
+- **Verificado com console real (01/11/2026, v01.02.00):** o autor trocou com o Legends: Z-A pelo ESP32-S3 no Windows:
+  duas sessões de uma troca e uma de duas, encerrada pelo console depois da primeira. Os recebidos chegaram ao cofre,
+  e o histórico ficou certo, inclusive a sessão parcial.
+- **Não verificado:** o `stop` passando a sala ao console no Windows, os outros jogos e o modo LAN com console real.
