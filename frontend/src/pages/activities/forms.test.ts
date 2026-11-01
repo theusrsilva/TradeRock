@@ -12,6 +12,9 @@ describe('formulários das atividades', () => {
     expect(raidReady({ ...newRaid('tera-raid-host'), pokemon: 'a', seed: 'XYZ' })).toBe(false)
     expect(raidReady({ ...newRaid('lair-host'), code: '123' })).toBe(false)
     expect(raidReady(newRaid('lair-join'))).toBe(true)
+    // Max Raid em que o TradeRock entra: o golpe começa no automático da mini IA (D31).
+    expect(newRaid('max-raid-join').move).toBe(0)
+    expect(raidReady(newRaid('max-raid-join'))).toBe(true)
   })
 
   it('Union Circle precisa do código de 4 dígitos e do Pokémon nos encontros', () => {

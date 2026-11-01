@@ -216,6 +216,14 @@ public sealed class ActivityTests : IAsyncLifetime
         Assert.Equal("raid_invalid", await Bad(new { kind = "tera-raid-join", pokemon = sv }));          // raid do SV no Sword
         Assert.Equal("raid_seed_invalid", await Bad(new { kind = "tera-raid-host", pokemon = sv, seed = "xyz" }, "scarlet"));
         Assert.Equal("activity_game_unsupported", await Bad(new { kind = "max-raid-join" }, "fire_red"));
+        // Mini IA (D31): golpe 0 = automático; o chefe informado precisa existir no Sword/Shield.
+        Assert.Equal("raid_invalid", await Bad(new { kind = "max-raid-join", move = 5 }));
+        Assert.Equal("raid_invalid", await Bad(new { kind = "max-raid-join", move = 0, targetSpecies = 1010 }));
+        await Json(await _client.PostAsJsonAsync("/api/activities", new
+        {
+            game = "sword", kind = "raid", raid = new { kind = "max-raid-join", offer = swsh, move = 0, targetSpecies = 149 },
+        }));
+        await FinishedAsync();
 
         // Max Raid de evento, com um chefe que o evento tem.
         await Json(await _client.PostAsJsonAsync("/api/activities", new
@@ -250,6 +258,14 @@ public sealed class ActivityTests : IAsyncLifetime
         Assert.Equal(("tera-raid-host", "scarlet", "0A1B2C3D", 2), (raid["kind"]!.GetValue<string>(), raid["version"]!.GetValue<string>(),
             raid["seed"]!.GetValue<string>(), raid["players"]!.GetValue<int>()));
         Assert.NotNull(raid["pokemon"]);
+
+        // Max Raid em que o TradeRock entra, com a mini IA (D31): "auto" e os tipos do chefe (Dragonite: Dragon/Flying).
+        var join = PokeldnActivity.Request(new ActivityRequest(TradeGame.Sword, ActivityKind.Raid, new TrainerProfile("ANA", 1, 2),
+            Raid: new RaidChoice(RaidKinds.MaxRaidJoin, Move: 0, TargetTypes: [15, 2], AttackerTypes: [14])), "esp32:/dev/ttyUSB0", null)["raid"]!;
+        Assert.Equal("auto", join["move"]!.GetValue<string>());
+        Assert.Equal([15, 2], join["targetTypes"]!.AsArray().Select(t => t!.GetValue<int>()));
+        Assert.Equal(3, PokeldnActivity.Request(new ActivityRequest(TradeGame.Sword, ActivityKind.Raid, new TrainerProfile("ANA", 1, 2),
+            Raid: new RaidChoice(RaidKinds.MaxRaidJoin, Move: 3)), null, null)["raid"]!["move"]!.GetValue<int>());
 
         // Sem a batalha começar, a raid não deu certo.
         _pokeldn.Script = [Message("event", "starting"), Message("milestone", "lobby")];

@@ -28,6 +28,7 @@ public static class ActivityEndpoints
         string? EventBoss = null,
         bool Gigantamax = false,
         int Move = 1,
+        int? TargetSpecies = null,
         int? Legendary = null,
         string? Code = null,
         string? Version = null,
@@ -211,7 +212,23 @@ public static class ActivityEndpoints
             case RaidKinds.MaxRaidJoin:
             {
                 var (offer, e) = await Mon(r.Offer, false);
-                return e is not null ? (null, e) : r.Move is < 1 or > 4 ? (null, "raid_invalid") : (choice with { Offer = offer, Move = r.Move }, null);
+                if (e is not null)
+                    return (null, e);
+                if (r.Move is < 0 or > 4 || (r.TargetSpecies is { } t && (t is < 1 or > ushort.MaxValue || !game.HasSpecies((ushort)t))))
+                    return (null, "raid_invalid");
+                // Mini IA (D31): os tipos do chefe informado e do Pokémon que o TradeRock leva.
+                IReadOnlyList<int>? Types(ushort species, byte form = 0)
+                {
+                    var info = game.PersonalTable.GetFormEntry(species, form);
+                    return info.Type1 == info.Type2 ? [info.Type1] : [info.Type1, info.Type2];
+                }
+                var mine = r.Offer is { } id && await store.GetAsync(id, ct) is { } stored ? Types(stored.Species, stored.Form) : null;
+                return (choice with
+                {
+                    Offer = offer, Move = r.Move,
+                    TargetTypes = r.Move == 0 && r.TargetSpecies is { } boss ? Types((ushort)boss) : null,
+                    AttackerTypes = r.Move == 0 ? mine : null,
+                }, null);
             }
             case RaidKinds.LairHost:
                 if (r.Legendary is not { } legendary || !RaidKinds.LairLegendaries.Contains(legendary))

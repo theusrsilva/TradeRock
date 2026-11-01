@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D30).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D31).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -47,6 +47,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Ilustrações | SVG em vez de fotos |
 | Trocas por sessão | Até 6 |
 | Trocas pelo pokeldn | O recebido é guardado assim que o pokeldn o grava (o Z-A e o Arceus gravam depois do `[done]`: o worker espera o arquivo). Troca feita conta mesmo se o console encerrar, a conexão cair ou o processo sair com erro. A sala espera 240 s. Cancelar manda `stop` pela entrada (saída educada também no Windows). Tela ao vivo com o fluxo do anfitrião (D30) |
+| Mini IA das raids | Dynamax Adventure e Max Raid em que o TradeRock entra (SwSh): escolhe o aluguel e o golpe de cada batalha "no papel" (tipo, força, STAB, precisão), com a tabela de golpes do PokeAPI. Sem decisão turno a turno nem Dynamax (D31) |
 | Testes E2E | Só pela API |
 | Construtor | Modo automático (AutoMod) por padrão e modo avançado. OT padrão = perfil "Meu treinador". Mensagens do PKHeX traduzidas só as da Gen 3. Nomes de golpes e itens em inglês |
 | Cofre | Caixas de 30 posições com Caixa de entrada. Lixeira recuperável. Injeção em `.sav` sobrescreve, com backup. Exportação padrão: .pk3 de 100 bytes |

@@ -1564,7 +1564,12 @@
       "black": "Raid de 6 estrelas (cristal preto)",
       "seed": "Semente",
       "seedHelp": "8 dígitos hexadecimais. Com a mesma semente, a raid sai igual.",
-      "svOffer": "Pokémon que o TradeRock leva"
+      "svOffer": "Pokémon que o TradeRock leva",
+      "moveAuto": "Automático (a IA escolhe)",
+      "moveAutoHelp": "O TradeRock escolhe, antes de começar, o golpe mais efetivo contra o chefe (tipo, força e mesmo tipo do Pokémon). Ele usa esse golpe a batalha inteira.",
+      "target": "Chefe da raid (opcional)",
+      "targetHelp": "O Pokémon que o seu console abriu. Sem ele, o TradeRock usa o golpe mais forte.",
+      "targetUnknown": "Não sei / qualquer um"
     },
     "circle": {
       "title": "Union Circle",

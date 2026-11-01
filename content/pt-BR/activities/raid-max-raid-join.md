@@ -10,5 +10,7 @@
 
 - **Pela rede de casa (modo LAN):** em Opções, aperte **L + R + analógico esquerdo** juntos antes de abrir a raid.
 - Sem Pokémon escolhido, o pokeldn leva um padrão dele.
+- **Golpe automático:** com o chefe informado, o TradeRock escolhe o golpe mais efetivo contra ele (tipo, força e
+  mesmo tipo do Pokémon); sem o chefe, o mais forte. Ele repete esse golpe a batalha inteira e não usa Dynamax.
 
 </details>

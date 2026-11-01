@@ -1097,3 +1097,38 @@ pelo ESP32 e pela placa Wi-Fi).
   duas sessões de uma troca e uma de duas, encerrada pelo console depois da primeira. Os recebidos chegaram ao cofre,
   e o histórico ficou certo, inclusive a sessão parcial.
 - **Não verificado:** o `stop` passando a sala ao console no Windows, os outros jogos e o modo LAN com console real.
+
+## D31. Mini IA do parceiro nas raids do Sword/Shield
+
+O autor pediu um parceiro mais efetivo na Dynamax Adventure e na Max Raid em que o TradeRock entra.
+
+- **O que o pokeldn permite:** o parceiro responde ao jogo com um golpe fixo por batalha (`raid_battle.action`). Ele
+  não lê o HP, o clima, os escudos nem quem é o adversário. Por isso a IA escolhe "no papel", antes de cada batalha.
+- **Nota de um golpe:** força × efetividade de tipo × 1,5 com o mesmo tipo do atacante (STAB) × precisão.
+  - Golpes de status valem zero, e os de força variável (Low Kick, Gyro Ball) contam como 60.
+  - A tabela de tipos (18×18, da Gen 6 em diante) foi escrita à mão e é testada.
+  - A tabela de golpes (tipo, força, precisão, categoria até a Gen 8) vem do `moves.csv` do PokeAPI, num commit fixo
+    (`scripts/fetch-move-data.py` → `worker/traderock_worker/data/moves.json`). O PKHeX dá o tipo e a categoria, mas
+    não a força.
+- **Dynamax Adventure (o TradeRock entra):**
+  - A semente da aventura dá os seis aluguéis e os dez Pokémon que podem aparecer (`lair.adventure`), e o lendário
+    vem no `ChikaBigBossFixed`. Qual dos dez aparece em cada sala é desconhecido (docs/swsh_raid.md do pokeldn).
+  - **Aluguel:** entre os lugares 0 a 2 que o anfitrião não pegou, a melhor nota. O melhor golpe contra o lendário
+    pesa 60%, e a melhor média contra os dez pesa 40%.
+  - **Golpe:** nas três primeiras batalhas, a melhor média contra os dez; na quarta, o melhor contra o lendário.
+  - **Como entra no pokeldn:** o worker troca, no próprio processo, o `lair.Guest._select` e o `raid_battle.action`
+    (só no modelo `LAIR_ACTION`) antes de rodar o `swsh_connect.py`. Não há patch no submódulo
+    (`worker/traderock_worker/partner_ai.py`). Vale também pela rede de casa.
+- **Max Raid (o TradeRock entra):**
+  - O golpe tem a opção "Automático", o novo padrão (`move: "auto"`), e um campo opcional "Chefe da raid".
+  - O app manda os tipos do chefe e do Pokémon levado (PKHeX), e o worker escolhe o `--raid-move`.
+  - Sem chefe, fica o golpe mais forte; sem Pokémon próprio, o golpe 1, como antes.
+  - Na Max Raid aberta pelo TradeRock, o Pokémon dele não batalha, então nada muda.
+- **Fica de fora:** decidir turno a turno, Dynamax, trocar pelo Pokémon capturado na aventura e escolher o caminho.
+  O parceiro segue o caminho do anfitrião, como antes.
+- **Verificado:**
+  - testes do worker: a tabela de tipos, a nota, o melhor golpe, a escolha do aluguel e a IA ligada ao `lair.Guest` e
+    ao `raid_battle.action` do pokeldn numa semente conhecida;
+  - o `--raid-move` automático com um PK8 de verdade;
+  - testes do .NET (pedido "auto" com os tipos, chefe que não existe) e da tela.
+- **Não verificado:** em batalha com um Sword/Shield de verdade.
