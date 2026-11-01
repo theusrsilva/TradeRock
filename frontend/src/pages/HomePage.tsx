@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth'
 import { connectionKeys, requiredKeys, useConnection } from '../lib/connection'
 import type { Pokemon, TradeHistoryItem, TradeSession, VaultOverview } from '../lib/types'
 import { stateLook } from './settings/ConnectionChecklist'
+import { UpdateNotice } from './UpdateCard'
 
 export default function HomePage() {
   const { t, i18n } = useTranslation()
@@ -62,6 +63,8 @@ export default function HomePage() {
         </h1>
         <p className="mt-1 text-muted">{t('ui.home.intro')}</p>
       </div>
+
+      {!remote && <UpdateNotice />}
 
       {session?.status === 'running' && (
         <Callout tone="sky" icon="sync">

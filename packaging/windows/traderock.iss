@@ -4,7 +4,8 @@
 ; - Pede administrador (decisão do autor, D20): instala em Arquivos de Programas e cria a regra do
 ;   Firewall do Windows para o modo servidor, só nas redes privadas e só para o traderock.exe, e a regra do
 ;   Sword/Shield na rede de casa (modo LAN, D24): UDP do pokeldn, só redes privadas e só para o Python embutido.
-; - O app em si nunca roda como administrador: o "Abrir o TradeRock" do fim roda como o usuário.
+; - O app em si nunca roda como administrador: o "Abrir o TradeRock" do fim roda como o usuário, e também a
+;   reabertura depois de uma atualização feita pelo app (D29).
 ; - Os dados (cofre, prod.keys, contas) ficam em %LOCALAPPDATA%\TradeRock de cada usuário e não são
 ;   apagados na desinstalação.
 
@@ -87,12 +88,20 @@ Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""{
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#LanRule}"""; Flags: runhidden; Tasks: lanfirewall
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#LanRule}"" dir=in action=allow program=""{app}\esp32-runtime\python\python.exe"" protocol=UDP localport={#LanPorts} profile=private enable=yes"; Flags: runhidden; Tasks: lanfirewall
 Filename: "{app}\traderock.exe"; Description: "{cm:Launch}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+; Atualização pelo app (D29): ele roda este instalador com /SILENT /TRADEROCKRESTART=1 e fecha; no fim, o app novo
+; abre de novo como o usuário (nunca como administrador).
+Filename: "{app}\traderock.exe"; Flags: nowait runasoriginaluser; Check: RestartAfterUpdate
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#FirewallRule}"""; Flags: runhidden; RunOnceId: "RemoveFirewallRule"
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#LanRule}"""; Flags: runhidden; RunOnceId: "RemoveLanRule"
 
 [Code]
+function RestartAfterUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:TRADEROCKRESTART|0}') = '1';
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usPostUninstall) and not UninstallSilent then

@@ -20,8 +20,9 @@ extraídas do seu próprio console.
 ## Instalação (Linux)
 
 Baixe o pacote da versão mais recente na página de
-[Releases](https://github.com/theusrsilva/TradeRock/releases). Não há verificação automática de
-atualizações: para atualizar, baixe o pacote novo e instale por cima.
+[Releases](https://github.com/theusrsilva/TradeRock/releases). O app procura versões novas
+sozinho (dá para desligar) e se atualiza pela tela **Sobre**. Também dá para baixar o
+pacote novo e instalar por cima.
 
 **Debian, Ubuntu e derivados (.deb).** Ubuntu 22.04 ou mais novo, Debian 12 ou mais novo:
 

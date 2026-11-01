@@ -340,8 +340,8 @@ em memória. **Falta testar com um `.sav` real.**
 
 ## D17. Pacotes Linux e CI (Entrega 8)
 
-- **Sem verificação de atualizações** (decisão do autor). Nem o app nem o catálogo consultam a
-  internet: quem quiser baixa a versão mais recente na página de Releases. O catálogo embutido é
+- **Sem verificação de atualizações** (decisão do autor, trocada depois pela D29). Nem o app nem o catálogo
+  consultavam a internet: quem quisesse baixava a versão mais recente na página de Releases. O catálogo embutido é
   atualizado a cada versão.
 - **.deb** (`scripts/package-linux.sh`):
   - app *self-contained* em `/usr/lib/traderock/app`;
@@ -990,3 +990,53 @@ Pedidos do autor ao testar a v01.00.00 no Windows com um ESP32-S3.
     tela (contagem da Conexão);
   - a varredura com o Python embutido do app instalado no Windows, na COM4, que achou a sala do FireRed com os
     canais 1, 6 e 11.
+## D29. Atualização pela internet
+
+O autor trocou a regra da D17: o app pode procurar versões novas no GitHub e se atualizar.
+
+- **Quando:** ao abrir o app, no máximo uma vez por dia, uns 15 segundos depois de abrir. Dá para desligar na tela
+  Sobre. O botão "Procurar agora" funciona sempre.
+  - Rodando do código (desenvolvimento e testes), a procura automática não roda.
+  - Pré-lançamentos não são oferecidos. O app usa `/releases/latest`, que já os deixa de fora, e também recusa versões
+    com sufixo.
+- **O que é consultado:** só `api.github.com/repos/theusrsilva/TradeRock/releases/latest` e os arquivos do próprio
+  Release (`github.com/theusrsilva/TradeRock/releases/download/<tag>/...`).
+  - O pedido leva só o User-Agent `TradeRock/<versão>`, que o GitHub exige.
+  - Nenhum dado do PC é enviado, e o prod.keys não entra em nada disso. O pokeldn continua sem internet (netguard).
+- **Versões:** números separados por ponto, comparados um a um (`01.00.00` é igual a `1.0.0`).
+- **Instalação:** o app baixa o arquivo do tipo de instalação, confere com o `SHA256SUMS` do mesmo Release e só então
+  instala. Ele não instala no meio de uma troca ou atividade.
+  - **Windows:** roda o `TradeRock-Setup-<versão>.exe` com
+    `/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /TRADEROCKRESTART=1`, e o Windows pede o administrador
+    (UAC).
+    - O app fecha.
+    - No fim, o instalador abre o app novo como o usuário (`runasoriginaluser`, `traderock.iss`). O app continua sem
+      rodar como administrador.
+    - A instalação é reconhecida pelo `unins000.exe` ao lado do app.
+  - **AppImage** (a variável `APPIMAGE`): copia o arquivo para a mesma pasta e troca o atual com um rename, sem root.
+    O app aberto continua com o arquivo antigo até fechar, e o novo abre em seguida. Sem permissão na pasta, o app
+    manda baixar pela página do Release.
+  - **.deb** (app em `/usr/lib/traderock/app`): `pkexec /bin/sh -c` com um script fixo, e a senha é pedida pelo
+    sistema.
+    - O pacote vai pela entrada padrão para um arquivo temporário do root.
+    - O hash é conferido de novo como root antes do `dpkg -i`. O root nunca usa o arquivo do usuário.
+  - **Outras cópias** (código ou pasta solta): o app só avisa e abre a página do Release.
+- **Tela:**
+  - cartão "Atualizações" na tela Sobre, com a procura, o liga/desliga, as novidades do Release, o andamento e os
+    erros;
+  - aviso no Início quando há versão nova;
+  - tudo só na janela do PC (`/api/update` é local).
+- **Verificado:** testes do .NET com um GitHub falso:
+  - versões;
+  - arquivo de cada instalação;
+  - `SHA256SUMS`;
+  - arquivo que não confere não é instalado;
+  - sem internet;
+  - só URLs do GitHub;
+  - liga/desliga.
+- **Não verificado:**
+  - o UAC e a reinstalação silenciosa no Windows de verdade;
+  - a troca do AppImage montado;
+  - o `dpkg` pelo pkexec.
+
+  A primeira atualização real só acontece entre duas versões que já tenham este código.

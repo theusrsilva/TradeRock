@@ -1418,8 +1418,8 @@
       "intro": "Trades Pokémon with FireRed and LeafGreen on the Switch using the game's local wireless. Your PC (or an ESP32) pretends to be a second Switch in the Direct Corner room.",
       "keysTitle": "Your keys stay with you",
       "keysSub": "Never downloads, shows or sends prod.keys.",
-      "offlineTitle": "Works offline",
-      "offlineSub": "Sends no data anywhere.",
+      "offlineTitle": "No telemetry",
+      "offlineSub": "It only checks GitHub for new versions, and you can turn that off.",
       "freeTitle": "Free software",
       "freeSub": "AGPL-3.0: use, study and modify it.",
       "license": "License, source code and trademarks",
@@ -1616,6 +1616,48 @@
       "WRN": "warning",
       "INF": "info",
       "DBG": "debug"
+    }
+  },
+  "update": {
+    "title": "Updates",
+    "checkedAt": "Last check: {{date}}",
+    "neverChecked": "Never checked for a new version.",
+    "check": "Check now",
+    "checking": "Checking…",
+    "auto": "Check for a new version when the app opens (at most once a day)",
+    "privacy": "The check only reads TradeRock's releases page on GitHub. Nothing from your PC is sent, and the prod.keys never leaves it.",
+    "upToDate": "You have the newest version ({{version}}).",
+    "available": "Version {{version}} is available (you have {{current}}).",
+    "notes": "What's new",
+    "installVersion": "Update to {{version}}",
+    "install": "Update now",
+    "manual": "This copy does not update itself. Download the new version from the Release page:",
+    "openRelease": "open the Release",
+    "notice": "TradeRock {{version}} is available.",
+    "see": "See and update",
+    "confirm": {
+      "windows_installer": "TradeRock downloads the installer, checks the file and runs the setup. Windows asks for administrator permission, as in the first install. The app closes and opens again on its own at the end.",
+      "app_image": "TradeRock downloads the new AppImage, checks the file, replaces the current one and opens again.",
+      "deb": "TradeRock downloads the package, checks the file and installs it. The system asks for your administrator password. The app closes and opens again on its own at the end.",
+      "none": ""
+    },
+    "stages": {
+      "downloading": "Downloading…",
+      "verifying": "Checking the file…",
+      "installing": "Installing…",
+      "restarting": "Done. TradeRock will close and open again."
+    },
+    "errors": {
+      "update_check_failed": "Could not reach GitHub. Check the internet and try again.",
+      "update_download_failed": "The download stopped. Check the internet and try again.",
+      "update_hash_mismatch": "The downloaded file does not match the one published in the Release. Nothing was installed.",
+      "update_asset_missing": "The Release has no file for this install. Download it from the Release page.",
+      "update_cancelled": "Administrator permission was not given. Nothing was installed.",
+      "update_no_permission": "No permission to replace the AppImage file. Move the AppImage to a folder of yours or download from the Release page.",
+      "update_manual": "This copy does not update itself. Download from the Release page.",
+      "update_none": "There is no new version.",
+      "busy": "Finish the trade or activity in progress before updating.",
+      "update_failed": "The update failed. See the Logs tab in Settings."
     }
   }
 }

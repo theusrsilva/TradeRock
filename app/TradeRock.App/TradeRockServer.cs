@@ -105,6 +105,7 @@ public static class TradeRockServer
         api.MapTrades();
         api.MapActivities();
         api.MapLogs();
+        api.MapUpdates();
         api.MapSettings();
         api.MapBuilder();
         api.MapVault();

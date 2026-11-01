@@ -1418,8 +1418,8 @@
       "intro": "Troca Pokémon com o FireRed e LeafGreen do Switch usando o wireless local do jogo. O seu PC (ou um ESP32) finge ser um segundo Switch na sala do Direct Corner.",
       "keysTitle": "Suas chaves ficam com você",
       "keysSub": "Nunca baixa, mostra ou envia o prod.keys.",
-      "offlineTitle": "Funciona offline",
-      "offlineSub": "Não manda dados para lugar nenhum.",
+      "offlineTitle": "Sem telemetria",
+      "offlineSub": "Só consulta o GitHub para achar versões novas, e dá para desligar.",
       "freeTitle": "Software livre",
       "freeSub": "AGPL-3.0: use, estude e modifique.",
       "license": "Licença, código-fonte e marcas",
@@ -1616,6 +1616,48 @@
       "WRN": "aviso",
       "INF": "info",
       "DBG": "debug"
+    }
+  },
+  "update": {
+    "title": "Atualizações",
+    "checkedAt": "Última procura: {{date}}",
+    "neverChecked": "Ainda não procurou uma versão nova.",
+    "check": "Procurar agora",
+    "checking": "Procurando…",
+    "auto": "Procurar versão nova ao abrir o app (no máximo uma vez por dia)",
+    "privacy": "A procura só consulta a página de versões do TradeRock no GitHub. Nada do seu PC é enviado, e o prod.keys nunca sai daqui.",
+    "upToDate": "Você está na versão mais nova ({{version}}).",
+    "available": "Versão {{version}} disponível (você tem a {{current}}).",
+    "notes": "Novidades",
+    "installVersion": "Atualizar para a {{version}}",
+    "install": "Atualizar agora",
+    "manual": "Esta cópia não se atualiza sozinha. Baixe a versão nova na página do Release:",
+    "openRelease": "abrir o Release",
+    "notice": "A versão {{version}} do TradeRock está disponível.",
+    "see": "Ver e atualizar",
+    "confirm": {
+      "windows_installer": "O TradeRock baixa o instalador, confere o arquivo e roda a instalação. O Windows pede a permissão de administrador, como na primeira instalação. O app fecha e abre de novo sozinho no fim.",
+      "app_image": "O TradeRock baixa o AppImage novo, confere o arquivo, troca o atual e abre de novo.",
+      "deb": "O TradeRock baixa o pacote, confere o arquivo e instala. O sistema pede a sua senha de administrador. O app fecha e abre de novo sozinho no fim.",
+      "none": ""
+    },
+    "stages": {
+      "downloading": "Baixando…",
+      "verifying": "Conferindo o arquivo…",
+      "installing": "Instalando…",
+      "restarting": "Pronto. O TradeRock vai fechar e abrir de novo."
+    },
+    "errors": {
+      "update_check_failed": "Não foi possível consultar o GitHub. Confira a internet e tente de novo.",
+      "update_download_failed": "O download parou. Confira a internet e tente de novo.",
+      "update_hash_mismatch": "O arquivo baixado não confere com o publicado no Release. Nada foi instalado.",
+      "update_asset_missing": "O Release não tem o arquivo para esta instalação. Baixe pela página do Release.",
+      "update_cancelled": "A permissão de administrador não foi dada. Nada foi instalado.",
+      "update_no_permission": "Sem permissão para trocar o arquivo do AppImage. Mova o AppImage para uma pasta sua ou baixe pela página do Release.",
+      "update_manual": "Esta cópia não se atualiza sozinha. Baixe pela página do Release.",
+      "update_none": "Não há versão nova.",
+      "busy": "Termine a troca ou a atividade em andamento antes de atualizar.",
+      "update_failed": "A atualização falhou. Veja a aba Logs nas Configurações."
     }
   }
 }

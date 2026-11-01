@@ -4,6 +4,7 @@ import { ContentFile } from '../components/Markdown'
 import { useState } from 'react'
 import { Icon, Logo } from '../components/ui'
 import { useAppInfo } from '../lib/appInfo'
+import { UpdateCard } from './UpdateCard'
 import notices from '../../../THIRD-PARTY-NOTICES.md?raw'
 
 export const RELEASES_URL = 'https://github.com/theusrsilva/TradeRock/releases'
@@ -75,6 +76,7 @@ export default function AboutPage() {
           </div>
         </details>
       </div>
+      <UpdateCard />
       <div className="rounded-xl border border-line bg-surface">
         <button
           type="button"
