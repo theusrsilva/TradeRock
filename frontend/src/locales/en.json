@@ -793,8 +793,8 @@
       "network_manager_unconfigured": "NetworkManager may interfere with trading. Set it up below (recommended).",
       "switch_test_needs_radio": "Choose and prepare the radio (Radio and Network component items) before the Switch test.",
       "switch_test_needs_keys": "Upload a valid prod.keys (Keys item) before the Switch test.",
-      "switch_test_not_run": "Run the Switch test below: it is what confirms the radio and the prod.keys.",
-      "switch_test_failed": "The Switch test did not pass. See the result below.",
+      "switch_test_not_run": "Recommended: run the Switch test below to confirm the radio and the prod.keys before the first trade. Trading is already unlocked without it.",
+      "switch_test_failed": "The Switch test did not pass. Trading stays unlocked, but see the result below: the problem may show up during the trade.",
       "worker_appimage_missing": "The network component has not been installed from the AppImage yet. Use the button below.",
       "worker_appimage_outdated": "The installed network component is from another TradeRock version. Use the button below to update it.",
       "esp32_firmware_needs_port": "Pick the ESP32 port to check the firmware.",
@@ -888,7 +888,7 @@
       "unusable": "Channels the card could not tune: {{channels}}",
       "sweeps": "{{sweeps}} pass(es) over the channels in {{seconds}} s",
       "codes": {
-        "found_decrypted": "Room found and decrypted! Radio and prod.keys confirmed: trading is unlocked.",
+        "found_decrypted": "Room found and decrypted! Radio and prod.keys confirmed.",
         "found_not_decrypted": "The room was found but could not be decrypted: the prod.keys is not right.",
         "other_session": "The prod.keys works (a session from another game was decrypted), but the FireRed/LeafGreen room did not show up.",
         "not_found": "No room found.",
@@ -917,7 +917,7 @@
       "hints": {
         "missing_master_key_12": "Your prod.keys does not have the key for the newer LDN protocol (master_key_12). Updated consoles use that protocol: dump the keys again with the system up to date."
       },
-      "esp32Band": "The ESP32 only sees rooms on 2.4 GHz (channels 1 to 11). If the Switch is connected to a 5 GHz network, the room may not show up: disconnect the Switch from the internet and open the room again.",
+      "esp32Band": "The ESP32 only sees rooms on 2.4 GHz (channels 1, 6 and 11, the ones the Switch uses). If the Switch is connected to a 5 GHz network, the room may not show up: disconnect the Switch from the internet and open the room again.",
       "needsFirmware": "First check the ESP32 firmware in the ESP32: firmware and USB port item."
     },
     "esp32fw": {
@@ -1160,7 +1160,7 @@
         "driver": "Network component",
         "driverEsp32": "ESP32: firmware and USB port",
         "game": "Game ready on the Switch",
-        "switch": "Switch test"
+        "switch": "Switch test (recommended)"
       },
       "what": {
         "system": "With the Wi-Fi card, TradeRock controls the card directly, which only works with Linux installed on the PC (not a virtual machine or WSL). With an ESP32, any system works.",
@@ -1190,8 +1190,8 @@
         "driverWifiOk": "Installed and tested",
         "driverEspOk": "Firmware answering on the chosen port",
         "game": "Direct Corner unlocked (about 20–40 min of play)",
-        "switchOk": "Room found and decrypted. Real trades unlocked!",
-        "switchIdle": "Open the room as Leader on the Switch and click Test. Takes up to {{seconds}} s."
+        "switchOk": "Room found and decrypted. Radio and prod.keys confirmed.",
+        "switchIdle": "Optional: open the room as Leader on the Switch and click Test. Takes up to {{seconds}} s."
       },
       "radio": {
         "wifi": "PC Wi-Fi card",
@@ -1418,8 +1418,8 @@
       "intro": "Trades Pokémon with FireRed and LeafGreen on the Switch using the game's local wireless. Your PC (or an ESP32) pretends to be a second Switch in the Direct Corner room.",
       "keysTitle": "Your keys stay with you",
       "keysSub": "Never downloads, shows or sends prod.keys.",
-      "offlineTitle": "Works offline",
-      "offlineSub": "Sends no data anywhere.",
+      "offlineTitle": "No telemetry",
+      "offlineSub": "It only checks GitHub for new versions, and you can turn that off.",
       "freeTitle": "Free software",
       "freeSub": "AGPL-3.0: use, study and modify it.",
       "license": "License, source code and trademarks",
@@ -1595,6 +1595,69 @@
         "running": "The circle is running on the console. To finish, close the circle on the console or click Done."
       },
       "result": "Union Circle finished."
+    }
+  },
+  "logs": {
+    "tab": "Logs",
+    "title": "Logs",
+    "sub": "What TradeRock, pokeldn and the ESP32 flasher recorded in the last {{days}} days. Newest first.",
+    "problemsOnly": "Only errors and warnings",
+    "refresh": "Refresh",
+    "copy": "Copy",
+    "save": "Save file",
+    "copied": "Logs copied.",
+    "copyFailed": "Could not copy. Use Save file.",
+    "privacy": "Logs stay on this PC and never carry the prod.keys: keys, long numbers and Pokémon data are removed before writing. Only send the file to whoever is helping you.",
+    "loadFailed": "Could not load the logs.",
+    "empty": "Nothing recorded yet.",
+    "noProblems": "No errors or warnings recorded.",
+    "levels": {
+      "ERR": "error",
+      "WRN": "warning",
+      "INF": "info",
+      "DBG": "debug"
+    }
+  },
+  "update": {
+    "title": "Updates",
+    "checkedAt": "Last check: {{date}}",
+    "neverChecked": "Never checked for a new version.",
+    "check": "Check now",
+    "checking": "Checking…",
+    "auto": "Check for a new version when the app opens (at most once a day)",
+    "privacy": "The check only reads TradeRock's releases page on GitHub. Nothing from your PC is sent, and the prod.keys never leaves it.",
+    "upToDate": "You have the newest version ({{version}}).",
+    "available": "Version {{version}} is available (you have {{current}}).",
+    "notes": "What's new",
+    "installVersion": "Update to {{version}}",
+    "install": "Update now",
+    "manual": "This copy does not update itself. Download the new version from the Release page:",
+    "openRelease": "open the Release",
+    "notice": "TradeRock {{version}} is available.",
+    "see": "See and update",
+    "confirm": {
+      "windows_installer": "TradeRock downloads the installer, checks the file and runs the setup. Windows asks for administrator permission, as in the first install. The app closes and opens again on its own at the end.",
+      "app_image": "TradeRock downloads the new AppImage, checks the file, replaces the current one and opens again.",
+      "deb": "TradeRock downloads the package, checks the file and installs it. The system asks for your administrator password. The app closes and opens again on its own at the end.",
+      "none": ""
+    },
+    "stages": {
+      "downloading": "Downloading…",
+      "verifying": "Checking the file…",
+      "installing": "Installing…",
+      "restarting": "Done. TradeRock will close and open again."
+    },
+    "errors": {
+      "update_check_failed": "Could not reach GitHub. Check the internet and try again.",
+      "update_download_failed": "The download stopped. Check the internet and try again.",
+      "update_hash_mismatch": "The downloaded file does not match the one published in the Release. Nothing was installed.",
+      "update_asset_missing": "The Release has no file for this install. Download it from the Release page.",
+      "update_cancelled": "Administrator permission was not given. Nothing was installed.",
+      "update_no_permission": "No permission to replace the AppImage file. Move the AppImage to a folder of yours or download from the Release page.",
+      "update_manual": "This copy does not update itself. Download from the Release page.",
+      "update_none": "There is no new version.",
+      "busy": "Finish the trade or activity in progress before updating.",
+      "update_failed": "The update failed. See the Logs tab in Settings."
     }
   }
 }

@@ -113,6 +113,33 @@ class PokeldnPatchTests(unittest.TestCase):
         self.assertIn("bloqueado:", self.run_engine(code, traderock=False).stdout)
 
 
+class PokeldnBoardTests(unittest.TestCase):
+    def test_canais_do_teste_sao_os_do_ldn(self):
+        # app/TradeRock.Core/Esp32/PokeldnEsp32Link.cs: a biblioteca LDN recusa canais fora do Channels dela
+        # (ldn.wlan.is_valid_channel), e o teste com o Switch parava com "Invalid channel: 2".
+        with open(os.path.join(REPO, "app", "TradeRock.Core", "Esp32", "PokeldnEsp32Link.cs"), encoding="utf-8") as f:
+            line = next(l for l in f if "int[] Channels" in l)
+        channels = [int(c) for c in line.split("[", 2)[2].split("]")[0].split(",")]
+        with open(os.path.join(REPO, "engines", "pokeldn", "vendor", "LDN", "ldn", "wlan.py"), encoding="utf-8") as f:
+            text = f.read()
+        if "Channels = " not in text:
+            self.skipTest("submódulo engines/pokeldn ausente")
+        # Channels = {1: 2412, 6: 2437, ...}: canal → frequência.
+        table = text.split("Channels = {", 1)[1].split("}", 1)[0]
+        allowed = [int(entry.split(":")[0]) for entry in table.split(",") if entry.strip()]
+        self.assertTrue(set(channels) <= set(allowed), (channels, allowed))
+
+    def test_erro_que_nao_e_da_placa_nao_vira_parou_de_responder(self):
+        from traderock_worker.pokeldn_board import classify
+
+        class RadioError(Exception):
+            pass
+
+        self.assertEqual(classify(ValueError("Invalid channel: 2")), "esp32_error")
+        self.assertEqual(classify(RadioError("The board stopped answering over USB")), "esp32_no_response")
+        self.assertEqual(classify(TimeoutError("timed out")), "esp32_no_response")
+
+
 class NetguardTests(unittest.TestCase):
     def guarded(self, code):
         return run_python(textwrap.dedent(f"""

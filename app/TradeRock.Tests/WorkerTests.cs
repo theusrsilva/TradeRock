@@ -203,9 +203,9 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         var test = await Json(await _client.PostAsJsonAsync("/api/setup/card-test", new { phy = "phy1" }));
         Assert.True(test.GetProperty("result").GetProperty("passed").GetBoolean());
         Assert.Equal("card_test_passed", Check(test.GetProperty("status"), "card_test"));
-        // Falta o teste com o Switch (Entrega 7): ele é essencial com a placa Wi-Fi.
+        // O teste com o Switch é recomendado, não obrigatório: com a placa aprovada, a troca já fica liberada.
         Assert.Equal("switch_test_not_run", Check(test.GetProperty("status"), "switch_test"));
-        Assert.False(test.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
+        Assert.True(test.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
 
         var sw = await Json(await _client.PostAsJsonAsync("/api/setup/switch-test", new { phy = "phy1" }));
         Assert.Equal("found_decrypted", sw.GetProperty("result").GetProperty("code").GetString());
@@ -297,7 +297,9 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         Assert.Equal(code, check.GetProperty("args").GetProperty("code").GetString());
         // prod.keys só com a master_key_00: o anúncio pode ser do protocolo LDN 3.
         Assert.Equal(code == "found_not_decrypted", check.GetProperty("args").TryGetProperty("hint", out _));
-        Assert.False(sw.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
+        // O teste reprovado avisa, mas não bloqueia a troca (ele é opcional).
+        Assert.Equal("warning", check.GetProperty("status").GetString());
+        Assert.True(sw.GetProperty("status").GetProperty("readyToTrade").GetBoolean());
     }
 
     [LinuxFact]
@@ -309,7 +311,7 @@ public sealed class PythonLdnApiTests : IAsyncLifetime
         await UploadKeysAsync();
         var status = await Json(await _client.GetAsync("/api/setup"));
         Assert.Equal("switch_test_not_run", Check(status, "switch_test"));
-        Assert.False(status.GetProperty("readyToTrade").GetBoolean());
+        Assert.True(status.GetProperty("readyToTrade").GetBoolean()); // o teste é opcional
     }
 
     [LinuxFact]

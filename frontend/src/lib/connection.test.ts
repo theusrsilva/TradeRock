@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { connectionItems } from './connection'
+import { connectionItems, requiredKeys } from './connection'
 import type { CheckStatus, SetupStatus } from './types'
 
 const check = (id: string, step: number, status: CheckStatus, code = id) => ({ id, step, status, essential: true, code, args: null, fix: null, availableIn: null })
@@ -36,6 +36,15 @@ describe('lista de Configurações → Conexão', () => {
       }),
     )
     expect(items).toEqual({ system: 'ok', keys: 'ok', radio: 'ok', driver: 'missing', switch: 'idle' })
+  })
+
+  it('teste com o Switch é recomendado: não conta como pendência e, reprovado, só pede atenção', () => {
+    expect(requiredKeys).not.toContain('switch')
+    const items = connectionItems(
+      setup({ radio: 'esp32', checks: [check('keys', 2, 'ok'), check('radio', 3, 'ok'), check('switch_test', 6, 'warning', 'switch_test_failed')] }),
+    )
+    expect(items.switch).toBe('warn')
+    expect(requiredKeys.every((k) => items[k] === 'ok')).toBe(true)
   })
 
   it('WSL sem rádio escolhido: sistema pede atenção (só ESP32 funciona)', () => {

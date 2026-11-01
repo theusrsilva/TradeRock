@@ -245,6 +245,10 @@ public static class SetupChecks
                 : new SetupCheck("network_manager", 4, CheckStatus.Warning, false, "network_manager_unconfigured");
     }
 
+    /// <summary>
+    /// O teste com o Switch é recomendado, não obrigatório: a troca fica liberada com o rádio e o prod.keys
+    /// conferidos. Sem ele, um prod.keys errado só aparece na hora da troca.
+    /// </summary>
     private static SetupCheck SwitchTestCheck(RadioAdvice advice, SetupState state, KeysValidation? keys)
     {
         SwitchTestResult? test;
@@ -253,30 +257,30 @@ public static class SetupChecks
             // O teste usa o firmware: primeiro ele precisa responder na porta escolhida.
             var probe = state.Esp32Probe is { Ok: true } p && p.Port == state.SerialPort ? p : null;
             if (probe is null)
-                return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_radio");
+                return new SetupCheck("switch_test", 6, CheckStatus.Pending, false, "switch_test_needs_radio");
             if (keys is not { Valid: true })
-                return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_keys");
+                return new SetupCheck("switch_test", 6, CheckStatus.Pending, false, "switch_test_needs_keys");
             test = state.SwitchTest is { } e && e.IsForEsp32(probe.Port, probe.Target, keys) ? e : null;
         }
         else
         {
             var card = advice.Cards.FirstOrDefault(c => c.Card.Phy == state.Phy)?.Card;
             if (state.Radio != RadioAdvisor.Wifi || card is null)
-                return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_radio");
+                return new SetupCheck("switch_test", 6, CheckStatus.Pending, false, "switch_test_needs_radio");
             if (keys is not { Valid: true })
-                return new SetupCheck("switch_test", 6, CheckStatus.Pending, true, "switch_test_needs_keys");
+                return new SetupCheck("switch_test", 6, CheckStatus.Pending, false, "switch_test_needs_keys");
             test = state.SwitchTest is { } t && t.IsFor(card, keys) ? t : null;
         }
         if (test is null)
-            return new SetupCheck("switch_test", 6, CheckStatus.Error, true, "switch_test_not_run");
+            return new SetupCheck("switch_test", 6, CheckStatus.Info, false, "switch_test_not_run");
         if (test.Passed)
-            return new SetupCheck("switch_test", 6, CheckStatus.Ok, true, "switch_test_ok",
+            return new SetupCheck("switch_test", 6, CheckStatus.Ok, false, "switch_test_ok",
                 Args(("channel", test.Networks.FirstOrDefault(n => n.Frlg)?.Channel.ToString() ?? "?")));
         var args = new Dictionary<string, string> { ["code"] = test.Code };
         // Anúncio que não decifra com um prod.keys só com a master_key_00: a sala pode ser do protocolo 3.
         if (test.Code == "found_not_decrypted" && !keys.Protocols.Contains(3))
             args["hint"] = "missing_master_key_12";
-        return new SetupCheck("switch_test", 6, CheckStatus.Error, true, "switch_test_failed", args);
+        return new SetupCheck("switch_test", 6, CheckStatus.Warning, false, "switch_test_failed", args);
     }
 
     private static SetupCheck WorkerCheck(SystemSnapshot system) => system switch

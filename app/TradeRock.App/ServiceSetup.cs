@@ -13,6 +13,8 @@ using TradeRock.Core.Esp32;
 using TradeRock.Core.Pokemon;
 using TradeRock.Core.Storage;
 using TradeRock.Core.Trading;
+using TradeRock.Core.Updates;
+using TradeRock.App.Api;
 
 namespace TradeRock.App;
 
@@ -65,9 +67,11 @@ public static class ServiceSetup
         var esp32Runtime = config["Engines:Esp32:Runtime"];
         var devStage = development ? FindDevStage() : null;
         Func<string?> runtime = () => esp32Runtime ?? PythonEsp32Flasher.FindRuntime(payload, development, devStage);
-        services.AddSingleton<IPokeldnProcess>(new PokeldnProcess(runtime, Path.Combine(paths.DataDir, "tmp")));
+        services.AddSingleton<IPokeldnProcess>(sp => new PokeldnProcess(runtime, Path.Combine(paths.DataDir, "tmp"),
+            sp.GetRequiredService<ILogger<PokeldnProcess>>()));
         services.AddSingleton<IEsp32Link, PokeldnEsp32Link>();
-        services.AddSingleton<IEsp32Flasher>(sp => new PythonEsp32Flasher(runtime, Path.Combine(paths.DataDir, "tmp")));
+        services.AddSingleton<IEsp32Flasher>(sp => new PythonEsp32Flasher(runtime, Path.Combine(paths.DataDir, "tmp"),
+            sp.GetRequiredService<ILogger<PythonEsp32Flasher>>()));
         services.AddSingleton<TradeRock.Core.Setup.Esp32Setup>();
 
         // Motores: o primeiro registrado é o padrão (simulação).
@@ -86,6 +90,16 @@ public static class ServiceSetup
         services.AddSingleton<ITradeEngine, PokeldnEngine>();
         services.AddSingleton<ITradeEngine, PokeldnLanEngine>();
         services.AddSingleton<EngineRegistry>();
+
+        // Atualização pela internet (D29): só o GitHub, só com a procura ligada ou pelo botão.
+        services.AddSingleton(new UpdateOptions { CurrentVersion = AppVersion.Current, DownloadDir = Path.Combine(paths.DataDir, "tmp") });
+        services.AddSingleton(sp => UpdateInstallers.Create(UpdateInstallers.Detect(AppContext.BaseDirectory, Environment.GetEnvironmentVariable),
+            sp.GetRequiredService<IPrivilegedShell>()));
+        services.AddSingleton<IAppExit, AppExit>();
+        services.AddHttpClient(nameof(UpdateService), http => UpdateService.Configure(http, AppVersion.Current));
+        services.AddSingleton(sp => ActivatorUtilities.CreateInstance<UpdateService>(sp,
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(UpdateService))));
+        services.AddHostedService<UpdateAutoCheck>();
     }
 
     /// <summary>

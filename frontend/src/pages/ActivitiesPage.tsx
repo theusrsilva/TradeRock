@@ -4,7 +4,7 @@ import { ContentFile } from '../components/Markdown'
 import { Badge, Button, Callout, Icon, inputClass, PageTitle, Segmented } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { GAMES, gameOf, versionName } from '../lib/games'
-import { giftText, groupName, whenText } from '../lib/gifts'
+import { giftText, whenText } from '../lib/gifts'
 import type { ActivitiesCatalog, ActivitySnapshot, GiftEntry, Pokemon, TradeGame } from '../lib/types'
 import { CircleForm, circleReady, newCircle, type CircleState } from './activities/CircleForm'
 import { newRaid, RAID_KINDS, RaidForm, raidReady, type RaidState } from './activities/RaidForm'
@@ -83,7 +83,7 @@ export default function ActivitiesPage() {
   const list: GiftEntry[] = mode === 'event' ? (gifts?.events ?? []) : (gifts?.presets ?? [])
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return list.filter((g) => !q || `${g.label} ${g.summary} ${giftText(family, g).label}`.toLowerCase().includes(q))
+    return list.filter((g) => !q || `${g.label} ${g.summary} ${giftText(family, g).summary}`.toLowerCase().includes(q))
   }, [list, search, family])
   const groups = useMemo(() => {
     const out = new Map<string, GiftEntry[]>()
@@ -221,7 +221,7 @@ export default function ActivitiesPage() {
             <div className="flex max-h-[460px] flex-col gap-4 overflow-y-auto pr-1" role="radiogroup">
               {groups.map(([group, entries]) => (
                 <div key={group} className="flex flex-col gap-1.5">
-                  <div className="text-[13px] font-bold text-muted">{groupName(group)}</div>
+                  <div className="text-[13px] font-bold text-muted">{group}</div>
                   {entries.map((g) => {
                     const text = mode === 'event' ? { label: g.label, summary: g.summary } : giftText(family, g)
                     const on = key === g.key

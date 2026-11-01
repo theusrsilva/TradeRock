@@ -28,6 +28,7 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
     setBusy(kind)
     setError(null)
     setDetail(null)
+    setJob(null) // o resultado da gravação anterior sai junto com os erros antigos
     try {
       const res = await api.post<{ status: SetupStatus }>(`/api/setup/esp32/${kind}`)
       onStatus(res.status)
@@ -38,6 +39,13 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
       setBusy(null)
     }
   }
+
+  // Firmware respondendo: os erros de antes (de outra ação ou de outra tentativa) não valem mais.
+  useEffect(() => {
+    if (!probe?.ok) return
+    setError(null)
+    setDetail(null)
+  }, [probe?.ok, probe?.at])
 
   // Conferência automática (só LDN_HELLO) ao escolher uma porta ainda não conferida.
   useEffect(() => {

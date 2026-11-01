@@ -431,7 +431,9 @@ public sealed class SetupChecksTests
         Assert.Equal("switch_test_not_run", Get(Checks("linux-compatible", State(ok with { Driver = "rtl8xxxu" }), keys), "switch_test").Code);
         Assert.Equal("switch_test_not_run", Get(Checks("linux-compatible", State(ok), keys with { SavedAt = saved.AddMinutes(1) }), "switch_test").Code);
         Assert.Equal("switch_test_needs_keys", Get(Checks("linux-compatible", State(ok), null), "switch_test").Code);
-        Assert.True(Get(Checks("linux-compatible", State(null), keys), "switch_test").Essential);
+        // Recomendado, não obrigatório: sem ele a troca já fica liberada.
+        Assert.False(Get(Checks("linux-compatible", State(null), keys), "switch_test").Essential);
+        Assert.Equal(CheckStatus.Info, Get(Checks("linux-compatible", State(null), keys), "switch_test").Status);
 
         // Anúncio que não decifra: com só a master_key_00, a dica aponta a master_key_12.
         var bad = ok with { Passed = false, Code = "found_not_decrypted", Networks = [] };
@@ -589,7 +591,7 @@ public sealed class SetupChecksTests
         var advice = RadioAdvisor.Advise(system, catalog);
         var state = new SetupState { Radio = "wifi", Phy = "phy1" };
         var status = new SetupStatus(system, advice, state, GoodKeys, SetupChecks.Evaluate(system, advice, state, GoodKeys, catalog));
-        Assert.False(status.ReadyToTrade); // falta o teste da placa e o teste com o Switch
+        Assert.False(status.ReadyToTrade); // falta o teste da placa (o teste com o Switch é opcional)
     }
 
     [Fact]

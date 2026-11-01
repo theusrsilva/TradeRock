@@ -793,8 +793,8 @@
       "network_manager_unconfigured": "O NetworkManager pode atrapalhar a troca. Configure abaixo (recomendado).",
       "switch_test_needs_radio": "Escolha e prepare o rádio (itens Rádio e Componente de rede) antes do teste com o Switch.",
       "switch_test_needs_keys": "Envie um prod.keys válido (item Chaves) antes do teste com o Switch.",
-      "switch_test_not_run": "Faça o teste com o Switch abaixo: é ele que confirma o rádio e o prod.keys.",
-      "switch_test_failed": "O teste com o Switch não passou. Veja o resultado abaixo.",
+      "switch_test_not_run": "Recomendado: faça o teste com o Switch abaixo para confirmar o rádio e o prod.keys antes da primeira troca. A troca já está liberada sem ele.",
+      "switch_test_failed": "O teste com o Switch não passou. A troca continua liberada, mas veja o resultado abaixo: o problema pode aparecer na troca.",
       "worker_appimage_missing": "O componente de rede ainda não foi instalado a partir do AppImage. Use o botão abaixo.",
       "worker_appimage_outdated": "O componente de rede instalado é de outra versão do TradeRock. Use o botão abaixo para atualizar.",
       "esp32_firmware_needs_port": "Escolha a porta do ESP32 para conferir o firmware.",
@@ -888,7 +888,7 @@
       "unusable": "Canais que a placa não sintonizou: {{channels}}",
       "sweeps": "{{sweeps}} volta(s) pelos canais em {{seconds}} s",
       "codes": {
-        "found_decrypted": "Sala encontrada e decifrada! Rádio e prod.keys confirmados: a troca está liberada.",
+        "found_decrypted": "Sala encontrada e decifrada! Rádio e prod.keys confirmados.",
         "found_not_decrypted": "A sala foi encontrada, mas não foi decifrada: o prod.keys não está certo.",
         "other_session": "O prod.keys funciona (uma sessão de outro jogo foi decifrada), mas a sala do FireRed/LeafGreen não apareceu.",
         "not_found": "Nenhuma sala encontrada.",
@@ -917,7 +917,7 @@
       "hints": {
         "missing_master_key_12": "O seu prod.keys não tem a chave do protocolo mais novo do LDN (master_key_12). Consoles atualizados usam esse protocolo: extraia as chaves de novo com o sistema atualizado."
       },
-      "esp32Band": "O ESP32 só enxerga salas em 2,4 GHz (canais 1 a 11). Se o Switch estiver ligado a uma rede de 5 GHz, a sala pode não aparecer: desconecte o Switch da internet e abra a sala de novo.",
+      "esp32Band": "O ESP32 só enxerga salas em 2,4 GHz (canais 1, 6 e 11, os que o Switch usa). Se o Switch estiver ligado a uma rede de 5 GHz, a sala pode não aparecer: desconecte o Switch da internet e abra a sala de novo.",
       "needsFirmware": "Primeiro confira o firmware do ESP32 no item ESP32: firmware e porta USB."
     },
     "esp32fw": {
@@ -1160,7 +1160,7 @@
         "driver": "Componente de rede",
         "driverEsp32": "ESP32: firmware e porta USB",
         "game": "Jogo pronto no Switch",
-        "switch": "Teste com o Switch"
+        "switch": "Teste com o Switch (recomendado)"
       },
       "what": {
         "system": "Com a placa Wi-Fi, o TradeRock controla a placa diretamente, e isso só funciona com Linux instalado no PC (não serve máquina virtual nem WSL). Com ESP32, qualquer sistema serve.",
@@ -1190,8 +1190,8 @@
         "driverWifiOk": "Instalado e testado",
         "driverEspOk": "Firmware respondendo na porta escolhida",
         "game": "Direct Corner liberado (cerca de 20–40 min de jogo)",
-        "switchOk": "Sala encontrada e decifrada. Troca de verdade liberada!",
-        "switchIdle": "Abra a sala como Leader no Switch e clique em Testar. Leva até {{seconds}} s."
+        "switchOk": "Sala encontrada e decifrada. Rádio e prod.keys confirmados.",
+        "switchIdle": "Opcional: abra a sala como Leader no Switch e clique em Testar. Leva até {{seconds}} s."
       },
       "radio": {
         "wifi": "Placa Wi-Fi do PC",
@@ -1418,8 +1418,8 @@
       "intro": "Troca Pokémon com o FireRed e LeafGreen do Switch usando o wireless local do jogo. O seu PC (ou um ESP32) finge ser um segundo Switch na sala do Direct Corner.",
       "keysTitle": "Suas chaves ficam com você",
       "keysSub": "Nunca baixa, mostra ou envia o prod.keys.",
-      "offlineTitle": "Funciona offline",
-      "offlineSub": "Não manda dados para lugar nenhum.",
+      "offlineTitle": "Sem telemetria",
+      "offlineSub": "Só consulta o GitHub para achar versões novas, e dá para desligar.",
       "freeTitle": "Software livre",
       "freeSub": "AGPL-3.0: use, estude e modifique.",
       "license": "Licença, código-fonte e marcas",
@@ -1434,28 +1434,28 @@
     "whichGame": "Para qual jogo?",
     "whichGameSub": "Mystery Gift no FireRed/LeafGreen e no Sword/Shield; raids no Sword/Shield e no Scarlet/Violet; Union Circle no Scarlet/Violet.",
     "gift": {
-      "title": "Qual presente?",
-      "sub": "Escolha um presente pronto, um evento oficial ou abra um arquivo de presente.",
+      "title": "Qual Mystery Gift?",
+      "sub": "Escolha um Mystery Gift pronto, um evento oficial ou abra um arquivo de Mystery Gift.",
       "modes": {
         "preset": "Prontos",
         "event": "Eventos oficiais",
         "file": "Arquivo"
       },
       "search": "Procurar…",
-      "nothing": "Nenhum presente encontrado.",
+      "nothing": "Nenhum Mystery Gift encontrado.",
       "fileHelp": "Abra um arquivo de presente ({{types}}). O TradeRock não baixa presentes: use arquivos que você já tem."
     },
     "howTo": "No {{game}}",
     "send": "Enviar",
     "stop": "Parar",
     "done": "Terminei",
-    "again": "Mandar outro presente",
+    "again": "Mandar outro Mystery Gift",
     "progress": {
       "started": "Preparando o rádio",
       "waiting": "Esperando o console",
-      "joined": "O console encontrou o presente",
-      "delivered": "Presente entregue",
-      "advertising": "Presente no ar",
+      "joined": "O console encontrou o Mystery Gift",
+      "delivered": "Mystery Gift entregue",
+      "advertising": "Mystery Gift no ar",
       "swshConfirm": "O console só ouve o presente e não avisa quando recebe. Quando o cartão aparecer no jogo e você aceitar, clique em Terminei.",
       "lobby": "Sala aberta",
       "battle": "Batalha começou",
@@ -1463,7 +1463,7 @@
       "raidBattle": "A batalha está no console. Quando terminar, clique em Terminei."
     },
     "result": {
-      "frlg": "Presente entregue. Salve o jogo e fale com o entregador no 2º andar de qualquer Centro Pokémon.",
+      "frlg": "Mystery Gift entregue. Salve o jogo e fale com o entregador no 2º andar de qualquer Centro Pokémon.",
       "swsh": "Pronto. Se o cartão chegou ao jogo, o presente está lá.",
       "cancelled": "Envio interrompido.",
       "raid": "Raid concluída."
@@ -1566,11 +1566,11 @@
       "sub": "O console abre o círculo e o TradeRock entra.",
       "start": "Entrar no círculo",
       "kinds": {
-        "quests": "Missões do Blueberry",
+        "quests": "Blueberry Quests",
         "encounters": "Encontros"
       },
       "about": {
-        "quests": "O TradeRock cumpre missões do Blueberry pelo seu console: todos os lendários do Snacksworth, ou os BP que você escolher. Depois ele sai do círculo.",
+        "quests": "O TradeRock cumpre Blueberry Quests pelo seu console: todos os lendários do Snacksworth, ou os BP que você escolher. Depois ele sai do círculo.",
         "encounters": "O TradeRock faz aparecer em volta do seu jogador o Pokémon selvagem que você escolher, para batalhar e capturar."
       },
       "code": "Código do círculo",
@@ -1595,6 +1595,69 @@
         "running": "O círculo está em andamento no console. Para terminar, feche o círculo no console ou clique em Terminei."
       },
       "result": "Union Circle concluído."
+    }
+  },
+  "logs": {
+    "tab": "Logs",
+    "title": "Logs",
+    "sub": "O que o TradeRock, o pokeldn e o gravador do ESP32 registraram nos últimos {{days}} dias. Os mais novos ficam em cima.",
+    "problemsOnly": "Só erros e avisos",
+    "refresh": "Atualizar",
+    "copy": "Copiar",
+    "save": "Salvar arquivo",
+    "copied": "Logs copiados.",
+    "copyFailed": "Não foi possível copiar. Use Salvar arquivo.",
+    "privacy": "Os logs ficam só neste PC e não levam o prod.keys: chaves, números longos e dados de Pokémon são apagados antes de gravar. Mande o arquivo só para quem for ajudar.",
+    "loadFailed": "Não foi possível carregar os logs.",
+    "empty": "Nada registrado ainda.",
+    "noProblems": "Nenhum erro ou aviso registrado.",
+    "levels": {
+      "ERR": "erro",
+      "WRN": "aviso",
+      "INF": "info",
+      "DBG": "debug"
+    }
+  },
+  "update": {
+    "title": "Atualizações",
+    "checkedAt": "Última procura: {{date}}",
+    "neverChecked": "Ainda não procurou uma versão nova.",
+    "check": "Procurar agora",
+    "checking": "Procurando…",
+    "auto": "Procurar versão nova ao abrir o app (no máximo uma vez por dia)",
+    "privacy": "A procura só consulta a página de versões do TradeRock no GitHub. Nada do seu PC é enviado, e o prod.keys nunca sai daqui.",
+    "upToDate": "Você está na versão mais nova ({{version}}).",
+    "available": "Versão {{version}} disponível (você tem a {{current}}).",
+    "notes": "Novidades",
+    "installVersion": "Atualizar para a {{version}}",
+    "install": "Atualizar agora",
+    "manual": "Esta cópia não se atualiza sozinha. Baixe a versão nova na página do Release:",
+    "openRelease": "abrir o Release",
+    "notice": "A versão {{version}} do TradeRock está disponível.",
+    "see": "Ver e atualizar",
+    "confirm": {
+      "windows_installer": "O TradeRock baixa o instalador, confere o arquivo e roda a instalação. O Windows pede a permissão de administrador, como na primeira instalação. O app fecha e abre de novo sozinho no fim.",
+      "app_image": "O TradeRock baixa o AppImage novo, confere o arquivo, troca o atual e abre de novo.",
+      "deb": "O TradeRock baixa o pacote, confere o arquivo e instala. O sistema pede a sua senha de administrador. O app fecha e abre de novo sozinho no fim.",
+      "none": ""
+    },
+    "stages": {
+      "downloading": "Baixando…",
+      "verifying": "Conferindo o arquivo…",
+      "installing": "Instalando…",
+      "restarting": "Pronto. O TradeRock vai fechar e abrir de novo."
+    },
+    "errors": {
+      "update_check_failed": "Não foi possível consultar o GitHub. Confira a internet e tente de novo.",
+      "update_download_failed": "O download parou. Confira a internet e tente de novo.",
+      "update_hash_mismatch": "O arquivo baixado não confere com o publicado no Release. Nada foi instalado.",
+      "update_asset_missing": "O Release não tem o arquivo para esta instalação. Baixe pela página do Release.",
+      "update_cancelled": "A permissão de administrador não foi dada. Nada foi instalado.",
+      "update_no_permission": "Sem permissão para trocar o arquivo do AppImage. Mova o AppImage para uma pasta sua ou baixe pela página do Release.",
+      "update_manual": "Esta cópia não se atualiza sozinha. Baixe pela página do Release.",
+      "update_none": "Não há versão nova.",
+      "busy": "Termine a troca ou a atividade em andamento antes de atualizar.",
+      "update_failed": "A atualização falhou. Veja a aba Logs nas Configurações."
     }
   }
 }

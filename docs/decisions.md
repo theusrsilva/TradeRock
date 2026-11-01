@@ -340,8 +340,8 @@ em memória. **Falta testar com um `.sav` real.**
 
 ## D17. Pacotes Linux e CI (Entrega 8)
 
-- **Sem verificação de atualizações** (decisão do autor). Nem o app nem o catálogo consultam a
-  internet: quem quiser baixa a versão mais recente na página de Releases. O catálogo embutido é
+- **Sem verificação de atualizações** (decisão do autor, trocada depois pela D29). Nem o app nem o catálogo
+  consultavam a internet: quem quisesse baixava a versão mais recente na página de Releases. O catálogo embutido é
   atualizado a cada versão.
 - **.deb** (`scripts/package-linux.sh`):
   - app *self-contained* em `/usr/lib/traderock/app`;
@@ -950,3 +950,93 @@ o ajudante do pokeldn; nada gravado na placa; sem backup nem restauração do sa
   "battle" quando o círculo começa e "over" quando a tarefa termina.
 - **Verificado:** testes do worker (validação, comando, marcos) e da API (simulado, conferências, pedido pelo ESP32).
 - **Não verificado:** com um Scarlet/Violet de verdade.
+
+## D28. Teste com o Switch opcional, logs e correções do ESP32 (depois da v01.00.00)
+
+Pedidos do autor ao testar a v01.00.00 no Windows com um ESP32-S3.
+
+- **Teste com o Switch opcional:** a troca fica liberada quando o rádio e o prod.keys passam, com o ESP32 ou com a
+  placa Wi-Fi. O teste continua na tela como "recomendado".
+  - Ele não conta mais como pendência no menu, no Início e no resumo da Conexão (4 itens obrigatórios).
+  - Reprovado, ele só pede atenção.
+  - O lado ruim: sem ele, um prod.keys errado só aparece na hora da troca.
+  - Isso substitui o "essencial" da D16.
+- **Varredura do ESP32 nos canais 1, 6 e 11:** o teste pedia os canais 1 a 11. A biblioteca LDN só aceita os canais do
+  LDN (`ldn.wlan.Channels`) e parava com "Invalid channel: 2", que o app mostrava como "O ESP32 parou de responder".
+  - Um teste do worker compara a lista do app com a da biblioteca.
+  - Os erros que não são da placa (USB, tempo esgotado, `RadioError`) agora saem como `esp32_error`, e a tela mostra a
+    mensagem de verdade.
+- **Depois de gravar o firmware:** a conferência tenta de novo por alguns segundos enquanto a placa reinicia. Com o
+  USB nativo, a porta some e volta.
+- **Erros antigos somem:**
+  - no painel do firmware e no teste com o Switch, a mensagem de uma tentativa sai quando o firmware passa a responder
+    ou quando a porta, a placa ou o prod.keys mudam;
+  - uma ação nova também apaga o resultado da gravação anterior.
+- **Aba Logs (Configurações, só na janela do PC):** o app grava `logs/traderock-AAAAMMDD.log` na pasta de dados,
+  guardado por 7 dias.
+  - O que entra:
+    - Information do TradeRock e avisos e erros do resto;
+    - a saída de erro do pokeldn e do esptool ao fim de cada execução (as últimas 300 linhas);
+    - os erros do ESP32.
+  - Antes de gravar, o app apaga as sequências hexadecimais longas (a mesma regra do worker), o token da URL e o
+    base64 longo. Nada do prod.keys entra no log.
+  - A aba mostra as 500 linhas mais recentes, com o filtro "só erros e avisos", e tem os botões Copiar e Salvar
+    arquivo (os 7 dias num .txt).
+- **Nomes originais nas atividades:** os nomes dos presentes prontos, dos eventos e dos grupos ficam em inglês, como
+  no jogo e no pokeldn. "Presente" virou "Mystery Gift" nos títulos, e "Missões do Blueberry" virou "Blueberry Quests".
+  As descrições e as instruções continuam em português.
+- **Verificado:**
+  - testes do .NET (redator, arquivo por dia, API dos logs, teste opcional), do worker (canais e classificação) e da
+    tela (contagem da Conexão);
+  - a varredura com o Python embutido do app instalado no Windows, na COM4, que achou a sala do FireRed com os
+    canais 1, 6 e 11.
+## D29. Atualização pela internet
+
+O autor trocou a regra da D17: o app pode procurar versões novas no GitHub e se atualizar.
+
+- **Quando:** ao abrir o app, no máximo uma vez por dia, uns 15 segundos depois de abrir. Dá para desligar na tela
+  Sobre. O botão "Procurar agora" funciona sempre.
+  - Rodando do código (desenvolvimento e testes), a procura automática não roda.
+  - Pré-lançamentos não são oferecidos. O app usa `/releases/latest`, que já os deixa de fora, e também recusa versões
+    com sufixo.
+- **O que é consultado:** só `api.github.com/repos/theusrsilva/TradeRock/releases/latest` e os arquivos do próprio
+  Release (`github.com/theusrsilva/TradeRock/releases/download/<tag>/...`).
+  - O pedido leva só o User-Agent `TradeRock/<versão>`, que o GitHub exige.
+  - Nenhum dado do PC é enviado, e o prod.keys não entra em nada disso. O pokeldn continua sem internet (netguard).
+- **Versões:** números separados por ponto, comparados um a um (`01.00.00` é igual a `1.0.0`).
+- **Instalação:** o app baixa o arquivo do tipo de instalação, confere com o `SHA256SUMS` do mesmo Release e só então
+  instala. Ele não instala no meio de uma troca ou atividade.
+  - **Windows:** roda o `TradeRock-Setup-<versão>.exe` com
+    `/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /TRADEROCKRESTART=1`, e o Windows pede o administrador
+    (UAC).
+    - O app fecha.
+    - No fim, o instalador abre o app novo como o usuário (`runasoriginaluser`, `traderock.iss`). O app continua sem
+      rodar como administrador.
+    - A instalação é reconhecida pelo `unins000.exe` ao lado do app.
+  - **AppImage** (a variável `APPIMAGE`): copia o arquivo para a mesma pasta e troca o atual com um rename, sem root.
+    O app aberto continua com o arquivo antigo até fechar, e o novo abre em seguida. Sem permissão na pasta, o app
+    manda baixar pela página do Release.
+  - **.deb** (app em `/usr/lib/traderock/app`): `pkexec /bin/sh -c` com um script fixo, e a senha é pedida pelo
+    sistema.
+    - O pacote vai pela entrada padrão para um arquivo temporário do root.
+    - O hash é conferido de novo como root antes do `dpkg -i`. O root nunca usa o arquivo do usuário.
+  - **Outras cópias** (código ou pasta solta): o app só avisa e abre a página do Release.
+- **Tela:**
+  - cartão "Atualizações" na tela Sobre, com a procura, o liga/desliga, as novidades do Release, o andamento e os
+    erros;
+  - aviso no Início quando há versão nova;
+  - tudo só na janela do PC (`/api/update` é local).
+- **Verificado:** testes do .NET com um GitHub falso:
+  - versões;
+  - arquivo de cada instalação;
+  - `SHA256SUMS`;
+  - arquivo que não confere não é instalado;
+  - sem internet;
+  - só URLs do GitHub;
+  - liga/desliga.
+- **Não verificado:**
+  - o UAC e a reinstalação silenciosa no Windows de verdade;
+  - a troca do AppImage montado;
+  - o `dpkg` pelo pkexec.
+
+  A primeira atualização real só acontece entre duas versões que já tenham este código.
