@@ -6,7 +6,7 @@ import { Badge, Button, Callout, HelpTip, Icon, selectClass, useToast } from '..
 import { api } from '../../lib/api'
 import { downloadBlob } from '../../lib/appInfo'
 import { useIsRemote } from '../../lib/auth'
-import { connectionKeys, systemCheckIds, useConnection, type ConnectionKey, type ItemState } from '../../lib/connection'
+import { connectionKeys, requiredKeys, systemCheckIds, useConnection, type ConnectionKey, type ItemState } from '../../lib/connection'
 import type { HardwareCatalog, SetupStatus } from '../../lib/types'
 import { Esp32Actions } from '../setup/Esp32Actions'
 import { CatalogNotice, CheckList, CompatBadge, Esp32Table, WifiTable } from '../setup/parts'
@@ -249,12 +249,12 @@ export function ConnectionChecklist() {
       <div className="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-surface px-5 py-[18px]">
         <div
           className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full"
-          style={{ background: `conic-gradient(${ringColor} ${(readyCount / 5) * 100}%, var(--tr-surface2) 0)` }}
+          style={{ background: `conic-gradient(${ringColor} ${(readyCount / requiredKeys.length) * 100}%, var(--tr-surface2) 0)` }}
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface text-sm font-extrabold">{readyCount}/5</div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface text-sm font-extrabold">{readyCount}/{requiredKeys.length}</div>
         </div>
         <div className="min-w-[200px] flex-1">
-          <div className="text-[17px] font-extrabold">{allOk ? t('ui.home.allReady') : t('ui.home.missing', { count: 5 - readyCount })}</div>
+          <div className="text-[17px] font-extrabold">{allOk ? t('ui.home.allReady') : t('ui.home.missing', { count: requiredKeys.length - readyCount })}</div>
           <div className="text-sm text-muted">{allOk && demo ? t('ui.conn.activateHelp') : t('ui.conn.summarySub')}</div>
         </div>
         {allOk && demo && (

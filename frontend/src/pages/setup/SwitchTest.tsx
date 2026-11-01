@@ -15,6 +15,7 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [detail, setDetail] = useState<string | null>(null)
   const [cancelled, setCancelled] = useState(false)
   const [simulated, setSimulated] = useState<SwitchTestCode>('found_decrypted')
   const abort = useRef<AbortController | null>(null)
@@ -42,12 +43,20 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
   const keysOk = keys?.valid === true
   const canRun = (esp32 ? !!state.serialPort : !!card) && radioOk && keysOk && !running
 
+  // O erro de uma tentativa some quando algo muda depois dela (firmware conferido ou gravado, outra porta ou placa,
+  // outro prod.keys): ele não vale mais.
+  useEffect(() => {
+    setError(null)
+    setDetail(null)
+  }, [state.esp32Probe?.at, state.esp32Firmware, state.serialPort, state.phy, keys?.savedAt])
+
   async function run() {
     const controller = new AbortController()
     abort.current = controller
     setRunning(true)
     setElapsed(0)
     setError(null)
+    setDetail(null)
     setCancelled(false)
     try {
       const simulatedOutcome = status.simulatedSwitchOutcomes ? simulated : null
@@ -57,7 +66,10 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
       onStatus(res.status)
     } catch (e) {
       if (controller.signal.aborted) setCancelled(true)
-      else setError(e instanceof ApiError && e.code ? e.code : 'unknown')
+      else {
+        setError(e instanceof ApiError && e.code ? e.code : 'unknown')
+        setDetail(e instanceof ApiError ? e.detail : null)
+      }
     } finally {
       abort.current = null
       setRunning(false)
@@ -127,6 +139,7 @@ export function SwitchTest({ status, onStatus }: { status: SetupStatus; onStatus
       {error && (
         <p role="alert" className="rounded-lg bg-bad-soft p-3 text-sm text-bad">
           {t(`failures.${error}`, { defaultValue: t('failures.unknown') })}
+          {detail && <code className="mt-1 block break-words text-xs">{detail}</code>}
         </p>
       )}
 

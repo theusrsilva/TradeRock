@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
+using TradeRock.Core.Logging;
 using TradeRock.Core.Esp32;
 
 namespace TradeRock.Core.Engines.Pokeldn;
@@ -23,7 +25,7 @@ public interface IPokeldnProcess
 /// O pokeldn no Python embutido, como o usuário (ESP32, sem pkexec; D23). O runtime é o mesmo do esptool: o worker
 /// do pacote ou build/worker/stage no Linux, esp32-runtime ao lado do app no Windows.
 /// </summary>
-public sealed class PokeldnProcess(Func<string?> runtimeRoot, string tempDir) : IPokeldnProcess
+public sealed class PokeldnProcess(Func<string?> runtimeRoot, string tempDir, ILogger? logger = null) : IPokeldnProcess
 {
     /// <summary>Tempo para o pokeldn sair da sala com educação antes de ser encerrado.</summary>
     public static readonly TimeSpan GracefulExit = TimeSpan.FromSeconds(20);
@@ -38,7 +40,7 @@ public sealed class PokeldnProcess(Func<string?> runtimeRoot, string tempDir) : 
         var start = PythonEsp32Flasher.StartInfo(root, tempDir, "--pokeldn", mode);
         using var process = Process.Start(start) ?? throw new Esp32Exception("pokeldn_missing", "Não foi possível iniciar o pokeldn.");
         using var stop = ct.Register(() => _ = StopAsync(process));
-        // O log do pokeldn (já sem chaves de sessão) só é lido para não travar o processo.
+        // O log do pokeldn (já sem chaves de sessão) vai para a aba Logs (D28) quando o processo termina.
         var stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);
         await process.StandardInput.WriteLineAsync(request.ToJsonString());
         process.StandardInput.Close();
@@ -49,7 +51,7 @@ public sealed class PokeldnProcess(Func<string?> runtimeRoot, string tempDir) : 
                 yield return message;
         }
         await process.WaitForExitAsync(CancellationToken.None);
-        await stderr;
+        ProcessLog.Write(logger, $"pokeldn {mode}", process.ExitCode, await stderr);
     }
 
     private static JsonObject? TryParse(string line)

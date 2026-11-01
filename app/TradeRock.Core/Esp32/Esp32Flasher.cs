@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
 using TradeRock.Core.Engines.Worker;
+using TradeRock.Core.Logging;
 
 namespace TradeRock.Core.Esp32;
 
@@ -28,7 +30,7 @@ public interface IEsp32Flasher
 /// Roda worker/traderock_worker/esp32_flash.py (API do esptool 5) com o Python embutido, como o
 /// usuário comum (sem pkexec): a porta serial só precisa do grupo dialout/uucp.
 /// </summary>
-public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir) : IEsp32Flasher
+public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir, ILogger? logger = null) : IEsp32Flasher
 {
     /// <summary>
     /// Onde está o runtime (pasta com python/ e worker/): o worker embutido no AppImage (legível pelo
@@ -183,6 +185,7 @@ public sealed class PythonEsp32Flasher(Func<string?> runtimeRoot, string tempDir
         await process.WaitForExitAsync(CancellationToken.None);
         ct.ThrowIfCancellationRequested();
         var log = await stderr;
+        ProcessLog.Write(logger, $"esptool {request["op"]}", process.ExitCode, log);
         return result ?? throw new Esp32Exception("esptool_error", log.Length > 500 ? log[^500..] : log);
     }
 }

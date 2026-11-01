@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using TradeRock.Core.Esp32;
 using TradeRock.Core.Storage;
 
@@ -22,7 +23,8 @@ public sealed record Esp32FlashJob(
 /// porta: o firmware e o esptool não podem disputar a serial. Na simulação (desenvolvimento), os
 /// resultados seguem o catálogo, sem tocar em porta nenhuma.
 /// </summary>
-public sealed class Esp32Setup(SetupService setup, SettingsStore settings, IEsp32Link link, IEsp32Flasher flasher, ProdKeys keys, TimeProvider time)
+public sealed class Esp32Setup(SetupService setup, SettingsStore settings, IEsp32Link link, IEsp32Flasher flasher, ProdKeys keys, TimeProvider time,
+    ILogger<Esp32Setup> logger)
 {
     private readonly SemaphoreSlim _port = new(1, 1);
     private Esp32FlashJob? _job;
@@ -32,6 +34,9 @@ public sealed class Esp32Setup(SetupService setup, SettingsStore settings, IEsp3
 
     /// <summary>Espera o firmware iniciar depois do reset do esptool, antes do LDN_HELLO.</summary>
     public TimeSpan BootWait { get; init; } = TimeSpan.FromSeconds(1.5);
+
+    /// <summary>Novas conferências depois da gravação, com <see cref="BootWait"/> entre elas, enquanto a placa volta.</summary>
+    public int BootRetries { get; init; } = 6;
 
     public Esp32FlashJob? CurrentJob => _job;
 
@@ -51,6 +56,11 @@ public sealed class Esp32Setup(SetupService setup, SettingsStore settings, IEsp3
         try
         {
             return await body();
+        }
+        catch (Esp32Exception e)
+        {
+            logger.LogWarning("ESP32: {Code}. {Message}", e.Code, e.Message);
+            throw;
         }
         finally
         {
@@ -159,10 +169,12 @@ public sealed class Esp32Setup(SetupService setup, SettingsStore settings, IEsp3
             }
             catch (Esp32Exception e)
             {
+                logger.LogWarning("Gravação do ESP32: {Code}. {Message}", e.Code, e.Message);
                 Update(job.Id, j => j with { Stage = "error", ErrorCode = e.Code, ErrorMessage = e.Message });
             }
             catch (Exception e)
             {
+                logger.LogError(e, "Gravação do ESP32 parou com erro.");
                 Update(job.Id, j => j with { Stage = "error", ErrorCode = "esp32_error", ErrorMessage = e.Message });
             }
             finally
@@ -211,6 +223,13 @@ public sealed class Esp32Setup(SetupService setup, SettingsStore settings, IEsp3
             await Task.Delay(BootWait, ct);
         var after = await setup.StatusAsync(ct);
         var probe = await ProbeCoreAsync(after, port, ct);
+        // A placa reinicia depois da gravação; com o USB nativo (S2, S3, C3, C6) a porta some e volta. Tenta de novo
+        // por alguns segundos antes de dizer que ela não respondeu.
+        for (var i = 0; i < BootRetries && !probe.Ok && probe.Code is "esp32_no_response" or "serial_port_missing" or "serial_busy"; i++)
+        {
+            await Task.Delay(BootWait, ct);
+            probe = await ProbeCoreAsync(after, port, ct);
+        }
         await SaveAsync(s => s with { Esp32Probe = probe }, ct);
         Update(id, j => j with { Stage = "done", Result = result });
     }

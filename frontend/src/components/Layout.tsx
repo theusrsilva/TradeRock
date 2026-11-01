@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { useConnection } from '../lib/connection'
+import { requiredKeys, useConnection } from '../lib/connection'
 import type { TradeSession } from '../lib/types'
 import { useTheme } from '../theme'
 import { GlobalDrop } from './GlobalDrop'
@@ -33,7 +33,7 @@ export function useConnectionSummary() {
   const { ready, readyCount } = useConnection()
   const { me } = useAuth()
   const remote = me?.local === false
-  const missing = 5 - readyCount
+  const missing = requiredKeys.length - readyCount
   return {
     ready,
     missing: remote ? 0 : missing,

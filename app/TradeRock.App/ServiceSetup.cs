@@ -65,9 +65,11 @@ public static class ServiceSetup
         var esp32Runtime = config["Engines:Esp32:Runtime"];
         var devStage = development ? FindDevStage() : null;
         Func<string?> runtime = () => esp32Runtime ?? PythonEsp32Flasher.FindRuntime(payload, development, devStage);
-        services.AddSingleton<IPokeldnProcess>(new PokeldnProcess(runtime, Path.Combine(paths.DataDir, "tmp")));
+        services.AddSingleton<IPokeldnProcess>(sp => new PokeldnProcess(runtime, Path.Combine(paths.DataDir, "tmp"),
+            sp.GetRequiredService<ILogger<PokeldnProcess>>()));
         services.AddSingleton<IEsp32Link, PokeldnEsp32Link>();
-        services.AddSingleton<IEsp32Flasher>(sp => new PythonEsp32Flasher(runtime, Path.Combine(paths.DataDir, "tmp")));
+        services.AddSingleton<IEsp32Flasher>(sp => new PythonEsp32Flasher(runtime, Path.Combine(paths.DataDir, "tmp"),
+            sp.GetRequiredService<ILogger<PythonEsp32Flasher>>()));
         services.AddSingleton<TradeRock.Core.Setup.Esp32Setup>();
 
         // Motores: o primeiro registrado é o padrão (simulação).

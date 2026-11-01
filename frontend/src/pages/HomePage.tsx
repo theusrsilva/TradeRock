@@ -5,7 +5,7 @@ import { useConnectionSummary } from '../components/Layout'
 import { Button, Callout, Icon } from '../components/ui'
 import { api, spriteUrl } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { connectionKeys, useConnection } from '../lib/connection'
+import { connectionKeys, requiredKeys, useConnection } from '../lib/connection'
 import type { Pokemon, TradeHistoryItem, TradeSession, VaultOverview } from '../lib/types'
 import { stateLook } from './settings/ConnectionChecklist'
 
@@ -96,7 +96,7 @@ export default function HomePage() {
           {!remote && (
             <>
               <div className="h-2 overflow-hidden rounded bg-surface2">
-                <div className={`h-full rounded ${status.ready ? 'bg-ok' : 'bg-warn'}`} style={{ width: `${(readyCount / 5) * 100}%` }} />
+                <div className={`h-full rounded ${status.ready ? 'bg-ok' : 'bg-warn'}`} style={{ width: `${(readyCount / requiredKeys.length) * 100}%` }} />
               </div>
               <div className="flex flex-wrap gap-2">
                 {connectionKeys.map((k) => {

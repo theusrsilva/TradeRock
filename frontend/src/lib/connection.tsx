@@ -7,6 +7,9 @@ import type { CheckStatus, Engine, SetupCheck, SetupStatus } from './types'
 export const connectionKeys = ['system', 'keys', 'radio', 'driver', 'switch'] as const
 export type ConnectionKey = (typeof connectionKeys)[number]
 
+/** Os itens obrigatórios para a troca; o teste com o Switch é recomendado, não obrigatório. */
+export const requiredKeys: readonly ConnectionKey[] = ['system', 'keys', 'radio', 'driver']
+
 /** Situação de um item: ok, atenção, falta, esperando outro item ou ainda não testado. */
 export type ItemState = 'ok' | 'warn' | 'missing' | 'blocked' | 'idle'
 
@@ -16,6 +19,7 @@ export interface ConnectionState {
   /** Motor escolhido é a simulação: as trocas são de mentira. */
   demo: boolean
   items: Record<ConnectionKey, ItemState>
+  /** Itens obrigatórios que já passaram (de requiredKeys.length). */
   readyCount: number
   ready: boolean
   reload: () => Promise<SetupStatus | null>
@@ -102,7 +106,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   }, [reload, reloadEngines])
 
   const items = connectionItems(setup)
-  const readyCount = connectionKeys.filter((k) => items[k] === 'ok').length
+  const readyCount = requiredKeys.filter((k) => items[k] === 'ok').length
   const selected = engines.find((e) => e.selected)
   const demo = selected?.isSimulation ?? false
   // Pela rede não dá para ver as verificações: "pronto" é ter um motor de verdade escolhido. O modo LAN não precisa

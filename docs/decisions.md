@@ -950,3 +950,43 @@ o ajudante do pokeldn; nada gravado na placa; sem backup nem restauração do sa
   "battle" quando o círculo começa e "over" quando a tarefa termina.
 - **Verificado:** testes do worker (validação, comando, marcos) e da API (simulado, conferências, pedido pelo ESP32).
 - **Não verificado:** com um Scarlet/Violet de verdade.
+
+## D28. Teste com o Switch opcional, logs e correções do ESP32 (depois da v01.00.00)
+
+Pedidos do autor ao testar a v01.00.00 no Windows com um ESP32-S3.
+
+- **Teste com o Switch opcional:** a troca fica liberada quando o rádio e o prod.keys passam, com o ESP32 ou com a
+  placa Wi-Fi. O teste continua na tela como "recomendado".
+  - Ele não conta mais como pendência no menu, no Início e no resumo da Conexão (4 itens obrigatórios).
+  - Reprovado, ele só pede atenção.
+  - O lado ruim: sem ele, um prod.keys errado só aparece na hora da troca.
+  - Isso substitui o "essencial" da D16.
+- **Varredura do ESP32 nos canais 1, 6 e 11:** o teste pedia os canais 1 a 11. A biblioteca LDN só aceita os canais do
+  LDN (`ldn.wlan.Channels`) e parava com "Invalid channel: 2", que o app mostrava como "O ESP32 parou de responder".
+  - Um teste do worker compara a lista do app com a da biblioteca.
+  - Os erros que não são da placa (USB, tempo esgotado, `RadioError`) agora saem como `esp32_error`, e a tela mostra a
+    mensagem de verdade.
+- **Depois de gravar o firmware:** a conferência tenta de novo por alguns segundos enquanto a placa reinicia. Com o
+  USB nativo, a porta some e volta.
+- **Erros antigos somem:**
+  - no painel do firmware e no teste com o Switch, a mensagem de uma tentativa sai quando o firmware passa a responder
+    ou quando a porta, a placa ou o prod.keys mudam;
+  - uma ação nova também apaga o resultado da gravação anterior.
+- **Aba Logs (Configurações, só na janela do PC):** o app grava `logs/traderock-AAAAMMDD.log` na pasta de dados,
+  guardado por 7 dias.
+  - O que entra:
+    - Information do TradeRock e avisos e erros do resto;
+    - a saída de erro do pokeldn e do esptool ao fim de cada execução (as últimas 300 linhas);
+    - os erros do ESP32.
+  - Antes de gravar, o app apaga as sequências hexadecimais longas (a mesma regra do worker), o token da URL e o
+    base64 longo. Nada do prod.keys entra no log.
+  - A aba mostra as 500 linhas mais recentes, com o filtro "só erros e avisos", e tem os botões Copiar e Salvar
+    arquivo (os 7 dias num .txt).
+- **Nomes originais nas atividades:** os nomes dos presentes prontos, dos eventos e dos grupos ficam em inglês, como
+  no jogo e no pokeldn. "Presente" virou "Mystery Gift" nos títulos, e "Missões do Blueberry" virou "Blueberry Quests".
+  As descrições e as instruções continuam em português.
+- **Verificado:**
+  - testes do .NET (redator, arquivo por dia, API dos logs, teste opcional), do worker (canais e classificação) e da
+    tela (contagem da Conexão);
+  - a varredura com o Python embutido do app instalado no Windows, na COM4, que achou a sala do FireRed com os
+    canais 1, 6 e 11.

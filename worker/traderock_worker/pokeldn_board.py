@@ -86,7 +86,10 @@ def classify(error):
         return code
     if "protocol" in str(error).lower():
         return "esp32_firmware_other_version"
-    return "esp32_no_response"
+    if isinstance(error, (TimeoutError, OSError)) or type(error).__name__ == "RadioError":
+        return "esp32_no_response"
+    # Outro erro (do pokeldn ou da biblioteca LDN): a tela mostra a mensagem, sem dizer que a placa parou.
+    return "esp32_error"
 
 
 def main(root):

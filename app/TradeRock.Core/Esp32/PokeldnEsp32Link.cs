@@ -11,8 +11,11 @@ namespace TradeRock.Core.Esp32;
 /// </summary>
 public sealed class PokeldnEsp32Link(IPokeldnProcess process) : IEsp32Link
 {
-    /// <summary>Canais de 2,4 GHz da varredura, e o tempo em cada um.</summary>
-    public static readonly int[] Channels = [1, 6, 11, 2, 3, 4, 5, 7, 8, 9, 10];
+    /// <summary>
+    /// Canais da varredura, e o tempo em cada um. São os do LDN em 2,4 GHz: a biblioteca recusa os outros
+    /// (ldn.wlan.is_valid_channel), e o teste parava com "Invalid channel: 2".
+    /// </summary>
+    public static readonly int[] Channels = [1, 6, 11];
     public const double DwellSeconds = 0.5;
 
     /// <summary>Sala de troca de algum jogo do catálogo.</summary>

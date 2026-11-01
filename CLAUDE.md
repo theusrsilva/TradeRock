@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D27).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D28).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -48,10 +48,11 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Testes E2E | Só pela API |
 | Construtor | Modo automático (AutoMod) por padrão e modo avançado. OT padrão = perfil "Meu treinador". Mensagens do PKHeX traduzidas só as da Gen 3. Nomes de golpes e itens em inglês |
 | Cofre | Caixas de 30 posições com Caixa de entrada. Lixeira recuperável. Injeção em `.sav` sobrescreve, com backup. Exportação padrão: .pk3 de 100 bytes |
+| Logs | Aba Logs nas Configurações (só na janela do PC). Arquivo por dia na pasta de dados, 7 dias, sem chaves nem dados (D28) |
 | Assistente | RTL8821CE também recomendada. Seletor de simulação só em desenvolvimento. Desde a Entrega 12 é a lista de Configurações → Conexão (`/configurar` redireciona) |
 | Worker | Em Python (runtime embutido). Canal por stdin/stdout em vez de socket Unix. Polkit `auth_admin_keep`. Patches do FRLG-LDN-Trade-Console aplicados. `iw` e `ip` estáticos embutidos (o autor não quer mandar a pessoa instalar pré-requisitos) |
 | Pacotes | .deb e AppImage. Sem verificação de atualizações (a pessoa baixa o Release). Tag `v*` publica o Release direto. Tela Sobre com créditos e oferta do código-fonte |
-| Teste com o Switch | Até 30 s. Sessão de outro jogo decifrada não aprova. Vale até mudar a placa ou o prod.keys (não expira) |
+| Teste com o Switch | Até 30 s. Sessão de outro jogo decifrada não aprova. Vale até mudar a placa ou o prod.keys (não expira). Opcional desde a D28: a troca libera sem ele |
 | Modo servidor | HTTP (só rede de casa, com aviso). Argon2id (Konscious). Fila começa a troca sozinha. Conta nova com os Pokémon de demonstração. Porta 8337. Começa desligado a cada abertura |
 | Windows | Só ESP32. Instalador Inno Setup com administrador (regra do firewall só em redes privadas). Sem assinatura digital por enquanto. Dados em `%LOCALAPPDATA%` com ACL só do usuário. Sem WebView2: abre no navegador |
 | Jogos do Switch | Todos os jogos com troca local (FRLG, Let's Go, SwSh, BDSP, Arceus, SV, Z-A) pelo pokeldn (submódulo, D21). Escopo todo (troca, raids, Mystery Gift, Union Circle). ESP32 passa a usar o firmware do pokeldn. Python embutido no Windows. Modo LAN só no SwSh. Legalidade avisa e não bloqueia nos jogos novos. Cofre único com filtro por jogo. "Meu treinador" por jogo. Mover entre jogos como o HOME (D22) |

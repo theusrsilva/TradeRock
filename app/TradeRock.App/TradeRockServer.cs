@@ -6,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using TradeRock.App.Api;
 using TradeRock.App.Server;
 using TradeRock.Core;
+using TradeRock.Core.Logging;
 
 namespace TradeRock.App;
 
@@ -48,6 +49,10 @@ public static class TradeRockServer
         builder.WebHost.ConfigureKestrel(k => k.Listen(ParseAddress(options.Bind), options.Port));
 
         var paths = AppPaths.ForCurrentUser(options.DataDir);
+        // O log em arquivo da aba Logs (D28), já sem chaves nem dados.
+        var fileLog = new FileLog(paths.LogsDir);
+        builder.Logging.AddProvider(new FileLoggerProvider(fileLog));
+        builder.Services.AddSingleton(fileLog);
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(token);
         builder.Services.AddSingleton(paths);
@@ -99,6 +104,7 @@ public static class TradeRockServer
         api.MapPokemon();
         api.MapTrades();
         api.MapActivities();
+        api.MapLogs();
         api.MapSettings();
         api.MapBuilder();
         api.MapVault();

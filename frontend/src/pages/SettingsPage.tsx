@@ -11,6 +11,7 @@ import { useTheme, type ThemeChoice } from '../theme'
 import { AppImageWorkerSettings } from './setup/AppImageWorker'
 import { AccountsCard, ServerModeCard } from './settings/ServerSettings'
 import { ConnectionChecklist } from './settings/ConnectionChecklist'
+import { LogsTab } from './settings/LogsTab'
 import { useAuth } from '../lib/auth'
 import { useConnection } from '../lib/connection'
 import { useConnectionSummary } from '../components/Layout'
@@ -25,7 +26,7 @@ const numberFields: { key: NumberSetting; min: number; max: number; unit: string
   { key: 'totalTimeoutMinutes', min: 1, max: 180, unit: 'ui.settings.unitMin' },
 ]
 
-type Tab = 'conexao' | 'treinador' | 'preferencias' | 'avancado' | 'contas'
+type Tab = 'conexao' | 'treinador' | 'preferencias' | 'avancado' | 'logs' | 'contas'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -45,6 +46,7 @@ export default function SettingsPage() {
     { key: 'treinador', label: t('settings.myTrainerTitle'), icon: 'badge' },
     { key: 'preferencias', label: t('ui.settings.tabs.preferencias'), icon: 'palette' },
     ...(local ? [{ key: 'avancado' as Tab, label: t('ui.settings.tabs.avancado'), icon: 'tune' }] : []),
+    ...(local ? [{ key: 'logs' as Tab, label: t('logs.tab'), icon: 'receipt_long' }] : []),
     ...(!local && caller?.role === 'admin' ? [{ key: 'contas' as Tab, label: t('accounts.title'), icon: 'group' }] : []),
   ]
   const asked = params.get('aba') as Tab | null
@@ -85,6 +87,7 @@ export default function SettingsPage() {
       {tab === 'treinador' && <TrainerTab />}
       {tab === 'preferencias' && <PreferencesTab settings={settings} onSave={saveSettings} />}
       {tab === 'avancado' && local && <AdvancedTab settings={settings} onSave={saveSettings} />}
+      {tab === 'logs' && local && <LogsTab />}
       {tab === 'contas' && <AccountsCard />}
     </div>
   )
