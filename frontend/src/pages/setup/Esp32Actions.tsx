@@ -24,6 +24,25 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
   const flashing = job !== null && !job.finished
   const idle = busy === null && !flashing
 
+  // A gravação continua no app mesmo com a tela fechada (aba minimizada, item recolhido): ao voltar, retoma o
+  // acompanhamento em vez de esbarrar na placa ocupada.
+  async function resume(): Promise<boolean> {
+    try {
+      const res = await api.get<{ job: Esp32FlashJob; status: SetupStatus | null }>('/api/setup/esp32/flash')
+      if (res.job.finished) return false
+      setError(null)
+      setDetail(null)
+      setJob(res.job)
+      return true
+    } catch {
+      return false // nenhuma gravação nesta execução
+    }
+  }
+
+  useEffect(() => {
+    void resume()
+  }, []) // só ao abrir o painel
+
   async function run(kind: 'probe' | 'identify' | 'verify') {
     setBusy(kind)
     setError(null)
@@ -33,6 +52,7 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
       const res = await api.post<{ status: SetupStatus }>(`/api/setup/esp32/${kind}`)
       onStatus(res.status)
     } catch (e) {
+      if (e instanceof ApiError && e.code === 'esp32_busy' && (await resume())) return
       setError(e instanceof ApiError && e.code ? e.code : 'unknown')
       setDetail(e instanceof ApiError ? e.detail : null)
     } finally {
@@ -61,6 +81,7 @@ export function Esp32Actions({ status, onStatus }: { status: SetupStatus; onStat
     try {
       setJob(await api.post<Esp32FlashJob>('/api/setup/esp32/flash'))
     } catch (e) {
+      if (e instanceof ApiError && e.code === 'esp32_busy' && (await resume())) return
       setError(e instanceof ApiError && e.code ? e.code : 'unknown')
       setDetail(e instanceof ApiError ? e.detail : null)
     }

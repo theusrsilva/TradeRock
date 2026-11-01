@@ -3,9 +3,11 @@ import { inputClass } from './ui'
 import type { Option } from '../lib/types'
 
 /**
- * Lista com busca (para espécies, golpes e itens). Mostra no máximo 60 opções filtradas;
- * teclado: setas, Enter e Esc.
+ * Lista com busca (para espécies, golpes e itens). Mostra as opções de 60 em 60: rolar até o fim (ou descer com as
+ * setas) carrega mais, até a lista toda. Teclado: setas, Enter e Esc.
  */
+const PAGE = 60
+
 export function SearchSelect({
   options,
   value,
@@ -29,13 +31,17 @@ export function SearchSelect({
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
+  const [limit, setLimit] = useState(PAGE)
   const box = useRef<HTMLDivElement>(null)
 
-  const filtered = useMemo(() => {
+  const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const list = q ? options.filter((o) => o.text.toLowerCase().includes(q) || String(o.value) === q) : options
-    return list.slice(0, 60)
+    return q ? options.filter((o) => o.text.toLowerCase().includes(q) || String(o.value) === q) : options
   }, [options, query])
+  const filtered = matches.slice(0, limit)
+
+  // Busca nova ou lista reaberta: volta às primeiras opções.
+  useEffect(() => setLimit(PAGE), [query, open])
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -70,7 +76,10 @@ export function SearchSelect({
             setActive(0)
           }}
           onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') setActive((a) => Math.min(a + 1, filtered.length - 1))
+            if (e.key === 'ArrowDown') {
+              if (active + 1 >= filtered.length) setLimit((l) => l + PAGE)
+              setActive((a) => Math.min(a + 1, matches.length - 1))
+            }
             else if (e.key === 'ArrowUp') setActive((a) => Math.max(a - 1, 0))
             else if (e.key === 'Enter' && filtered[active]) {
               e.preventDefault()
@@ -80,7 +89,13 @@ export function SearchSelect({
         />
       </div>
       {open && (
-        <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-line bg-surface py-1 text-sm shadow-lg">
+        <ul
+          className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-line bg-surface py-1 text-sm shadow-lg"
+          onScroll={(e) => {
+            const el = e.currentTarget
+            if (filtered.length < matches.length && el.scrollTop + el.clientHeight >= el.scrollHeight - 80) setLimit((l) => l + PAGE)
+          }}
+        >
           {emptyLabel !== undefined && (
             <li>
               <button type="button" className="w-full px-3 py-1.5 text-left text-muted hover:bg-surface2" onMouseDown={() => choose(null)}>
