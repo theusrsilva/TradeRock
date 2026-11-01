@@ -111,8 +111,11 @@ find "$SITE" -name __pycache__ -prune -exec rm -rf {} +
 echo "==> worker (gravação do ESP32 e pokeldn)"
 mkdir -p "$RUNTIME/worker/traderock_worker"
 cp worker/run.py "$RUNTIME/worker/"
-cp worker/traderock_worker/{__init__.py,main.py,esp32_flash.py,netguard.py,pokeldn_env.py,pokeldn_board.py,pokeldn_trade.py} \
+cp worker/traderock_worker/{__init__.py,main.py,esp32_flash.py,netguard.py,pokeldn_env.py,pokeldn_board.py,pokeldn_trade.py,partner_ai.py} \
   "$RUNTIME/worker/traderock_worker/"
+# Tabela de golpes da mini IA do parceiro (D31, scripts/fetch-move-data.py).
+mkdir -p "$RUNTIME/worker/traderock_worker/data"
+cp worker/traderock_worker/data/moves.json "$RUNTIME/worker/traderock_worker/data/"
 
 echo "==> pokeldn + patches"
 scripts/stage-pokeldn.sh "$RUNTIME/pokeldn"

@@ -35,16 +35,22 @@ export default function HomePage() {
       })
       .catch(() => undefined)
     api
-      .get<Pokemon[]>('/api/pokemon')
-      .then((list) => setPokemon(Object.fromEntries(list.map((p) => [p.id, p]))))
-      .catch(() => undefined)
-    api
       .get<VaultOverview>('/api/vault')
       .then((v) => setVaultCount(v.inboxCount + v.boxes.reduce((n, b) => n + b.count, 0)))
       .catch(() => undefined)
   }, [])
 
   const entry = last?.entries.find((e) => e.receivedPokemonId)
+
+  // Um por um, como no Histórico: o Pokémon que foi embora na troca (ou para a lixeira) não está na lista do cofre.
+  useEffect(() => {
+    for (const id of [entry?.sentPokemonId, entry?.receivedPokemonId])
+      if (id)
+        api
+          .get<Pokemon>(`/api/pokemon/${id}`)
+          .then((p) => setPokemon((m) => ({ ...m, [id]: p })))
+          .catch(() => undefined)
+  }, [entry?.sentPokemonId, entry?.receivedPokemonId])
   const sent = entry ? pokemon[entry.sentPokemonId] : undefined
   const received = entry?.receivedPokemonId ? pokemon[entry.receivedPokemonId] : undefined
   const name = (p?: Pokemon) => (p ? (p.nickname || p.speciesName).toUpperCase() : '?')

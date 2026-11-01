@@ -61,7 +61,9 @@ public sealed record RaidChoice(
     string? Event = null,
     string? EventBoss = null,
     bool Gigantamax = false,
-    int Move = 1,
+    int Move = 1, // Max Raid em que o TradeRock entra: 1 a 4, ou 0 = a mini IA escolhe (D31)
+    IReadOnlyList<int>? TargetTypes = null,   // tipos do chefe informado (ordem do jogo), para a mini IA
+    IReadOnlyList<int>? AttackerTypes = null, // tipos do Pokémon que o TradeRock leva
     int? Legendary = null,
     string? Code = null,
     string? Version = null,

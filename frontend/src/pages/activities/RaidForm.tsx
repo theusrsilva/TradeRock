@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Field, inputClass, Segmented, selectClass, Toggle } from '../../components/ui'
+import { SearchSelect } from '../../components/SearchSelect'
 import { api } from '../../lib/api'
+import { useBuilderData } from '../../lib/builderData'
 import type { GameFamily, Pokemon } from '../../lib/types'
 
 /** Tipos de raid (pokeldn_trade.py RAIDS): "host" = o console entra na sala do TradeRock; "join" = o contrário. */
@@ -21,7 +23,10 @@ export interface RaidState {
   eventTitle?: string
   eventBoss?: string
   gigantamax?: boolean
+  /** 1 a 4, ou 0 = a mini IA escolhe (D31). */
   move?: number
+  /** Max Raid em que o TradeRock entra: o chefe, para a mini IA escolher o golpe. */
+  targetSpecies?: number
   legendary?: number
   code?: string
   version?: string
@@ -55,7 +60,7 @@ const SV_PROGRESS = ['beginning', 'tera', '3star', '4star', '5star', '6star']
 export function newRaid(kind: RaidKind): RaidState {
   if (kind === 'tera-raid-host') return { kind, version: 'violet', map: 'paldea', progress: '4star', content: 'standard', seed: '000F34C3', players: 1 }
   if (kind === 'lair-host') return { kind, legendary: 150 }
-  if (kind === 'max-raid-join') return { kind, move: 1 }
+  if (kind === 'max-raid-join') return { kind, move: 0 }
   return { kind }
 }
 
@@ -88,6 +93,7 @@ export function RaidForm({
 }) {
   const { t } = useTranslation()
   const [events, setEvents] = useState<RaidEvents | null>(null)
+  const swshData = useBuilderData('sword')
   const set = (patch: Partial<RaidState>) => onChange({ ...raid, ...patch })
   const mine = pokemon.filter((p) => p.family === (family as GameFamily))
   const usesEvents = raid.kind === 'max-raid-host' || raid.kind === 'tera-raid-host'
@@ -125,8 +131,9 @@ export function RaidForm({
       {raid.kind === 'max-raid-join' && (
         <>
           <Field label={t('activities.raid.offer')}>{picker(raid.offer, (offer) => set({ offer }), true)}</Field>
-          <Field label={t('activities.raid.move')}>
-            <select className={selectClass} value={raid.move ?? 1} onChange={(e) => set({ move: Number(e.target.value) })}>
+          <Field label={t('activities.raid.move')} help={raid.move === 0 ? t('activities.raid.moveAutoHelp') : undefined}>
+            <select className={selectClass} value={raid.move ?? 0} onChange={(e) => set({ move: Number(e.target.value) })}>
+              <option value={0}>{t('activities.raid.moveAuto')}</option>
               {[1, 2, 3, 4].map((m) => (
                 <option key={m} value={m}>
                   {t('activities.raid.moveN', { n: m })}
@@ -134,6 +141,17 @@ export function RaidForm({
               ))}
             </select>
           </Field>
+          {raid.move === 0 && (
+            <Field label={t('activities.raid.target')} help={t('activities.raid.targetHelp')}>
+              <SearchSelect
+                options={(swshData?.species ?? []).map((s) => ({ value: s.value, text: `#${s.value} ${s.text}` }))}
+                value={raid.targetSpecies ?? null}
+                onChange={(v) => set({ targetSpecies: v ?? undefined })}
+                placeholder={t('builder.searchSpecies')}
+                emptyLabel={t('activities.raid.targetUnknown')}
+              />
+            </Field>
+          )}
         </>
       )}
       {raid.kind === 'lair-host' && (

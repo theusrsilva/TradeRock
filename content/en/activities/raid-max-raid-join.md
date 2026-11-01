@@ -10,5 +10,7 @@
 
 - **Over your home network (LAN mode):** in Options, press **L + R + left stick** together before opening the raid.
 - With no Pokémon chosen, pokeldn brings a default one.
+- **Automatic move:** with the boss filled in, TradeRock picks the move that works best against it (type, power and
+  same-type bonus); without it, the strongest one. It repeats that move for the whole battle and doesn't Dynamax.
 
 </details>

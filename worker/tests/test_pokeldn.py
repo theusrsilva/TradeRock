@@ -268,6 +268,8 @@ class PokeldnTradeTests(unittest.TestCase):
         ok = [dict(game="swsh", raid={"kind": "max-raid-host", "boss": mon, "offer": mon}),
               dict(game="swsh", raid={"kind": "max-raid-host", "event": "Index 001", "eventBoss": "sword:5:4:Wild Area", "offer": mon}),
               dict(game="swsh", radio="lan", keys=None, raid={"kind": "max-raid-join", "move": 3}),
+              dict(game="swsh", raid={"kind": "max-raid-join", "move": "auto", "offer": mon, "targetTypes": [15, 2],
+                                      "attackerTypes": [14]}),
               dict(game="swsh", raid={"kind": "lair-host", "legendary": 150, "code": "12345678"}),
               dict(game="swsh", raid={"kind": "lair-join"}),
               dict(game="sv", raid={"kind": "tera-raid-host", "pokemon": mon, "version": "scarlet", "seed": "0a1b2c3d",
@@ -283,6 +285,8 @@ class PokeldnTradeTests(unittest.TestCase):
                dict(game="swsh", raid={"kind": "max-raid-host", "event": "../etc", "eventBoss": "sword:5:4:Wild Area", "offer": mon}),
                dict(game="swsh", raid={"kind": "max-raid-host", "event": "Index 001", "eventBoss": "x", "offer": mon}),
                dict(game="swsh", raid={"kind": "lair-host", "legendary": 25}),
+               dict(game="swsh", raid={"kind": "max-raid-join", "move": "auto", "targetTypes": [18]}),
+               dict(game="swsh", raid={"kind": "max-raid-join", "move": 5}),
                dict(game="sv", raid={"kind": "tera-raid-host", "pokemon": mon, "seed": "xyz"}),
                dict(game="sv", raid={"kind": "tera-raid-host", "pokemon": mon, "map": "kanto"}),
                dict(game="sv", raid={"kind": "tera-raid-join"})]
@@ -510,12 +514,21 @@ A console joined the network.
             engine = pokeldn_env.prepare({root!r}, os.path.join(work, "data"))
             base = {{"activity": "raid", "keys": {self.keys!r}, "trainer": {{"name": "Ana", "tid": 123456, "sid": 1234}}}}
             mon = "eA=="
+            # Um PK8 de verdade (o aluguel gravado do pokeldn: Grimmsnarl com Power-Up Punch e Dark Pulse).
+            import base64
+            with open(os.path.join({root!r}, "pokeldn", "pokeldn", "swsh", "data", "lair_rental.ek8"), "rb") as f:
+                grimm = base64.b64encode(f.read()).decode()
             out = {{}}
             for name, p in [
                 ("max-host", {{"game": "swsh", "raid": {{"kind": "max-raid-host", "boss": mon, "offer": mon, "gigantamax": True}}}}),
                 ("max-event", {{"game": "swsh", "raid": {{"kind": "max-raid-host", "event": {swsh_event["key"]!r},
                                 "eventBoss": {swsh_event["bosses"][0][0]!r}, "offer": mon}}}}),
                 ("max-join-lan", {{"game": "swsh", "radio": "lan", "raid": {{"kind": "max-raid-join", "move": 2}}}}),
+                ("max-join-ai-dark", {{"game": "swsh", "raid": {{"kind": "max-raid-join", "move": "auto", "offer": grimm,
+                                       "targetTypes": [16], "attackerTypes": [16, 17]}}}}),
+                ("max-join-ai-psychic", {{"game": "swsh", "raid": {{"kind": "max-raid-join", "move": "auto", "offer": grimm,
+                                          "targetTypes": [13], "attackerTypes": [16, 17]}}}}),
+                ("max-join-ai-no-offer", {{"game": "swsh", "raid": {{"kind": "max-raid-join", "move": "auto"}}}}),
                 ("lair-host", {{"game": "swsh", "raid": {{"kind": "lair-host", "legendary": 249, "code": "12345678"}}}}),
                 ("tera-host", {{"game": "sv", "raid": {{"kind": "tera-raid-host", "pokemon": mon, "event": {sv_event["key"]!r},
                                 "version": {sv_version!r}, "group": {sv_group["group"]}, "progress": {sv_group["progress"][0]!r}}}}}),
@@ -549,6 +562,10 @@ A console joined the network.
         self.assertEqual(out["max-join-lan"][0], "swsh_connect.py")
         self.assertIn("--lan", out["max-join-lan"][1])
         self.assertEqual(arg("max-join-lan", "--raid-move"), "2")
+        # Mini IA (D31): contra Dark, Power-Up Punch (golpe 1); contra Psychic, Dark Pulse (golpe 2); sem Pokémon, o 1.
+        self.assertEqual(arg("max-join-ai-dark", "--raid-move"), "1")
+        self.assertEqual(arg("max-join-ai-psychic", "--raid-move"), "2")
+        self.assertEqual(arg("max-join-ai-no-offer", "--raid-move"), "1")
         self.assertEqual((arg("lair-host", "--lair-legendary"), arg("lair-host", "--code")), ("249", "12345678"))
         self.assertEqual(out["tera-host"][0], "sv_host.py")
         self.assertEqual(arg("tera-host", "--raid-event-group"), str(sv_group["group"]))

@@ -2,7 +2,7 @@
 
 App desktop (.NET 10 + React) para trocar Pokémon com FireRed/LeafGreen do Switch via wireless local
 (LDN), com público leigo. Especificação original completa: [docs/spec.md](docs/spec.md) (o projeto
-se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D30).
+se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/decisions.md) (D1–D31).
 
 ## Regras de trabalho (pedidas pelo autor, valem sempre)
 
@@ -47,6 +47,7 @@ se chamava "FRLG Trade Studio"). Decisões técnicas: [docs/decisions.md](docs/d
 | Ilustrações | SVG em vez de fotos |
 | Trocas por sessão | Até 6 |
 | Trocas pelo pokeldn | O recebido é guardado assim que o pokeldn o grava (o Z-A e o Arceus gravam depois do `[done]`: o worker espera o arquivo). Troca feita conta mesmo se o console encerrar, a conexão cair ou o processo sair com erro. A sala espera 240 s. Cancelar manda `stop` pela entrada (saída educada também no Windows). Tela ao vivo com o fluxo do anfitrião (D30) |
+| Mini IA das raids | Dynamax Adventure e Max Raid em que o TradeRock entra (SwSh): escolhe o aluguel e o golpe de cada batalha "no papel" (tipo, força, STAB, precisão), com a tabela de golpes do PokeAPI. Sem decisão turno a turno nem Dynamax (D31) |
 | Testes E2E | Só pela API |
 | Construtor | Modo automático (AutoMod) por padrão e modo avançado. OT padrão = perfil "Meu treinador". Mensagens do PKHeX traduzidas só as da Gen 3. Nomes de golpes e itens em inglês |
 | Cofre | Caixas de 30 posições com Caixa de entrada. Lixeira recuperável. Injeção em `.sav` sobrescreve, com backup. Exportação padrão: .pk3 de 100 bytes |
@@ -92,15 +93,16 @@ Todas as entregas da especificação estão na `main` (PR #1). O primeiro pré-l
   - janela nativa do Photino no Linux (WebKitGTK) e os diálogos de arquivo nos dois sistemas (no
     Windows, a janela abriu com o WebView2);
   - `.sav` real e o formato de save NSO do Switch;
-  - troca com Switch real;
+  - troca com Switch real nos outros jogos (o Legends: Z-A pelo ESP32-S3 no Windows funcionou em 01/11/2026,
+    v01.02.00, D30);
   - teste com o Switch (Entrega 7, D16);
-  - ESP32 real: gravação do firmware, troca e teste com o Switch (Entrega 9, D18; o autor ainda não
-    tem placa);
+  - ESP32 real no Linux (no Windows, o ESP32-S3 do autor gravou o firmware, passou no teste com o Switch e trocou
+    com o Z-A);
   - teste da placa com root;
   - AppImage montado por FUSE, instalação do worker pelo pkexec (diálogo) e a janela a partir dos pacotes.
   - modo servidor com um celular de verdade na rede (Entrega 10, D19);
-  - ESP32 real no Windows: gravação, troca e driver do CH340/CP210x (Entrega 11, D20). O app, a janela,
-    o instalador e os testes foram verificados num Windows 11 real, pelo WSL.
+  - ESP32 com conversor CH340/CP210x no Windows (o ESP32-S3 usa a USB nativa). O app, a janela, o instalador e os
+    testes foram verificados num Windows 11 real, pelo WSL.
 
   O roteiro de teste no host está em [docs/dev-host.md](docs/dev-host.md).
 

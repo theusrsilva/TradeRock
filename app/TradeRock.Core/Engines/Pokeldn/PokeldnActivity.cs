@@ -103,7 +103,13 @@ public static class PokeldnActivity
         if (raid.Gigantamax)
             json["gigantamax"] = true;
         if (raid.Kind == RaidKinds.MaxRaidJoin)
-            json["move"] = raid.Move;
+        {
+            json["move"] = raid.Move == 0 ? "auto" : raid.Move;
+            if (raid.TargetTypes is { Count: > 0 } target)
+                json["targetTypes"] = new JsonArray([.. target.Select(t => (JsonNode)t)]);
+            if (raid.AttackerTypes is { Count: > 0 } attacker)
+                json["attackerTypes"] = new JsonArray([.. attacker.Select(t => (JsonNode)t)]);
+        }
         Put("legendary", raid.Legendary);
         Put("code", raid.Code);
         Put("version", raid.Version);

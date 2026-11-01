@@ -337,8 +337,13 @@ def validate_raid(game, raid, lan):
             raise ValueError("chefe inválido")
     elif kind == "max-raid-join":
         _pokemon(raid.get("offer"), False)
-        if raid.get("move", 1) not in (1, 2, 3, 4):
+        if raid.get("move", 1) not in (1, 2, 3, 4, "auto"):
             raise ValueError("golpe inválido")
+        for name in ("targetTypes", "attackerTypes"):
+            types = raid.get(name)
+            if types is not None and (not isinstance(types, list) or not 1 <= len(types) <= 2
+                                      or not all(isinstance(t, int) and 0 <= t <= 17 for t in types)):
+                raise ValueError("tipos inválidos")
     elif kind == "lair-host":
         if raid.get("legendary") not in LAIR_LEGENDARIES:
             raise ValueError("lendário inválido")
@@ -417,7 +422,7 @@ def raid_values(tool, raid, game, work):
         "--raid-boss": pokemon("boss"),
         "--raid-gigantamax": bool(raid.get("gigantamax")),
         "--offer-file": pokemon("offer"),
-        "--raid-move": str(raid.get("move", 1)),
+        "--raid-move": str(raid_move(raid)),
         "--lair-legendary": str(raid.get("legendary", "")),
         "--code": raid.get("code") or "",
         "--raid-pokemon": pokemon("pokemon"),
@@ -434,6 +439,26 @@ def raid_values(tool, raid, game, work):
         if flag in wanted and wanted[flag] is not None:
             values[field.key] = wanted[flag]
     return values
+
+
+def raid_move(raid):
+    """O golpe da Max Raid em que o TradeRock entra: o escolhido, ou "auto" = o mais efetivo contra o chefe
+    informado (o mais forte sem chefe) pela mini IA (D31). Sem Pokémon próprio, o golpe 1."""
+    move = raid.get("move", 1)
+    if move != "auto":
+        return move
+    if not raid.get("offer"):
+        return 1
+    from pokeldn.swsh import pokemon as swsh_pokemon
+    from . import partner_ai
+    try:
+        move_list = [m for m in swsh_pokemon.read(base64.b64decode(raid["offer"]))["moves"] if m]
+    except Exception:  # noqa: BLE001 - Pokémon ilegível: fica o golpe 1, como antes
+        return 1
+    targets = [raid["targetTypes"]] if raid.get("targetTypes") else [[]]
+    slot = partner_ai.best_slot(move_list, targets, tuple(raid.get("attackerTypes") or ()))
+    print(f"[ai] Max Raid: golpe {slot + 1} de {move_list}", file=sys.stderr)
+    return slot + 1
 
 
 def lgpe_code(code):
@@ -573,6 +598,11 @@ def main(root):
             emit({"type": "error", "code": "invalid", "message": str(e)})
             return 2
         tracker = Tracker(emit, Received(received_dir))
+        # Dynamax Adventure com o TradeRock entrando: a mini IA escolhe o aluguel e os golpes (D31).
+        raid = params.get("raid") or {}
+        if params.get("activity") == "raid" and raid.get("kind") == "lair-join" and raid.get("ai", True):
+            from . import partner_ai
+            partner_ai.install_lair(lambda line: print(line, flush=True))
         watch_stop(sys.stdin)
 
         emit({"type": "event", "kind": "starting", "game": game})

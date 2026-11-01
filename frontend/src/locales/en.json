@@ -1564,7 +1564,12 @@
       "black": "6-star raid (black crystal)",
       "seed": "Seed",
       "seedHelp": "8 hexadecimal digits. The same seed gives the same raid.",
-      "svOffer": "Pokémon TradeRock brings"
+      "svOffer": "Pokémon TradeRock brings",
+      "moveAuto": "Automatic (the AI picks)",
+      "moveAutoHelp": "Before starting, TradeRock picks the move that works best against the boss (type, power and same-type bonus). It uses that move for the whole battle.",
+      "target": "Raid boss (optional)",
+      "targetHelp": "The Pokémon your console opened. Without it, TradeRock uses its strongest move.",
+      "targetUnknown": "Don't know / any"
     },
     "circle": {
       "title": "Union Circle",

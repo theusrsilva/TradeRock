@@ -142,8 +142,8 @@
       "flash": "4 MB",
       "status": "works",
       "notes": {
-        "pt-BR": "Trocas reais relatadas pelo pokeldn com o FireRed/LeafGreen e o Sword/Shield. Use a USB nativa do chip: em placas com duas portas, a marcada \"USB\" (não a \"UART\" ou \"COM\"); pela outra o firmware não responde.",
-        "en": "Real trades reported by pokeldn with FireRed/LeafGreen and Sword/Shield. Use the chip's native USB: on boards with two ports, the one marked \"USB\" (not \"UART\" or \"COM\"); the firmware doesn't answer through the other."
+        "pt-BR": "Trocas reais relatadas pelo pokeldn com o FireRed/LeafGreen e o Sword/Shield, e pelo TradeRock com o Legends: Z-A (Windows). Use a USB nativa do chip: em placas com duas portas, a marcada \"USB\" (não a \"UART\" ou \"COM\"); pela outra o firmware não responde.",
+        "en": "Real trades reported by pokeldn with FireRed/LeafGreen and Sword/Shield, and by TradeRock with Legends: Z-A (Windows). Use the chip's native USB: on boards with two ports, the one marked \"USB\" (not \"UART\" or \"COM\"); the firmware doesn't answer through the other."
       },
       "source": "https://github.com/Decryptu/pokeldn/blob/main/docs/hardware_esp32.md",
       "verifiedAt": "2026-10-30"
