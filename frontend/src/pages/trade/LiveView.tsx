@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
-import { MarkdownText } from '../../components/Markdown'
+import { ContentFile, MarkdownText } from '../../components/Markdown'
 import { TradeRoom } from '../../components/illustrations/TradeRoom'
 import { Badge, Button, Callout, Icon, Modal } from '../../components/ui'
 import { api, spriteUrl } from '../../lib/api'
+import { useConnection } from '../../lib/connection'
 import { contentSections, interpolate } from '../../lib/content'
+import { gameOf } from '../../lib/games'
 import { instructionFor, receivedIds, timeline, type InstructionKey } from '../../lib/tradeProgress'
 import type { Pokemon, TradeEvent, TradeHistoryItem, TradeSession } from '../../lib/types'
 
@@ -21,6 +23,12 @@ const instructionIcon: Record<InstructionKey, string> = {
   sair: 'logout',
   cancelado_switch: 'block',
   fim: 'check',
+  sala_abrindo: 'wifi_tethering',
+  sala_aberta: 'pin',
+  sala_entrou: 'touch_app',
+  sala_proxima: 'redo',
+  sala_sair: 'logout',
+  sala_saiu: 'block',
 }
 
 const resultLook = {
@@ -53,9 +61,16 @@ export function LiveView({
 
   const running = session.status === 'running'
   const phases = useMemo(() => contentSections(i18n.language, 'trade/fases'), [i18n.language])
-  const instruction = instructionFor(events, session.tradesPlanned)
+  // O fluxo da tela depende de quem abre a sala (D30): pelo pokeldn (jogos novos, e o FRLG pelo ESP32) o TradeRock é
+  // o anfitrião e o Switch entra com o código; pela placa Wi-Fi no FRLG, o TradeRock entra na sala do Switch.
+  const { engines } = useConnection()
+  const engine = engines.find((e) => e.id === session.engineId)
+  const family = gameOf(session.game).family
+  const hosting = !session.isSimulation && (engine?.pokeldnGames.includes(family) ?? family !== 'frlg')
+  const lan = engine?.ignoresLinkCode ?? false
+  const instruction = instructionFor(events, session.tradesPlanned, hosting)
   const failedSession = session.status === 'failed' || session.status === 'partially_completed' || session.status === 'cancelled'
-  const steps = timeline(events, session.tradesPlanned, !running, failedSession)
+  const steps = timeline(events, session.tradesPlanned, !running, failedSession, hosting)
   const ids = receivedIds(events)
   const lastRetry = [...events].reverse().find((e) => e.kind === 'retry_scheduled')
   const lastError = [...events].reverse().find((e) => e.kind === 'error')
@@ -94,7 +109,8 @@ export function LiveView({
   }
 
   const failure = session.failureCode ? t(`failures.${session.failureCode}`, { defaultValue: session.failureMessage ?? '' }) : null
-  const text = interpolate(phases[instruction.key] ?? '', { trainer: session.trainerName, n: instruction.n, total: session.tradesPlanned })
+  const code = lan ? t('ui.live.anyCode') : session.linkCode || t('ui.live.noCode')
+  const text = interpolate(phases[instruction.key] ?? '', { trainer: session.trainerName, n: instruction.n, total: session.tradesPlanned, code })
   const look = resultLook[session.status]
   const sent = (record?.entries ?? []).map((e) => pokemon[e.sentPokemonId]).filter((p): p is Pokemon => !!p)
   const received = ids.filter((id): id is string => !!id).map((id) => pokemon[id]).filter((p): p is Pokemon => !!p)
@@ -120,6 +136,11 @@ export function LiveView({
           <div className="text-xs font-bold tracking-[1px] text-accent uppercase">{t('trade.live.nowWhat')}</div>
           <MarkdownText className="max-w-[560px] text-[19px] leading-snug [&_strong]:font-display [&_strong]:text-[24px]" text={text} />
           {instruction.key === 'andar_cadeira' && <TradeRoom leftLabel={t('trade.live.leftChair')} rightLabel={session.trainerName} />}
+          {instruction.key === 'sala_aberta' && (
+            <div className="w-full max-w-[560px] rounded-lg bg-surface2 p-4 text-left text-sm">
+              <ContentFile name={lan ? 'trade/jogos/swsh-lan' : `trade/jogos/${family}`} />
+            </div>
+          )}
           {lastRetry && instruction.key === 'tentando_de_novo' && lastRetry.retryInSeconds !== null && (
             <p className="text-sm text-muted">{t('trade.live.retryIn', { seconds: lastRetry.retryInSeconds })}</p>
           )}

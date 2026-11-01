@@ -175,7 +175,10 @@
       "sit": "Sit at the table",
       "menu": "Open the trade menu",
       "trade": "Trade {{n}}",
-      "leave": "Leave the room"
+      "leave": "Leave the room",
+      "open": "Open the room",
+      "join": "Switch joins",
+      "close": "Close the room"
     },
     "result": {
       "completed": "Trade complete!",
@@ -1349,6 +1352,8 @@
     "live": {
       "running": "Trade in progress",
       "savedInbox": "The received Pokémon was stored in the Inbox.",
+      "noCode": "00000000 (no code)",
+      "anyCode": "of your choice (LAN mode ignores the code)",
       "seeInVault": "See in the vault",
       "techDetails": "Technical details"
     },

@@ -175,7 +175,10 @@
       "sit": "Sentar à mesa",
       "menu": "Abrir o menu de troca",
       "trade": "Troca {{n}}",
-      "leave": "Sair da sala"
+      "leave": "Sair da sala",
+      "open": "Abrir a sala",
+      "join": "O Switch entrar",
+      "close": "Fechar a sala"
     },
     "result": {
       "completed": "Troca concluída!",
@@ -1349,6 +1352,8 @@
     "live": {
       "running": "Troca em andamento",
       "savedInbox": "O Pokémon recebido foi guardado na Caixa de entrada.",
+      "noCode": "00000000 (sem código)",
+      "anyCode": "que quiser (o modo LAN ignora o código)",
       "seeInVault": "Ver no cofre",
       "techDetails": "Detalhes técnicos"
     },

@@ -16,8 +16,12 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
 {
     public const string EngineId = "esp32";
 
-    /// <summary>Quanto tempo a sala fica aberta esperando o console (o pokeldn fecha sozinho depois).</summary>
-    public const int RoomSeconds = 600;
+    /// <summary>
+    /// Quanto tempo a sala fica aberta esperando o console (o pokeldn fecha sozinho depois, e o resultado é
+    /// "console_never_joined"). Menor que o tempo da fase do coordenador (TradeSettings.PhaseTimeoutSeconds, 300 s):
+    /// se fosse maior, o app encerraria o pokeldn no meio da espera com "phase_timeout" (D30).
+    /// </summary>
+    public const int RoomSeconds = 240;
 
     public string Id => EngineId;
 
@@ -58,9 +62,7 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
         {
             return TradeAttemptResult.Fail(e.Code, e.Message, retryable: false);
         }
-        if (cancellationToken.IsCancellationRequested)
-            return TradeAttemptResult.Cancelled;
-        return tracker.Result();
+        return tracker.Result(cancellationToken.IsCancellationRequested);
     }
 
     public bool SupportsActivity(GameFamily family, ActivityKind kind) => PokeldnActivity.Supports(family, kind);
@@ -138,8 +140,10 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
                 case "event":
                     return message["kind"]?.GetValue<string>() switch
                     {
-                        "starting" => new TradeEvent(TradeEventKind.Scanning, at, "Abrindo a sala no ESP32."),
-                        "waiting" => new TradeEvent(TradeEventKind.InRoom, at, "Sala aberta: procure a troca no Switch com o mesmo código."),
+                        "starting" => new TradeEvent(TradeEventKind.Scanning, at, "Abrindo a sala."),
+                        "waiting" => new TradeEvent(TradeEventKind.InRoom, at, request.LinkCode is { Length: > 0 } code
+                            ? $"Sala aberta: procure a troca no Switch com o código {code}."
+                            : "Sala aberta: procure a troca no Switch."),
                         "joined" => Join(at),
                         "left" => new TradeEvent(TradeEventKind.LinkClosed, at, "O Switch saiu da sala."),
                         _ => null,
@@ -174,10 +178,17 @@ public sealed class PokeldnEngine(SetupService setup, ProdKeys keys, IPokeldnPro
             return new TradeEvent(TradeEventKind.Joined, at, "O Switch entrou na sala.");
         }
 
-        public TradeAttemptResult Result()
+        /// <summary>
+        /// O resultado da sessão. O que o console já mandou vale mesmo com a sessão cancelada, encerrada pelo console
+        /// ou terminada com erro: as trocas feitas já estão no cofre (o coordenador grava a cada TradeDone), e a
+        /// sessão fica concluída ou parcial, nunca "cancelada" sem registro do recebido (D30).
+        /// </summary>
+        public TradeAttemptResult Result(bool cancelled = false)
         {
             if (Received >= request.Trades)
                 return TradeAttemptResult.Completed;
+            if (cancelled && Received == 0)
+                return TradeAttemptResult.Cancelled;
             if (Received > 0)
                 return TradeAttemptResult.Fail("trade_incomplete", $"{Received}/{request.Trades}", retryable: false);
             if (_error is not null)

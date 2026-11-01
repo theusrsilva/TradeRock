@@ -13,6 +13,14 @@ export type InstructionKey =
   | 'sair'
   | 'cancelado_switch'
   | 'fim'
+  // O TradeRock é o anfitrião (pokeldn: jogos novos e o FRLG pelo ESP32, D23/D30): a sala é aberta aqui e o
+  // Switch entra nela procurando com o código.
+  | 'sala_abrindo'
+  | 'sala_aberta'
+  | 'sala_entrou'
+  | 'sala_proxima'
+  | 'sala_sair'
+  | 'sala_saiu'
 
 /** Último evento que indica progresso (ignora log e erro). */
 export function lastProgress(events: TradeEvent[]): TradeEvent | undefined {
@@ -23,11 +31,32 @@ export function lastProgress(events: TradeEvent[]): TradeEvent | undefined {
   return undefined
 }
 
-export function instructionFor(events: TradeEvent[], totalTrades: number): { key: InstructionKey; n: number } {
+/**
+ * A instrução do momento. Com <paramref>hosting</paramref>, o fluxo é o do anfitrião (pokeldn): abrir a sala, esperar
+ * o Switch entrar, ele escolhe e confirma; sem, o do FRLG pela placa Wi-Fi, em que o TradeRock entra na sala do Switch.
+ */
+export function instructionFor(events: TradeEvent[], totalTrades: number, hosting = false): { key: InstructionKey; n: number } {
   const last = lastProgress(events)
   const done = events.filter((e) => e.kind === 'trade_done').length
   const current = Math.min(done + 1, totalTrades)
-  if (!last) return { key: 'procurando', n: current }
+  if (!last) return { key: hosting ? 'sala_abrindo' : 'procurando', n: current }
+
+  if (hosting) {
+    if (last.kind === 'trade_done') {
+      return done >= totalTrades ? { key: 'sala_sair', n: done } : { key: 'sala_proxima', n: done }
+    }
+    const byKind: Partial<Record<TradeEventKind, InstructionKey>> = {
+      session_started: 'sala_abrindo',
+      attempt_started: 'sala_abrindo',
+      scanning: 'sala_abrindo',
+      retry_scheduled: 'tentando_de_novo',
+      in_room: 'sala_aberta',
+      joined: 'sala_entrou',
+      link_closed: done >= totalTrades ? 'fim' : 'sala_saiu',
+      session_finished: 'fim',
+    }
+    return { key: byKind[last.kind] ?? 'sala_entrou', n: current }
+  }
 
   const byKind: Partial<Record<TradeEventKind, InstructionKey>> = {
     session_started: 'procurando',
@@ -66,36 +95,44 @@ export interface Step {
   state: StepState
 }
 
-// Ordem das etapas visíveis e o evento que conclui cada uma.
-const baseSteps: { id: string; label: string; doneWhen: TradeEventKind }[] = [
+// Ordem das etapas visíveis e o evento que conclui cada uma (o TradeRock entra na sala do Switch: FRLG pela placa).
+const joinSteps: { id: string; label: string; doneWhen: TradeEventKind }[] = [
   { id: 'search', label: 'trade.steps.search', doneWhen: 'beacon_decrypted' },
   { id: 'approve', label: 'trade.steps.approve', doneWhen: 'joined' },
   { id: 'sit', label: 'trade.steps.sit', doneWhen: 'host_sat' },
   { id: 'menu', label: 'trade.steps.menu', doneWhen: 'trade_menu_open' },
 ]
 
+// O TradeRock abre a sala e o Switch entra (pokeldn).
+const hostSteps: { id: string; label: string; doneWhen: TradeEventKind }[] = [
+  { id: 'open', label: 'trade.steps.open', doneWhen: 'in_room' },
+  { id: 'join', label: 'trade.steps.join', doneWhen: 'joined' },
+]
+
 /**
  * Etapas da troca. Com a sessão encerrada sem sucesso (<paramref>failed</paramref>), a primeira
  * etapa não concluída fica marcada como a que falhou.
  */
-export function timeline(events: TradeEvent[], totalTrades: number, finished: boolean, failed = false): Step[] {
+export function timeline(events: TradeEvent[], totalTrades: number, finished: boolean, failed = false, hosting = false): Step[] {
   // Numa nova tentativa, o progresso de conexão recomeça: só contam eventos da última tentativa.
   const lastAttemptStart = events.map((e) => e.kind).lastIndexOf('attempt_started')
   const attemptEvents = lastAttemptStart >= 0 ? events.slice(lastAttemptStart) : events
   const seen = new Set(attemptEvents.map((e) => e.kind))
   const tradesDone = events.filter((e) => e.kind === 'trade_done').length
+  const baseSteps = hosting ? hostSteps : joinSteps
 
   const steps: Omit<Step, 'state'>[] = [
     ...baseSteps.map(({ id, label }) => ({ id, label })),
     ...Array.from({ length: totalTrades }, (_, i) => ({ id: `trade-${i}`, label: 'trade.steps.trade', tradeNumber: i + 1 })),
-    { id: 'leave', label: 'trade.steps.leave' },
+    { id: 'leave', label: hosting ? 'trade.steps.close' : 'trade.steps.leave' },
   ]
 
   const isDone = (index: number): boolean => {
     if (index < baseSteps.length) return seen.has(baseSteps[index].doneWhen)
     const tradeIndex = index - baseSteps.length
     if (tradeIndex < totalTrades) return tradeIndex < tradesDone
-    return seen.has('link_closed')
+    // Anfitrião: a sala fecha quando a sessão termina bem (o pokeldn passa a sala ao Switch e sai).
+    return seen.has('link_closed') || (hosting && finished && !failed)
   }
 
   let marked = finished && !failed

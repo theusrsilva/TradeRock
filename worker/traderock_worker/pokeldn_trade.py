@@ -8,6 +8,9 @@ catálogo dele (`pokeldn.app.command.build`), carregado com importlib e chamado 
 Entrada (uma linha JSON): {"game": "sv", "offers": ["<base64>", ...], "code": "12345678" | null,
 "tradeBack": false, "trainer": {"name", "tid", "sid", "language", "gender"}, "keys": "<caminho do prod.keys>",
 "radio": "esp32:COM3" | "lan" | null (placa Wi-Fi, como root), "seconds": 900}.
+Depois dessa linha, a entrada fica aberta: a linha "stop" pede a saída educada (o mesmo que o Ctrl+C: o pokeldn passa
+a sala ao console antes de fechar), e serve no Windows, onde o app não consegue mandar SIGINT (D30). O fim da entrada
+não interrompe nada (o worker fecha a entrada logo depois do pedido).
 "lan": modo LAN do Sword/Shield pela rede de casa, sem rádio nem prod.keys (D24).
 As ofertas já vêm no formato que o pokeldn espera de cada jogo (PokeldnOffer no C#).
 
@@ -28,8 +31,12 @@ No FRLG, "offers" é o time do anfitrião: primeiro os oferecidos, na ordem das 
 "trades" diz quantos são oferecidos e "version" é "firered" ou "leafgreen".
 
 Saída (linhas JSON num descritor próprio):
-- {"type": "event", "kind": "waiting" | "joined" | "left"}
-- {"type": "trade_done", "index": n, "data": "<base64 do recebido>"}
+- {"type": "event", "kind": "waiting" | "joined" | "left"}: a sala aberta, o console entrou, o console saiu. Vêm das
+  linhas do anfitrião do pokeldn (CONSOLE JOINED / console left; no modo LAN, seated / left the session), não do
+  "[link]" do ESP32, que também anuncia o próprio enlace da placa quando a sala sobe (D30).
+- {"type": "trade_done", "index": n, "data": "<base64 do recebido>"}: o pokeldn grava o recebido na pasta de
+  recebidos; o Legends: Arceus e o Z-A gravam DEPOIS da linha "[done]", então o processo espera o arquivo
+  (RECEIVED_WAIT) antes de mandar a mensagem. "data" nulo só se o arquivo não aparecer.
 - {"type": "done", "kind": "delivery", "index": n} (presente do FRLG entregue)
 - {"type": "milestone", "kind": "advertising" | "served", "count": n} (presente do SwSh: o console só ouve o anúncio)
 - {"type": "milestone", "kind": "lobby" | "battle" | "over"} (raids: sala aberta, batalha começou, terminou)
@@ -47,6 +54,8 @@ import re
 import signal
 import sys
 import tempfile
+import threading
+import time
 
 from . import pokeldn_env
 
@@ -82,22 +91,33 @@ MILESTONES = ((re.compile(r"\badvertising comm id\b"), "advertising"),
               (re.compile(r"THE BATTLE IS OVER|our Pokemon is in the battle; closing|our player has left the raid"
                           r"|handing the session to the console|the network is theirs"
                           r"|the circle task is done"), "over"))
-LINK = re.compile(r"\[link\] (waiting|joined|left)\b")
+# A sala: "[link] waiting" é do ESP32 (pokeldn.ldn.show_link); a placa Wi-Fi e o modo LAN não imprimem "[link]".
+WAITING = re.compile(r"\[link\] waiting\b|^Hosting\. Waiting for the console|\[lan\] session 0x")
+# O console entrou: o anfitrião IP (ldn_mitm_host.py), o do Let's Go (lgpe_host.py) e o do modo LAN (pia_lan.py).
+JOINED = re.compile(r"\*\*\* CONSOLE JOINED \*\*\*|\*\*\* THE CONSOLE JOINED THE MESH \*\*\*"
+                    r"|\[lan\] \S+ host request; seated at")
+LEFT = re.compile(r"\[host\] console left:|\[lan\] \S+ left the session|\[link\] left\b")
+# Quanto esperar o arquivo do recebido depois do "[done]" (o Z-A e o Arceus gravam na volta do laço de rede).
+RECEIVED_WAIT = 15.0
 
 
 class Emitter:
     def __init__(self, fd):
         self._out = os.fdopen(fd, "w", buffering=1, encoding="utf-8")
+        self._lock = threading.Lock()
 
     def __call__(self, obj):
-        self._out.write(json.dumps(obj, ensure_ascii=False) + "\n")
-        self._out.flush()
+        with self._lock:
+            self._out.write(json.dumps(obj, ensure_ascii=False) + "\n")
+            self._out.flush()
 
 
 class Received:
     """Os arquivos que o pokeldn grava na pasta de recebidos: a cada troca concluída, o mais novo ainda não enviado.
     O Sword/Shield e o BDSP gravam quando o console mostra a oferta (antes de concluir) e regravam se ele troca de
-    ideia; por isso só vale o que estiver lá no "[done]" (D21)."""
+    ideia; por isso só vale o que estiver lá no "[done]" (D21). O Legends: Arceus e o Z-A gravam logo DEPOIS do
+    "[done]" (bin/pla_host.py e bin/za_host.py: o `show_done()` sai de dentro do `receive()`, e o arquivo é gravado
+    quando ele volta), então quem lê espera um pouco (Tracker, D30)."""
 
     def __init__(self, folder):
         self.folder = folder
@@ -112,6 +132,92 @@ class Received:
         self.sent.add(newest)
         with open(newest, "rb") as f:
             return f.read()
+
+
+class Tracker:
+    """As linhas do pokeldn → mensagens para o app. A sala ("waiting") sai uma vez; "joined" e "left" seguem a
+    presença do console. No "[done] trade N", o recebido é lido da pasta; se ainda não estiver lá, um fio espera
+    até RECEIVED_WAIT e manda a mensagem assim que o arquivo aparecer (D30)."""
+
+    def __init__(self, emit, received, wait=RECEIVED_WAIT):
+        self.emit = emit
+        self.received = received
+        self.wait = wait
+        self.trades = 0
+        self.waited = False
+        self.present = False
+        self._pending = []          # índices de troca cujo arquivo ainda não apareceu
+        self._lock = threading.RLock()
+        self._thread = None
+
+    def line(self, line):
+        if WAITING.search(line):
+            if not self.waited:
+                self.waited = True
+                self.emit({"type": "event", "kind": "waiting"})
+        elif JOINED.search(line):
+            if not self.present:
+                self.present = True
+                self.emit({"type": "event", "kind": "joined"})
+        elif LEFT.search(line):
+            # "[link] left" também é o enlace da placa caindo no fim: só conta com um console presente.
+            if self.present:
+                self.present = False
+                self.emit({"type": "event", "kind": "left"})
+        elif (m := DONE.search(line)) and m.group(1) == "trade":
+            self.trades = int(m.group(2))
+            with self._lock:
+                self._pending.append(self.trades)
+                if not self._flush():
+                    self._watch()
+        elif m:
+            self.emit({"type": "done", "kind": m.group(1), "index": int(m.group(2))})
+        else:
+            for pattern, kind in MILESTONES:
+                if found := pattern.search(line):
+                    self.emit({"type": "milestone", "kind": kind,
+                               "count": int(found.group(1)) if found.groups() else None})
+
+    def _flush(self):
+        """Manda o recebido de cada troca pendente que já tem arquivo. -> True sem pendência."""
+        with self._lock:
+            while self._pending:
+                data = self.received.take()
+                if data is None:
+                    return False
+                self.emit({"type": "trade_done", "index": self._pending.pop(0),
+                           "data": base64.b64encode(data).decode()})
+            return True
+
+    def _watch(self):
+        if self._thread is not None and self._thread.is_alive():
+            return
+        deadline = time.monotonic() + self.wait
+
+        def run():
+            while time.monotonic() < deadline:
+                time.sleep(0.05)
+                if self._flush():
+                    return
+            self._give_up()
+
+        self._thread = threading.Thread(target=run, name="traderock-received", daemon=True)
+        self._thread.start()
+
+    def _give_up(self):
+        with self._lock:
+            if self._flush():
+                return
+            for index in self._pending:
+                self.emit({"type": "trade_done", "index": index, "data": None})
+            self._pending.clear()
+
+    def finish(self):
+        """No fim do processo: o que ainda não apareceu não vai mais aparecer."""
+        thread = self._thread
+        if thread is not None and thread.is_alive():
+            thread.join(self.wait)
+        self._give_up()
 
 
 class Lines(io.TextIOBase):
@@ -466,27 +572,11 @@ def main(root):
         except ValueError as e:
             emit({"type": "error", "code": "invalid", "message": str(e)})
             return 2
-        received = Received(received_dir)
-        state = {"trades": 0}
-
-        def on_line(line):
-            if m := LINK.search(line):
-                emit({"type": "event", "kind": m.group(1)})
-            elif (m := DONE.search(line)) and m.group(1) == "trade":
-                state["trades"] = int(m.group(2))
-                data = received.take()
-                emit({"type": "trade_done", "index": state["trades"],
-                      "data": base64.b64encode(data).decode() if data else None})
-            elif m:
-                emit({"type": "done", "kind": m.group(1), "index": int(m.group(2))})
-            else:
-                for pattern, kind in MILESTONES:
-                    if found := pattern.search(line):
-                        emit({"type": "milestone", "kind": kind,
-                              "count": int(found.group(1)) if found.groups() else None})
+        tracker = Tracker(emit, Received(received_dir))
+        watch_stop(sys.stdin)
 
         emit({"type": "event", "kind": "starting", "game": game})
-        sys.stdout = Lines(on_line, log)
+        sys.stdout = Lines(tracker.line, log)
         try:
             code = run_script(script, argv)
         except KeyboardInterrupt:
@@ -496,11 +586,30 @@ def main(root):
             log.write(pokeldn_env.redact(f"{type(e).__name__}: {e}") + "\n")
             from .pokeldn_board import classify
             code = classify(e)
+            # O que o console já mandou fica salvo mesmo com o erro: nunca perder um recebido (D30).
+            tracker.finish()
             emit({"type": "error", "code": code if code.startswith("serial_") else "engine_error",
                   "message": pokeldn_env.redact(str(e))})
             return 1
         finally:
             sys.stdout.flush()
             sys.stdout = log
-        emit({"type": "result", "exitCode": code, "trades": state["trades"], "game": game})
+        tracker.finish()
+        emit({"type": "result", "exitCode": code, "trades": tracker.trades, "game": game})
         return 0 if code in (0, 130) else 1
+
+
+def watch_stop(stream):
+    """A linha "stop" na entrada vira um KeyboardInterrupt no fio principal, como o Ctrl+C: o pokeldn passa a sala
+    ao console e sai. O fim da entrada não faz nada (o worker fecha a entrada logo depois do pedido)."""
+    def run():
+        try:
+            for line in stream:
+                if line.strip() == "stop":
+                    import _thread
+                    _thread.interrupt_main()
+                    return
+        except (OSError, ValueError):
+            pass
+
+    threading.Thread(target=run, name="traderock-stop", daemon=True).start()

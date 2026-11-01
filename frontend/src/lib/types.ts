@@ -131,6 +131,8 @@ export interface TradeSession {
   failureCode: string | null
   failureMessage: string | null
   receivedPokemonIds: (string | null)[]
+  /** O código de troca do pedido (o Switch procura com ele quando o TradeRock é o anfitrião). */
+  linkCode: string | null
 }
 
 export interface TradeHistoryItem {
