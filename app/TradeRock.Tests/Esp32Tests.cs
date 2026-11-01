@@ -273,6 +273,97 @@ public sealed class Esp32ApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, sv.StatusCode);
     }
 
+    [Fact]
+    public async Task Console_que_encerra_depois_da_troca_nao_perde_o_recebido()
+    {
+        // O problema relatado com o Legends: Z-A (D30): troca feita, o console encerra a sessão (ou a conexão cai, ou o
+        // processo sai com erro) antes das outras trocas. O recebido já está no cofre e a sessão fica parcial, com o
+        // Pokémon registrado; nunca "cancelada" sem ele.
+        await Json(await _client.PutAsJsonAsync("/api/setup/state", new { radio = "esp32", serialPort = "COM4" }));
+        var keys = "aes_kek_generation_source = 00112233445566778899aabbccddeeff\naes_key_generation_source = 00112233445566778899aabbccddeeff\nmaster_key_00 = 00112233445566778899aabbccddeeff\n";
+        using var form = new MultipartFormDataContent { { new ByteArrayContent(Encoding.UTF8.GetBytes(keys)), "file", "prod.keys" } };
+        await Json(await _client.PostAsync("/api/setup/keys", form));
+        var engine = _app.Services.GetServices<ITradeEngine>().Single(e => e.Id == "esp32");
+
+        var mine = SwitchPokemon.Stored(SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Za));
+        var theirs = SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Za, species: 944, ot: "Rocha");
+        var request = new TradeRequest(
+            [new PartyMember(Guid.NewGuid(), mine, "Pikachu"), new PartyMember(Guid.NewGuid(), mine, "pika 3")], [0, 1],
+            TradeGame.LegendsZA, new TradeRock.Core.Trading.TrainerProfile("EMU", 8185, 33600), LinkCode: "12341234");
+
+        // 1) O console encerra a sessão depois da primeira troca: o pokeldn sai com código 0 e uma troca feita.
+        _pokeldn.Script = [Event("starting"), Event("waiting"), Event("joined"), Done(1, SwitchPokemon.EncryptedParty(theirs)), Event("left"), Result(1)];
+        var events = new List<TradeEvent>();
+        var result = await engine.RunAttemptAsync(request, e => { events.Add(e); return ValueTask.CompletedTask; }, CancellationToken.None);
+        Assert.Equal(AttemptOutcome.Failed, result.Outcome);
+        Assert.Equal("trade_incomplete", result.Failure!.Code);
+        var done = Assert.Single(events, e => e.Kind == TradeEventKind.TradeDone);
+        Assert.Equal(0, done.TradeIndex);
+        Assert.NotNull(done.ReceivedData);
+        Assert.Contains("12341234", Assert.Single(events, e => e.Kind == TradeEventKind.InRoom).Message);
+
+        // 2) Cancelado (pelo usuário ou pelo tempo da fase) depois da troca feita: o resultado conta a troca.
+        _pokeldn.Script = [Event("joined"), Done(1, SwitchPokemon.EncryptedParty(theirs)), Result(1)];
+        using var cts = new CancellationTokenSource();
+        var cancelled = await engine.RunAttemptAsync(request, e =>
+        {
+            if (e.Kind == TradeEventKind.TradeDone)
+                cts.Cancel();
+            return ValueTask.CompletedTask;
+        }, cts.Token);
+        Assert.Equal(AttemptOutcome.Failed, cancelled.Outcome);
+        Assert.Equal("trade_incomplete", cancelled.Failure!.Code);
+        // ...e cancelado com todas as trocas feitas, é concluída.
+        using var cts2 = new CancellationTokenSource();
+        var complete = await engine.RunAttemptAsync(request with { OfferedSlots = [0] }, e =>
+        {
+            if (e.Kind == TradeEventKind.TradeDone)
+                cts2.Cancel();
+            return ValueTask.CompletedTask;
+        }, cts2.Token);
+        Assert.Equal(AttemptOutcome.Completed, complete.Outcome);
+        // Cancelado antes de qualquer troca: cancelada mesmo.
+        using var cts3 = new CancellationTokenSource();
+        _pokeldn.Script = [Event("joined"), Result(0)];
+        var nothing = await engine.RunAttemptAsync(request, e =>
+        {
+            if (e.Kind == TradeEventKind.Joined)
+                cts3.Cancel();
+            return ValueTask.CompletedTask;
+        }, cts3.Token);
+        Assert.Equal(AttemptOutcome.Cancelled, nothing.Outcome);
+
+        // 3) Pela API (coordenador, igual para todos os motores do pokeldn): o recebido vai para o cofre na hora e a
+        // sessão fica parcial, com o Pokémon. Pelo modo LAN, que não pede a configuração da conexão (D24).
+        var mine8 = SwitchPokemon.Stored(SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Swsh));
+        var theirs8 = SwitchPokemon.Make(TradeRock.Core.Games.GameFamily.Swsh, species: 133, ot: "RIVAL");
+        using var upload = new MultipartFormDataContent { { new ByteArrayContent(mine8), "files", "pikachu.pk8" }, { new ByteArrayContent(mine8), "files", "pika3.pk8" } };
+        var uploaded = await Json(await _client.PostAsync("/api/pokemon", upload));
+        var ids = uploaded.EnumerateArray().Select(p => p.GetProperty("pokemon").GetProperty("id").GetGuid()).ToArray();
+        _pokeldn.Script = [Event("starting"), Event("waiting"), Event("joined"), Done(1, SwitchPokemon.EncryptedParty(theirs8)), Event("left"), Result(1)];
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.PutAsJsonAsync("/api/engines/selected", new { id = "lan" })).StatusCode);
+        var start = await _client.PostAsJsonAsync("/api/trades", new
+        {
+            party = ids, offeredSlots = new[] { 0, 1 }, game = "sword", acceptIllegal = true,
+            trainer = new { name = "EMU", tid = 123456, sid = 1234 }, linkCode = "12341234",
+        });
+        var started = await Json(start);
+        Assert.Equal(HttpStatusCode.Accepted, start.StatusCode);
+        Assert.Equal("12341234", started.GetProperty("linkCode").GetString()); // a tela ao vivo lembra o código (D30)
+        for (var i = 0; i < 100 && (await Json(await _client.GetAsync("/api/trades"))).GetArrayLength() == 0; i++)
+            await Task.Delay(50);
+        var history = await Json(await _client.GetAsync("/api/trades"));
+        Assert.Equal("partially_completed", history[0].GetProperty("status").GetString());
+        Assert.Equal(1, history[0].GetProperty("tradesCompleted").GetInt32());
+        var received = history[0].GetProperty("entries")[0].GetProperty("receivedPokemonId").GetGuid();
+        var vaulted = await Json(await _client.GetAsync($"/api/pokemon/{received}"));
+        Assert.Equal(133, vaulted.GetProperty("species").GetInt32());
+        Assert.Equal("swsh", vaulted.GetProperty("family").GetString());
+        // A sala do pokeldn fecha antes do tempo da fase do coordenador (senão o app encerraria o processo).
+        Assert.True(PokeldnEngine.RoomSeconds < TradeRock.Core.Trading.TradeSettings.Default.PhaseTimeoutSeconds);
+        Assert.Equal(PokeldnEngine.RoomSeconds, _pokeldn.Last!["seconds"]!.GetValue<int>());
+    }
+
     private static JsonObject Event(string kind) => new() { ["type"] = "event", ["kind"] = kind };
     private static JsonObject Done(int index, byte[] data) => new() { ["type"] = "trade_done", ["index"] = index, ["data"] = Convert.ToBase64String(data) };
     private static JsonObject Result(int trades) => new() { ["type"] = "result", ["exitCode"] = 0, ["trades"] = trades };

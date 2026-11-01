@@ -46,7 +46,7 @@ public sealed class PokeldnLanEngine(IPokeldnProcess process) : ITradeEngine, IA
         {
             return TradeAttemptResult.Fail(e.Code, e.Message, retryable: false);
         }
-        return cancellationToken.IsCancellationRequested ? TradeAttemptResult.Cancelled : tracker.Result();
+        return tracker.Result(cancellationToken.IsCancellationRequested);
     }
 
     /// <summary>Pela rede de casa, só as raids do Sword/Shield (o pokeldn tem as ferramentas de raid do modo LAN, D24).</summary>

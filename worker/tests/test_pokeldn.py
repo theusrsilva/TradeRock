@@ -1,5 +1,6 @@
 """Testes da integração com o pokeldn (D21): patches do modo TradeRock e trava de rede."""
 
+import base64
 import io
 import json
 import os
@@ -328,22 +329,20 @@ class PokeldnTradeTests(unittest.TestCase):
         self.assertEqual(find("[sv] the circle task is done; closing"), ("over", None))
         self.assertIsNone(find("[done] trade 1 complete"))
 
+    def tracker(self, wait=2.0):
+        received = os.path.join(self.tmp.name, "rec")
+        os.makedirs(received, exist_ok=True)
+        events = []
+        return self.trade.Tracker(events.append, self.trade.Received(received), wait=wait), events, received
+
     def test_marcos_e_recebidos(self):
         """O "[done]" manda o arquivo mais novo da pasta de recebidos; cada linha vai para o log sem chaves."""
-        received = os.path.join(self.tmp.name, "rec")
-        os.makedirs(received)
-        events, log = [], io.StringIO()
-        got = self.trade.Received(received)
-
-        def on_line(line):
-            if m := self.trade.LINK.search(line):
-                events.append(("link", m.group(1)))
-            elif m := self.trade.DONE.search(line):
-                events.append(("done", int(m.group(2)), got.take()))
-
-        out = self.trade.Lines(on_line, log)
-        out.write("[link] waiting\n[sv] key 00112233445566778899aabbccddeeff00\n[link] joi")
-        out.write("ned\n")
+        tracker, events, received = self.tracker()
+        log = io.StringIO()
+        out = self.trade.Lines(tracker.line, log)
+        out.write("[link] waiting\n[sv] key 00112233445566778899aabbccddeeff00\nHosting. Waiting for the console to join\n")
+        out.write("[host] *** CONSOLE JOI")
+        out.write("NED *** idx=1 ip=169.254.74.2\n")
         with open(os.path.join(received, "sv-1.pk9"), "wb") as f:
             f.write(b"um")
         out.write("[done] trade 1 complete\n")
@@ -351,9 +350,106 @@ class PokeldnTradeTests(unittest.TestCase):
         with open(os.path.join(received, "sv-1-2.pk9"), "wb") as f:
             f.write(b"dois")
         out.write("[done] trade 2 complete\n")
-        self.assertEqual(events, [("link", "waiting"), ("link", "joined"), ("done", 1, b"um"), ("done", 2, b"dois")])
+        tracker.finish()
+        self.assertEqual(events, [{"type": "event", "kind": "waiting"}, {"type": "event", "kind": "joined"},
+                                  {"type": "trade_done", "index": 1, "data": "dW0="},
+                                  {"type": "trade_done", "index": 2, "data": "ZG9pcw=="}])
+        self.assertEqual(tracker.trades, 2)
         self.assertIn("[hex]", log.getvalue())
         self.assertNotIn("00112233445566778899", log.getvalue())
+
+    # Linhas de uma troca real com o Legends: Z-A (log do app no Windows, ESP32-S3, 2026-11-01), sem o hexadecimal.
+    ZA_LOG = """\
+[za-host] trade 1 offers {'species': 25, 'nickname': 'Pikachu', 'ht_name': '', 'ot_name': 'EMU', 'level': 20}, pid ce372dc0 ec d29bda5f
+[host] --phy auto -> esp32 (POKELDN_RADIO)
+Creating the LDN network (hosting)...
+[esp32] usbwatch: reset reason 9, up 176340 ms
+[link] waiting
+[link] joined
+[esp32] slow command 0x06: 66 ms
+[host] AP up: ssid=[hex]ch=6 us=169.254.74.1/c6297440e6ac bcast=169.254.74.255 comm_id=0x0100f43008c44000 beacon=112B
+Hosting. Waiting for the console to join (ssid=51b377e9..., channel 6).
+[za-host] hosting code 12341234: ssid=[hex]us=169.254.74.1 channel=6
+[esp32] ap station node 0x3fcc5b88 flags 020a0022
+[link] joined
+[host] *** CONSOLE JOINED *** idx=1 ip=169.254.74.2 mac=3ca9ab12db78 name=b'Matheus'
+A console joined the network.
+[za-host] a console is seated at 169.254.74.2
+[za-host] the console offers {'species': 944, 'nickname': 'Shroodle', 'ht_name': '', 'ot_name': 'Rocha', 'level': 16}
+[za-host] sent our offer, 0101b90300bc (354 bytes) at 11.88s
+[za-host] console 0200 on 10, 5 bytes, at 19.84s
+[done] trade 1 complete
+[za-host] trade_complete: the console sent its four steps (trade 1)
+[za-host] sent step answer 0x0e, 000000020201 (9 bytes) at 19.91s
+"""
+
+    def test_za_grava_o_recebido_depois_do_done(self):
+        """O problema relatado pelo autor: o za_host.py imprime "[done]" de dentro do receive() e grava o .pa9 quando
+        ele volta. O recebido tem que chegar ao app mesmo assim, e o "[link] joined" da placa não é o console."""
+        tracker, events, received = self.tracker()
+        lines = self.ZA_LOG.splitlines()
+        done = lines.index("[done] trade 1 complete")
+        for line in lines[:done + 1]:
+            tracker.line(line)
+        # No momento do "[done]" a pasta está vazia: antes, o app recebia "data": null e perdia o Pokémon.
+        self.assertEqual([e for e in events if e["type"] == "trade_done"], [])
+        self.assertEqual([e["kind"] for e in events if e["type"] == "event"], ["waiting", "joined"])
+        time.sleep(0.2)
+        with open(os.path.join(received, "za-20261101-020500.pa9"), "wb") as f:
+            f.write(b"\x01" * 360)
+        for line in lines[done + 1:]:
+            tracker.line(line)
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline and not any(e["type"] == "trade_done" for e in events):
+            time.sleep(0.02)
+        done_events = [e for e in events if e["type"] == "trade_done"]
+        self.assertEqual(done_events, [{"type": "trade_done", "index": 1, "data": base64.b64encode(b"\x01" * 360).decode()}])
+        tracker.finish()
+        self.assertEqual(len([e for e in events if e["type"] == "trade_done"]), 1)
+        self.assertEqual(tracker.trades, 1)
+
+    def test_recebido_que_nunca_aparece(self):
+        """Sem arquivo até o fim da espera, a mensagem sai com "data" nulo (o app avisa "received_missing")."""
+        tracker, events, _ = self.tracker(wait=0.2)
+        tracker.line("[done] trade 1 complete")
+        tracker.finish()
+        self.assertEqual(events, [{"type": "trade_done", "index": 1, "data": None}])
+
+    def test_entrada_e_saida_do_console(self):
+        """"joined"/"left" seguem o anfitrião do pokeldn (IP, Let's Go e modo LAN), uma vez por presença; o "[link]"
+        do ESP32 sozinho não entra nem sai, e o "[link] left" do fim (o enlace da placa) não conta."""
+        tracker, events, _ = self.tracker()
+        for line in ("[link] waiting", "[link] joined", "[link] left", "[host] AP up: ssid=[hex]",
+                     "[host] *** CONSOLE JOINED *** idx=1 ip=169.254.74.2", "[link] joined",
+                     "[lgh] *** THE CONSOLE JOINED THE MESH *** answered its join request",
+                     "[host] console left: 169.254.74.2 (quiet), 2 offers", "[link] left"):
+            tracker.line(line)
+        self.assertEqual([e["kind"] for e in events], ["waiting", "joined", "left"])
+
+        tracker, events, _ = self.tracker()
+        for line in ("[lan] session 0x12345678 on 192.168.0.10:46000, answering browse requests on 46001",
+                     "[lan] 192.168.0.20:46000 host request; seated at 1, constant 0x0000000000000001",
+                     "[lan] 192.168.0.20 left the session"):
+            tracker.line(line)
+        self.assertEqual([e["kind"] for e in events], ["waiting", "joined", "left"])
+
+        tracker, events, _ = self.tracker()
+        for line in ("[lgh] *** CONSOLE JOINED *** idx=1 ip=10.0.0.2", "[done] delivery 1 complete"):
+            tracker.line(line)
+        self.assertEqual(events, [{"type": "event", "kind": "joined"}, {"type": "done", "kind": "delivery", "index": 1}])
+
+    def test_stop_pela_entrada(self):
+        """A linha "stop" interrompe o fio principal como o Ctrl+C (o app no Windows não manda SIGINT)."""
+        r, w = os.pipe()
+        stream = os.fdopen(r, "r")
+        self.trade.watch_stop(stream)
+        with self.assertRaises(KeyboardInterrupt):
+            os.write(w, b"stop\n")
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                time.sleep(0.01)
+        os.close(w)
+        stream.close()
 
     def test_comando_de_cada_jogo(self):
         python = pokeldn_python()

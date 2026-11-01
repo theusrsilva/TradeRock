@@ -1040,3 +1040,58 @@ O autor trocou a regra da D17: o app pode procurar versões novas no GitHub e se
   - o `dpkg` pelo pkexec.
 
   A primeira atualização real só acontece entre duas versões que já tenham este código.
+## D30. Trocas com os jogos novos: o recebido nunca se perde e a tela do anfitrião
+
+O autor testou o Legends: Z-A de verdade (Windows, ESP32-S3) e relatou dois problemas: a tela parecia a do FireRed, e
+um Pokémon recebido se perdeu quando ele encerrou a sessão pelo console. A revisão de ponta a ponta achou as causas no
+caminho comum a todos os jogos do pokeldn (Let's Go, Sword/Shield também pela rede de casa, BDSP, Arceus, SV e Z-A,
+pelo ESP32 e pela placa Wi-Fi).
+
+- **Causa do Pokémon perdido:** o worker lia o arquivo do recebido no instante da linha `[done] trade N complete`.
+  No `bin/za_host.py` e no `bin/pla_host.py` do pokeldn, essa linha sai de dentro do `receive()` e o arquivo é gravado
+  só quando ele volta (`--offer-out`); nos outros jogos ele já existe antes (Sword/Shield e BDSP gravam na oferta,
+  Let's Go no commit, SV antes do `[done]`). No Z-A e no Arceus, o app recebia `data: null`, mostrava
+  "received_missing", não guardava nada, e a pasta temporária era apagada no fim do processo.
+  - **Conserto (worker, `pokeldn_trade.py`, `Tracker`):** no `[done]` sem arquivo, um fio espera até 15 s e manda o
+    `trade_done` assim que o arquivo aparece; no fim do processo, com ou sem erro, o que estiver pendente é enviado
+    antes do `result`/`error`. Só se o arquivo nunca aparecer a mensagem sai com `data` nulo.
+  - O coordenador já gravava cada recebido no cofre na hora do `TradeDone`; isso não mudou. O que mudou é que a
+    mensagem agora chega.
+  - Sem patch no pokeldn: o conserto é do nosso lado e vale para qualquer ordem de gravação.
+- **O Switch que encerra a sessão, a conexão que cai ou o processo que sai com erro depois de uma troca feita:**
+  - o resultado do motor (`PokeldnEngine.Progress.Result`) conta as trocas recebidas mesmo com a sessão cancelada:
+    todas feitas = concluída; algumas = parcial (`trade_incomplete`); nenhuma = cancelada. Antes, qualquer
+    cancelamento (do usuário ou do tempo da fase) virava "cancelada" mesmo com Pokémon recebido;
+  - no worker, o `trade_done` pendente sai antes do `error` quando o script do pokeldn quebra.
+- **"[link] joined" não é o console:** no ESP32, a placa imprime `[link] joined` quando a própria sala sobe
+  (`MSG_LINK`) e de novo quando o console entra (`MSG_STA_JOINED`). O app anunciava "O Switch entrou na sala" com a
+  sala vazia, e a placa Wi-Fi e o modo LAN não imprimem `[link]` nenhum, então nunca anunciavam a entrada.
+  - Agora "joined"/"left" vêm das linhas do anfitrião do pokeldn: `*** CONSOLE JOINED ***` e `[host] console left:`
+    (ldn_mitm_host.py, todos os jogos), `*** THE CONSOLE JOINED THE MESH ***` (Let's Go) e, no modo LAN,
+    `host request; seated at` e `left the session` (pia_lan.py). A sala aberta ("waiting") vem de `[link] waiting`,
+    de `Hosting. Waiting for the console` e de `[lan] session`.
+- **A sala e o tempo da fase:** a sala do pokeldn ficava aberta 600 s, mas o coordenador encerra uma fase sem
+  progresso em 300 s: o app matava o pokeldn no meio da espera com "phase_timeout" (foi o que aconteceu na primeira
+  tentativa do autor, com o ESP32 reiniciando no meio). A sala agora espera 240 s e fecha sozinha, com
+  "console_never_joined".
+- **Cancelar com educação também no Windows:** o app mandava SIGINT no Linux e matava o processo no Windows (sair no
+  meio castiga o console, D21). A entrada do `pokeldn_trade.py` fica aberta e a linha `stop` vira um
+  `KeyboardInterrupt` no fio principal, como o Ctrl+C: o pokeldn passa a sala ao console e sai. O app espera 30 s e
+  só então encerra o processo. O worker com a placa Wi-Fi continua com o SIGINT.
+- **Causa da "tela do FireRed" (problema 1):** o jogo escolhido não se perdeu (o log mostra o `za-host` nas duas
+  tentativas). A tela ao vivo só conhecia o fluxo do FRLG pela placa Wi-Fi, em que o TradeRock entra na sala do
+  Switch: "Deixe o Direct Corner aberto como Leader", "ande até a cadeira da esquerda" (que apareceu com o
+  `[link] joined` falso), etapas "Encontrar a sala / Aprovar a entrada / Sentar à mesa".
+  - Agora, quando o motor troca aquele jogo pelo pokeldn (`pokeldnGames`), a tela segue o fluxo do anfitrião: abrir a
+    sala, "procure a troca com o código X" com o passo a passo do jogo (`content/*/trade/jogos/<jogo>.md`), o Switch
+    entrou, escolha e confirme lá, próxima troca, encerrar. As etapas são "Abrir a sala / O Switch entrar / Troca n /
+    Fechar a sala". O código de troca entrou no snapshot da sessão (`linkCode`).
+- **Verificado:**
+  - teste do worker com as linhas reais do log do Z-A (arquivo gravado depois do `[done]`), o arquivo que nunca
+    aparece, entrada e saída do console por rádio (ESP32, placa, LAN) e o `stop` pela entrada;
+  - testes do .NET: console que encerra depois da primeira troca (motor e API: sessão parcial com o Pokémon no
+    cofre), cancelamento depois de uma troca, de todas e de nenhuma, o código na mensagem da sala, a sala menor que o
+    tempo da fase;
+  - testes do frontend do fluxo do anfitrião (instruções e linha do tempo).
+- **Não verificado:** com um console de verdade (o autor tem o Z-A): o recebido chegando ao cofre, o `stop` passando
+  a sala ao console no Windows, as linhas de entrada e saída dos outros jogos e do modo LAN.

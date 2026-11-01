@@ -38,7 +38,9 @@ public sealed record TradeSessionSnapshot(
     TradeGame Game,
     string? FailureCode,
     string? FailureMessage,
-    IReadOnlyList<Guid?> ReceivedPokemonIds);
+    IReadOnlyList<Guid?> ReceivedPokemonIds,
+    /// <summary>O código de troca do pedido, para a tela ao vivo lembrar o que digitar no Switch (D30).</summary>
+    string? LinkCode = null);
 
 /// <summary>
 /// Conduz uma sessão de troca por vez: tentativas com retry, timeouts por fase, cancelamento seguro,
@@ -398,7 +400,7 @@ public sealed class TradeCoordinator(ITradeRecorder recorder, TimeProvider time,
         public TradeSessionSnapshot Snapshot() => new(
             Id, Owner, Engine.Id, Engine.IsSimulation, Status, Attempt, Settings.MaxAttempts, Request.Trades,
             TradesCompleted, StartedAt, EndedAt, Request.Trainer.Name, Request.Game,
-            Failure?.Code, Failure?.Message, Received.ToArray());
+            Failure?.Code, Failure?.Message, Received.ToArray(), Request.LinkCode);
     }
 }
 

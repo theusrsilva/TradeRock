@@ -35,3 +35,23 @@ The trade was cancelled on the Switch. **Leave the room** on the Switch.
 
 ## fim
 Done! The connection was closed.
+
+<!-- TradeRock is the host (pokeldn: the newer games, and FRLG over the ESP32). {code} = link code. -->
+
+## sala_abrindo
+Opening the trade room. One moment.
+
+## sala_aberta
+Room open! On the Switch, search for the trade **with the code {code}** and join. The game's steps are right below.
+
+## sala_entrou
+The Switch joined the room! There, **choose the Pokémon** you want to send to the PC and **confirm** trade {n} of {total}.
+
+## sala_proxima
+Trade {n} of {total} done! The Pokémon is already in the vault. On the Switch, choose the Pokémon for the **next trade**.
+
+## sala_sair
+Trades done! TradeRock closes the room on its own; on the Switch, **end the trade** when the game lets you.
+
+## sala_saiu
+The Switch left the room before finishing. Whatever was traded is in the vault.

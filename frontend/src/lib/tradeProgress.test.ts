@@ -41,6 +41,37 @@ describe('instrução da fase', () => {
   })
 })
 
+describe('o TradeRock como anfitrião (pokeldn)', () => {
+  // O problema 1 relatado com o Legends: Z-A (D30): a tela mostrava o fluxo do FRLG ("Direct Corner", "cadeira da
+  // esquerda") para os jogos em que o TradeRock abre a sala.
+  it('abre a sala, espera o Switch entrar e manda escolher lá', () => {
+    expect(instructionFor([ev('session_started'), ev('attempt_started'), ev('scanning')], 1, true).key).toBe('sala_abrindo')
+    expect(instructionFor([ev('scanning'), ev('in_room')], 1, true).key).toBe('sala_aberta')
+    expect(instructionFor([ev('in_room'), ev('joined')], 2, true)).toEqual({ key: 'sala_entrou', n: 1 })
+    expect(instructionFor([ev('in_room'), ev('joined'), ev('error')], 2, true).key).toBe('sala_entrou')
+  })
+
+  it('depois da última troca manda encerrar; antes, a próxima; o Switch que sai antes avisa', () => {
+    const one = [ev('joined'), ev('trade_done', { tradeIndex: 0 })]
+    expect(instructionFor(one, 2, true)).toEqual({ key: 'sala_proxima', n: 1 })
+    expect(instructionFor(one, 1, true).key).toBe('sala_sair')
+    expect(instructionFor([...one, ev('link_closed')], 2, true).key).toBe('sala_saiu')
+    expect(instructionFor([...one, ev('link_closed')], 1, true).key).toBe('fim')
+  })
+
+  it('a linha do tempo tem abrir a sala, o Switch entrar, as trocas e fechar', () => {
+    const steps = timeline([ev('attempt_started'), ev('scanning'), ev('in_room')], 2, false, false, true)
+    expect(steps.map((s) => s.label)).toEqual(['trade.steps.open', 'trade.steps.join', 'trade.steps.trade', 'trade.steps.trade', 'trade.steps.close'])
+    expect(steps.map((s) => s.state)).toEqual(['done', 'current', 'pending', 'pending', 'pending'])
+    // Sessão concluída: a sala fechou mesmo sem o evento de saída.
+    const done = timeline([ev('in_room'), ev('joined'), ev('trade_done', { tradeIndex: 0 })], 1, true, false, true)
+    expect(done.map((s) => s.state)).toEqual(['done', 'done', 'done', 'done'])
+    // O Switch saiu depois da primeira de duas trocas: a segunda é a que falhou.
+    const partial = timeline([ev('in_room'), ev('joined'), ev('trade_done', { tradeIndex: 0 }), ev('link_closed')], 2, true, true, true)
+    expect(partial.map((s) => s.state)).toEqual(['done', 'done', 'done', 'failed', 'done'])
+  })
+})
+
 describe('linha do tempo', () => {
   it('marca feitas, atual e pendentes', () => {
     const steps = timeline([ev('attempt_started'), ev('beacon_decrypted'), ev('join_requested')], 2, false)

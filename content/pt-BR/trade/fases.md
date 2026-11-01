@@ -35,3 +35,23 @@ A troca foi cancelada no Switch. **Saia da sala** no Switch.
 
 ## fim
 Pronto! A conexão foi encerrada.
+
+<!-- O TradeRock é o anfitrião (pokeldn: jogos novos e o FRLG pelo ESP32). {code} = código de troca. -->
+
+## sala_abrindo
+Abrindo a sala de troca. Aguarde um instante.
+
+## sala_aberta
+Sala aberta! No Switch, procure a troca **com o código {code}** e entre. O passo a passo do jogo está logo abaixo.
+
+## sala_entrou
+O Switch entrou na sala! Lá, **escolha o Pokémon** que você quer mandar para o PC e **confirme** a troca {n} de {total}.
+
+## sala_proxima
+Troca {n} de {total} concluída! O Pokémon já está no cofre. No Switch, escolha o Pokémon da **próxima troca**.
+
+## sala_sair
+Trocas concluídas! O TradeRock fecha a sala sozinho; no Switch, **encerre a troca** quando o jogo deixar.
+
+## sala_saiu
+O Switch saiu da sala antes de terminar. O que já foi trocado está no cofre.

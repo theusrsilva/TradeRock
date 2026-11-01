@@ -128,7 +128,7 @@ public sealed class PythonLdnEngine(WorkerHost worker, SetupService setup, ProdK
             return end switch
             {
                 PokeldnEnd.Finished => progress.Result(),
-                PokeldnEnd.FinishedAfterCancel => progress.Received < request.Trades ? TradeAttemptResult.Cancelled : progress.Result(),
+                PokeldnEnd.FinishedAfterCancel => progress.Result(cancelled: true),
                 PokeldnEnd.WorkerExited => TradeAttemptResult.Fail("worker_exited", "O componente de rede parou durante a troca.", retryable: false),
                 _ => TradeAttemptResult.Cancelled,
             };
