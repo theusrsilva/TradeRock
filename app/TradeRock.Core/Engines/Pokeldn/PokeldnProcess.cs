@@ -42,7 +42,8 @@ public sealed class PokeldnProcess(Func<string?> runtimeRoot, string tempDir, IL
             : throw new Esp32Exception("pokeldn_missing", "O pokeldn embutido não foi encontrado.");
         var start = PythonEsp32Flasher.StartInfo(root, tempDir, "--pokeldn", mode);
         using var process = Process.Start(start) ?? throw new Esp32Exception("pokeldn_missing", "Não foi possível iniciar o pokeldn.");
-        using var stop = ct.Register(() => _ = StopAsync(process));
+        // Só a troca e as atividades (pokeldn_trade.py) ouvem o "stop"; o resto (pokeldn_board.py) termina na hora.
+        using var stop = ct.Register(() => _ = StopAsync(process, graceful: mode == "trade"));
         // O log do pokeldn (já sem chaves de sessão) vai para a aba Logs (D28) quando o processo termina.
         var stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);
         // A entrada fica aberta até o fim: é por ela que o cancelamento pede a saída educada (D30). O pokeldn_trade.py
@@ -71,12 +72,17 @@ public sealed class PokeldnProcess(Func<string?> runtimeRoot, string tempDir, IL
         }
     }
 
-    private static async Task StopAsync(Process process)
+    private static async Task StopAsync(Process process, bool graceful)
     {
         try
         {
             if (process.HasExited)
                 return;
+            if (!graceful)
+            {
+                process.Kill(entireProcessTree: true);
+                return;
+            }
             // "stop" na entrada: o pokeldn passa a sala ao console e sai (D21: sair no meio castiga o console). Vale
             // nos dois sistemas; no Windows não há SIGINT para outro processo.
             if (await TryStopLineAsync(process))
